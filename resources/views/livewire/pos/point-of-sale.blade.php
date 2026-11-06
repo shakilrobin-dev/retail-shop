@@ -35,6 +35,11 @@
             @endcan
         </div>
     @else
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+            <span class="flex items-center gap-2"><span class="size-2 rounded-full bg-emerald-500"></span> {{ __('Register is open') }} · {{ __('Open since') }} {{ shop_digits($shift->opened_at->format('h:i A')) }} · {{ $shift->user?->name }}</span>
+            @can('cash-shifts.manage')<a href="{{ route('cash-register') }}" wire:navigate class="font-medium hover:underline">{{ __('Cash register') }} →</a>@endcan
+        </div>
+
         <div class="grid gap-4 xl:grid-cols-3">
             {{-- Left: scan + cart --}}
             <div class="space-y-3 xl:col-span-2">
@@ -42,7 +47,7 @@
                 @error('cart') <p class="form-error text-sm">{{ $message }}</p> @enderror
                 @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
-                <div class="card overflow-x-auto">
+                <div class="card min-h-64 overflow-x-auto">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -101,18 +106,32 @@
                                     <td><button type="button" wire:click="removeLine({{ $index }})" class="text-slate-400 hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="py-16 text-center text-slate-400">{{ __('Scan a product to start the sale.') }}</td></tr>
+                                <x-empty :colspan="7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <div class="flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span class="rounded bg-white px-2 py-1 ring-1 ring-slate-200">F2 {{ __('Search') }}</span>
-                    <span class="rounded bg-white px-2 py-1 ring-1 ring-slate-200">F8 {{ __('Hold') }}</span>
-                    <span class="rounded bg-white px-2 py-1 ring-1 ring-slate-200">F10 {{ __('Pay') }}</span>
-                    <span class="rounded bg-white px-2 py-1 ring-1 ring-slate-200">Esc {{ __('Back') }}</span>
+                    @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
+                        <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{{ $key }}</kbd> {{ $label }}</span>
+                    @endforeach
                 </div>
+
+                @if ($quickItems->isNotEmpty())
+                    <div class="card p-4">
+                        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Quick items') }}</h3>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+                            @foreach ($quickItems as $quick)
+                                <button type="button" wire:click="pickUnit({{ $quick->id }})" wire:key="quick-{{ $quick->id }}"
+                                    class="flex min-h-16 flex-col justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left transition hover:border-brand-400 hover:bg-brand-50">
+                                    <span class="line-clamp-2 text-xs font-medium text-slate-800">{{ $quick->product->localName() }}@unless ($quick->is_base) ({{ $quick->localName() }})@endunless</span>
+                                    <span class="mt-1 text-xs font-semibold tabular-nums text-brand-700">{{ money($quick->selling_price) }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 @if ($heldSales->isNotEmpty())
                     <div class="card p-4">
@@ -130,7 +149,7 @@
             </div>
 
             {{-- Right: customer, totals, payment --}}
-            <div class="space-y-3">
+            <div class="space-y-3 xl:sticky xl:top-20 xl:self-start">
                 <div class="card p-4">
                     @if ($customer)
                         <div class="flex items-center justify-between text-sm">
@@ -177,7 +196,7 @@
                     @if ($vatEnabled && $totals['vat_amount'] > 0)
                         <div class="flex justify-between"><span>{{ __('VAT') }}</span><span class="tabular-nums">{{ money($totals['vat_amount']) }}</span></div>
                     @endif
-                    <div class="flex justify-between border-t border-slate-200 pt-2 text-2xl font-bold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($totals['total']) }}</span></div>
+                    <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium uppercase tracking-wide text-slate-300">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
                 </div>
 
                 @if ($showPayment)

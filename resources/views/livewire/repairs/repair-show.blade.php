@@ -172,7 +172,7 @@
             </form>
             <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($job->total) }}</span></div>
             <div class="flex justify-between"><span>{{ __('Paid') }}</span><span class="tabular-nums">{{ money($job->paid_amount) }}</span></div>
-            <div @class(['flex justify-between font-semibold', 'text-red-600' => $due > 0, 'text-emerald-700' => $due <= 0])><span>{{ $due >= 0 ? __('Due') : __('Refund due') }}</span><span class="tabular-nums">{{ money(abs($due)) }}</span></div>
+            <div @class(['flex justify-between font-semibold', 'text-red-600' => $due > 0, 'text-emerald-700' => $due <= 0])><span>{{ $due >= 0 ? __('Due') : ($isClosed ? __('Refund due') : __('Advance balance')) }}</span><span class="tabular-nums">{{ money(abs($due)) }}</span></div>
 
             @unless ($isClosed)
                 <form wire:submit="addPayment" class="flex gap-1 border-t border-slate-200 pt-3">

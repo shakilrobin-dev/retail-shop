@@ -29,7 +29,7 @@
                             <img src="{{ asset('storage/'.$logoPath) }}" alt="" class="h-16 rounded ring-1 ring-slate-200">
                             <button type="button" wire:click="removeLogo" class="text-xs text-red-600 hover:underline">{{ __('Remove') }}</button>
                         @endif
-                        <input wire:model="logo" type="file" accept="image/*" class="text-sm">
+                        <input wire:model="logo" type="file" accept="image/*" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100">
                     </div>
                     @error('logo') <p class="form-error">{{ $message }}</p> @enderror
                 </div>

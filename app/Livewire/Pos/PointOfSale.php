@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\ProductUnit;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\User;
 use App\Services\CashShiftService;
 use App\Services\CurrentBranch;
@@ -20,6 +21,7 @@ use App\Services\SaleService;
 use App\Services\Settings;
 use App\Services\StockService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -391,6 +393,43 @@ class PointOfSale extends Component
             'canEditPrice' => $this->canEditPrice(),
             'drawerEnabled' => $settings->bool('cash_drawer_enabled', $branch?->id),
             'lastShift' => $branch ? CashShift::query()->where('branch_id', $branch->id)->latest('closed_at')->first() : null,
+            'quickItems' => $this->quickItems(),
         ])->title(__('POS / Sale'));
+    }
+
+    /**
+     * Best sellers of the last 30 days (or newest products) as tap-to-add tiles.
+     *
+     * @return Collection<int, ProductUnit>
+     */
+    private function quickItems(): Collection
+    {
+        $branchId = app(CurrentBranch::class)->get()?->id;
+
+        $unitIds = SaleItem::query()
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.branch_id', $branchId)
+            ->where('sales.status', SaleStatus::Completed)
+            ->where('sales.sold_at', '>=', now()->subDays(30))
+            ->selectRaw('sale_items.product_unit_id, SUM(sale_items.quantity) as sold')
+            ->groupBy('sale_items.product_unit_id')
+            ->orderByDesc('sold')
+            ->limit(12)
+            ->pluck('product_unit_id');
+
+        if ($unitIds->count() < 12) {
+            $unitIds = $unitIds->merge(ProductUnit::query()
+                ->where('is_base', true)
+                ->whereHas('product', fn ($query) => $query->where('is_active', true))
+                ->whereNotIn('id', $unitIds)
+                ->latest('id')
+                ->limit(12 - $unitIds->count())
+                ->pluck('id'));
+        }
+
+        return ProductUnit::query()->with('product')->whereIn('id', $unitIds)->get()
+            ->filter(fn (ProductUnit $unit): bool => (bool) $unit->product?->is_active)
+            ->sortBy(fn (ProductUnit $unit): int => $unitIds->search($unit->id))
+            ->values();
     }
 }

@@ -1,6 +1,8 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
-    <x-page-header class="mb-0" :title="__('Invoice').' '.$sale->invoice_no" :subtitle="shop_digits($sale->sold_at->format('d M Y h:i A'))" :back="route('sales.index')" :backLabel="__('Sales')" />
+    <x-page-header class="mb-0" :title="__('Invoice').' '.$sale->invoice_no" :subtitle="shop_digits($sale->sold_at->format('d M Y h:i A'))" :back="route('sales.index')" :backLabel="__('Sales')">
+        <x-badge :tone="$sale->status === \App\Enums\SaleStatus::Voided ? 'red' : 'green'" class="px-3 py-1 text-sm">{{ $sale->status->label() }}</x-badge>
+    </x-page-header>
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     @if ($sale->status === \App\Enums\SaleStatus::Voided)

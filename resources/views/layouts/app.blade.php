@@ -155,7 +155,7 @@
                     <x-icon name="chevron-right" class="size-3.5 text-slate-300" />
                     <span class="text-slate-500">{{ $crumbGroup }}</span>
                 @endif
-                @if ($crumbPage && $crumbPage !== __('Dashboard'))
+                @if ($crumbPage && $crumbPage !== __('Dashboard') && $crumbPage !== $crumbGroup)
                     <x-icon name="chevron-right" class="size-3.5 text-slate-300" />
                     <span class="truncate font-medium text-slate-800">{{ $crumbPage }}</span>
                 @endif

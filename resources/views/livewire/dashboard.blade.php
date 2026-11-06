@@ -24,6 +24,11 @@
             @can('reports.view')
                 <x-slot:actions><a href="{{ route('reports.index', ['tab' => 'daily']) }}" wire:navigate class="text-xs font-medium text-brand-600 hover:underline">{{ __('View as table') }} →</a></x-slot:actions>
             @endcan
+            @if ($chartMax <= 0)
+                <div class="flex h-56 items-center justify-center">
+                    <x-empty icon="chart" :title="__('No sales in the last 14 days yet.')" :text="__('The chart fills up as you sell from the POS.')" />
+                </div>
+            @else
             <div class="flex gap-3">
                 <div class="flex h-48 flex-col justify-between text-right text-[11px] tabular-nums text-slate-400">
                     @foreach ($gridValues as $gridValue)
@@ -38,7 +43,7 @@
                     </div>
                     <div class="relative flex h-48 items-end gap-0.5">
                         @foreach ($chart as $point)
-                            @php $height = $point['total'] > 0 ? max(2, round($point['total'] / $chartMax * 100, 1)) : 0; @endphp
+                            @php $height = $point['total'] > 0 ? max(2, round($point['total'] / max(1, $chartMax) * 100, 1)) : 0; @endphp
                             <div x-data="{ tip: false }" x-on:mouseenter="tip = true" x-on:mouseleave="tip = false" x-on:focus="tip = true" x-on:blur="tip = false"
                                 class="group relative flex h-full flex-1 items-end justify-center outline-none" tabindex="0"
                                 aria-label="{{ $point['date']->format('d M') }}: {{ money($point['total']) }}">
@@ -57,6 +62,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </x-section>
 
         @if ($doneSteps < $setupSteps->count())

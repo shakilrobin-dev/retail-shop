@@ -61,7 +61,7 @@ class Dashboard extends Component
 
         return view('livewire.dashboard', [
             'chart' => $chart,
-            'chartMax' => max(1, (float) $chart->max('total')),
+            'chartMax' => $this->niceMax((float) $chart->max('total')),
             'setupSteps' => collect($setupSteps)->filter(fn (array $step): bool => auth()->user()->can($step[3]))->values(),
             'todaySalesTotal' => (float) (clone $todaySales)->sum('total'),
             'todayInvoiceCount' => (clone $todaySales)->count(),
@@ -101,5 +101,25 @@ class Dashboard extends Component
                 ->select('product_stocks.*')
                 ->limit(8)->get(),
         ])->title(__('Dashboard'));
+    }
+
+    /**
+     * Round the chart top up to a clean number (e.g. 3,450 -> 4,000).
+     */
+    private function niceMax(float $value): float
+    {
+        if ($value <= 0) {
+            return 0;
+        }
+
+        $magnitude = 10 ** floor(log10($value));
+
+        foreach ([1, 2, 2.5, 5, 10] as $step) {
+            if ($value <= $step * $magnitude) {
+                return $step * $magnitude;
+            }
+        }
+
+        return 10 * $magnitude;
     }
 }
