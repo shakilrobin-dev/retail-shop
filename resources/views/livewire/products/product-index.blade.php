@@ -9,7 +9,7 @@
 
     <div class="card overflow-hidden">
         <x-filter-tabs :tabs="$tabs" :active="$stockFilter" model="stockFilter" />
-        <div class="border-t border-slate-200"></div>
+        <div class="border-t border-card-line"></div>
 
         <x-list-toolbar :placeholder="__('Search name, model, SKU or scan barcode')">
             <x-category-select wire:model.live="categoryId" :options="$categoryOptions" :placeholder="__('All categories')" class="w-56" />
@@ -61,14 +61,14 @@
                             $barcodes = $product->units->flatMap->barcodes;
                         @endphp
                         <tr wire:key="product-{{ $product->id }}" x-on:click="Livewire.navigate('{{ route('products.edit', $product) }}')"
-                            @class(['cursor-pointer', 'bg-brand-50/60' => in_array((string) $product->id, $selected, true)])>
+                            @class(['cursor-pointer', 'bg-primary-50/60' => in_array((string) $product->id, $selected, true)])>
                             <x-table.check :value="$product->id" />
                             <td>
                                 <div class="flex items-center gap-3">
-                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><x-icon name="cube" class="size-4" /></span>
+                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface text-muted-foreground"><x-icon name="cube" class="size-4" /></span>
                                     <div class="min-w-0">
-                                        <div class="truncate font-medium text-slate-900">{{ $product->localName() }}</div>
-                                        <div class="truncate text-xs text-slate-500">
+                                        <div class="truncate font-medium text-foreground">{{ $product->localName() }}</div>
+                                        <div class="truncate text-xs text-muted-foreground-1">
                                             <span class="font-mono">{{ $product->sku }}</span>
                                             @if ($product->brand) · {{ $product->brand->name }} @endif
                                             @if ($product->compatible_models) · {{ $product->compatible_models }} @endif
@@ -77,35 +77,32 @@
                                 </div>
                             </td>
                             <td class="max-w-56">
-                                <span class="block truncate text-xs text-slate-600" title="{{ $tree->path($product->category_id) }}">{{ $tree->path($product->category_id) }}</span>
+                                <span class="block truncate text-xs text-muted-foreground-2" title="{{ $tree->path($product->category_id) }}">{{ $tree->path($product->category_id) }}</span>
                             </td>
-                            <td class="font-mono text-xs text-slate-600">
+                            <td class="font-mono text-xs text-muted-foreground-2">
                                 {{ $barcodes->first()?->code ?? '—' }}
-                                @if ($barcodes->count() > 1)<span class="ml-1 rounded bg-slate-100 px-1 font-sans text-[10px] text-slate-500">+{{ $barcodes->count() - 1 }}</span>@endif
+                                @if ($barcodes->count() > 1)<span class="ml-1 rounded bg-surface px-1 font-sans text-[10px] text-muted-foreground-1">+{{ $barcodes->count() - 1 }}</span>@endif
                             </td>
                             <td class="text-right tabular-nums">
-                                <div class="font-medium text-slate-900">{{ money($product->base_price) }}</div>
+                                <div class="font-medium text-foreground">{{ money($product->base_price) }}</div>
                                 @if ($product->units->count() > 1)
                                     @php $pack = $product->units->where('is_base', false)->first(); @endphp
-                                    <div class="text-xs text-slate-400">{{ money($pack->selling_price) }} / {{ $pack->localName() }}</div>
+                                    <div class="text-xs text-muted-foreground">{{ money($pack->selling_price) }} / {{ $pack->localName() }}</div>
                                 @endif
                             </td>
                             @can('products.view-cost')
-                                <td class="text-right tabular-nums text-slate-500">{{ money($product->cost_price) }}</td>
+                                <td class="text-right tabular-nums text-muted-foreground-1">{{ money($product->cost_price) }}</td>
                             @endcan
                             <td class="text-right">
                                 <x-badge :tone="$stockQty <= 0 ? 'red' : ($isLow ? 'amber' : 'green')">{{ $product->stockBreakdown($stockQty) }}</x-badge>
                             </td>
                             <td class="text-right" x-on:click.stop>
-                                <div class="relative inline-block" x-data="{ open: false }" x-on:click.outside="open = false">
-                                    <button type="button" x-on:click="open = !open" class="btn-ghost btn-sm" aria-label="{{ __('More actions') }}">⋯</button>
-                                    <div x-cloak x-show="open" class="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-lg">
-                                        <x-dropdown-item icon="pencil" :href="route('products.edit', $product)" wire:navigate>{{ __('Edit') }}</x-dropdown-item>
-                                        <x-dropdown-item icon="tag" :href="route('labels.index', ['product' => $product->id])" wire:navigate>{{ __('Print labels') }}</x-dropdown-item>
-                                        <x-dropdown-item icon="history" :href="route('stock.movements', ['productId' => $product->id])" wire:navigate>{{ __('Stock history') }}</x-dropdown-item>
-                                        <x-dropdown-item :icon="$product->is_active ? 'eye-off' : 'eye'" wire:click="toggleActive({{ $product->id }})">{{ $product->is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
-                                    </div>
-                                </div>
+                                <x-dropdown trigger="⋯" width="min-w-48">
+                                    <x-dropdown-item icon="pencil" :href="route('products.edit', $product)" wire:navigate>{{ __('Edit') }}</x-dropdown-item>
+                                    <x-dropdown-item icon="tag" :href="route('labels.index', ['product' => $product->id])" wire:navigate>{{ __('Print labels') }}</x-dropdown-item>
+                                    <x-dropdown-item icon="history" :href="route('stock.movements', ['productId' => $product->id])" wire:navigate>{{ __('Stock history') }}</x-dropdown-item>
+                                    <x-dropdown-item :icon="$product->is_active ? 'eye-off' : 'eye'" wire:click="toggleActive({{ $product->id }})">{{ $product->is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
+                                </x-dropdown>
                             </td>
                         </tr>
                     @empty

@@ -19,10 +19,10 @@
                     <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
                 @endforeach
             </select>
-            <div class="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2">
-                <x-icon name="history" class="size-4 text-slate-400" />
+            <div class="flex items-center gap-1 rounded-lg border border-layer-line bg-layer px-2">
+                <x-icon name="history" class="size-4 text-muted-foreground" />
                 <input wire:model.live="from" type="date" class="border-0 py-1.5 text-sm focus:ring-0" title="{{ __('From') }}">
-                <span class="text-slate-400">–</span>
+                <span class="text-muted-foreground">–</span>
                 <input wire:model.live="to" type="date" class="border-0 py-1.5 text-sm focus:ring-0" title="{{ __('To') }}">
             </div>
         </x-list-toolbar>
@@ -42,19 +42,19 @@
                 <tbody>
                     @forelse ($purchases as $purchase)
                         <tr wire:key="purchase-{{ $purchase->id }}" x-on:click="Livewire.navigate('{{ route('purchases.show', $purchase) }}')" class="cursor-pointer">
-                            <td class="font-mono text-xs font-medium text-slate-900">{{ $purchase->reference_no }}</td>
-                            <td class="whitespace-nowrap text-slate-600">{{ shop_digits($purchase->purchase_date->format('d M Y')) }}</td>
+                            <td class="font-mono text-xs font-medium text-foreground">{{ $purchase->reference_no }}</td>
+                            <td class="whitespace-nowrap text-muted-foreground-2">{{ shop_digits($purchase->purchase_date->format('d M Y')) }}</td>
                             <td>
                                 @if ($purchase->supplier)
                                     <div class="flex items-center gap-2"><x-avatar :name="$purchase->supplier->name" size="size-6" /> {{ $purchase->supplier->name }}</div>
                                 @else
-                                    <span class="text-slate-400">{{ __('Local market') }}</span>
+                                    <span class="text-muted-foreground">{{ __('Local market') }}</span>
                                 @endif
                             </td>
-                            <td class="font-mono text-xs text-slate-500">{{ $purchase->supplier_invoice_no ?? '—' }}</td>
+                            <td class="font-mono text-xs text-muted-foreground-1">{{ $purchase->supplier_invoice_no ?? '—' }}</td>
                             <td class="text-right tabular-nums">{{ shop_digits($purchase->items_count) }}</td>
-                            <td class="text-right font-semibold tabular-nums text-slate-900">{{ money($purchase->total) }}</td>
-                            <td class="text-slate-500">{{ $purchase->user?->name }}</td>
+                            <td class="text-right font-semibold tabular-nums text-foreground">{{ money($purchase->total) }}</td>
+                            <td class="text-muted-foreground-1">{{ $purchase->user?->name }}</td>
                         </tr>
                     @empty
                         <x-empty :colspan="7" icon="truck" :title="__('No purchases found.')">

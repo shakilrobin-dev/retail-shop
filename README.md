@@ -20,7 +20,7 @@ Full requirements: [REQUIREMENTS.md](REQUIREMENTS.md)
 
 ## Tech
 
-Laravel 13, PHP 8.3+, MySQL, Livewire 4, Alpine.js, Tailwind CSS 4.
+Laravel 13, PHP 8.3+, MySQL, Livewire 4, Alpine.js, Tailwind CSS 4, Preline UI 4 (light & dark theme).
 No Node.js, Redis, queue worker or WebSockets are needed on the server.
 
 ## Run on your computer

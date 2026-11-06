@@ -2,25 +2,25 @@
 
 @php
     $tones = [
-        'brand' => 'bg-brand-50 text-brand-600',
-        'green' => 'bg-emerald-50 text-emerald-600',
-        'amber' => 'bg-amber-50 text-amber-600',
-        'red' => 'bg-red-50 text-red-600',
-        'sky' => 'bg-sky-50 text-sky-600',
-        'slate' => 'bg-slate-100 text-slate-600',
+        'brand' => 'bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400',
+        'green' => 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400',
+        'amber' => 'bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10 dark:text-yellow-400',
+        'red' => 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
+        'sky' => 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
+        'slate' => 'bg-surface text-muted-foreground-2',
     ];
     $tag = $href ? 'a' : 'div';
 @endphp
 
-<{{ $tag }} @if ($href) href="{{ $href }}" wire:navigate @endif {{ $attributes->merge(['class' => 'card flex items-start gap-4 p-4 '.($href ? 'transition hover:border-brand-300 hover:shadow-md' : '')]) }}>
+<{{ $tag }} @if ($href) href="{{ $href }}" wire:navigate @endif {{ $attributes->merge(['class' => 'card flex items-start gap-4 p-4 '.($href ? 'transition hover:shadow-md' : '')]) }}>
     @if ($icon)
         <div class="rounded-lg p-2.5 {{ $tones[$tone] ?? $tones['brand'] }}">
             <x-icon :name="$icon" class="size-5" />
         </div>
     @endif
     <div class="min-w-0">
-        <div class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ $label }}</div>
-        <div class="mt-1 truncate text-2xl font-semibold tabular-nums text-slate-900">{{ $value }}</div>
-        @if ($hint)<div class="mt-0.5 text-xs text-slate-500">{{ $hint }}</div>@endif
+        <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground-1">{{ $label }}</div>
+        <div class="mt-1 truncate text-2xl font-semibold tabular-nums text-foreground">{{ $value }}</div>
+        @if ($hint)<div class="mt-0.5 text-xs text-muted-foreground-1">{{ $hint }}</div>@endif
     </div>
 </{{ $tag }}>

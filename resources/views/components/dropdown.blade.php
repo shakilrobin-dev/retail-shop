@@ -1,11 +1,16 @@
-@props(['label' => null, 'icon' => 'chevron-down', 'align' => 'right', 'width' => 'w-52'])
+@props(['label' => null, 'icon' => 'chevron-down', 'align' => 'right', 'width' => 'min-w-52', 'trigger' => null])
 
-{{-- Action menu ("Action ▾"). Put <x-dropdown-item> elements inside. --}}
-<div class="relative" x-data="{ open: false }" x-on:click.outside="open = false" x-on:keydown.escape="open = false">
-    <button type="button" x-on:click="open = !open" class="btn-secondary">
-        {{ $label ?? __('Action') }} <x-icon :name="$icon" class="size-4 text-slate-400" />
-    </button>
-    <div x-cloak x-show="open" x-transition.origin.top class="absolute {{ $align === 'right' ? 'right-0' : 'left-0' }} z-30 mt-1.5 {{ $width }} rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg" x-on:click="open = false">
-        {{ $slot }}
+{{-- Preline dropdown ("Action ▾"). Put <x-dropdown-item> elements inside. --}}
+@php $id = 'dd-'.\Illuminate\Support\Str::random(6); @endphp
+<div class="hs-dropdown relative inline-flex [--placement:bottom-{{ $align === 'right' ? 'right' : 'left' }}]">
+    @if ($trigger)
+        <button id="{{ $id }}" type="button" class="hs-dropdown-toggle btn-ghost btn-sm" aria-haspopup="menu" aria-expanded="false" aria-label="{{ __('More actions') }}">{{ $trigger }}</button>
+    @else
+        <button id="{{ $id }}" type="button" class="hs-dropdown-toggle btn-secondary" aria-haspopup="menu" aria-expanded="false">
+            {{ $label ?? __('Action') }} <x-icon :name="$icon" class="hs-dropdown-open:rotate-180 size-4 text-muted-foreground-1 transition" />
+        </button>
+    @endif
+    <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 duration z-30 hidden {{ $width }} rounded-xl bg-dropdown opacity-0 shadow-md transition-[opacity,margin]" role="menu" aria-orientation="vertical" aria-labelledby="{{ $id }}">
+        <div class="space-y-0.5 p-1.5">{{ $slot }}</div>
     </div>
 </div>

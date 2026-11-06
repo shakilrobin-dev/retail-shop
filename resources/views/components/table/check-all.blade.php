@@ -7,5 +7,5 @@
 @endphp
 <th class="w-10 !pr-0">
     <input type="checkbox" wire:click="togglePage(@js($ids))" @checked($all) x-init="$el.indeterminate = @js($some)"
-        class="rounded border-slate-300 text-brand-600" aria-label="{{ __('Select all on this page') }}">
+        class="rounded border-layer-line text-primary-600" aria-label="{{ __('Select all on this page') }}">
 </th>

@@ -1,6 +1,6 @@
 <x-section :title="__('Low stock items')" :padding="false">
     @can('products.manage')
-        <x-slot:actions><a href="{{ route('products.index', ['stockFilter' => 'low']) }}" wire:navigate class="text-xs font-medium text-brand-600 hover:underline">{{ __('View all') }} →</a></x-slot:actions>
+        <x-slot:actions><a href="{{ route('products.index', ['stockFilter' => 'low']) }}" wire:navigate class="text-xs font-medium text-primary-600 hover:underline">{{ __('View all') }} →</a></x-slot:actions>
     @endcan
     <table class="data-table">
         <tbody>

@@ -1,29 +1,20 @@
 @import 'tailwindcss';
 
+/* Preline UI */
+@source '../../node_modules/preline/dist/*.js';
+@import '../../node_modules/preline/variants.css';
+@import '../../node_modules/preline/css/themes/theme.css';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+
+/* Dark mode follows the "dark" class on <html> (Preline theme switch). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
     --font-sans: 'Inter', 'Hind Siliguri', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-bangla: 'Hind Siliguri', 'Inter', ui-sans-serif, system-ui, sans-serif;
-
-    /* Brand colour (business blue). Change these to re-theme the whole app. */
-    --color-brand-50: #eff5ff;
-    --color-brand-100: #dbe8fe;
-    --color-brand-200: #bfd5fe;
-    --color-brand-300: #93b8fd;
-    --color-brand-400: #6093fa;
-    --color-brand-500: #3b6ff6;
-    --color-brand-600: #2553eb;
-    --color-brand-700: #1d41d8;
-    --color-brand-800: #1e36af;
-    --color-brand-900: #1e338a;
-    --color-brand-950: #172154;
-
-    /* Sidebar */
-    --color-nav: #0f172a;
-    --color-nav-hover: #1e293b;
 }
 
 /* Bangla pages use the Bangla font first so Bangla text is clear. */
@@ -35,113 +26,139 @@ html:lang(bn) body {
     display: none !important;
 }
 
-body {
-    font-feature-settings: 'cv11', 'ss01';
-}
-
-/* Thin scrollbars inside panels */
 .scroll-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
 }
 
-/* ---------- Shared UI pieces used by all modules ---------- */
+/* ---------- Shared UI pieces (Preline recipes, theme tokens) ---------- */
 
 @utility card {
-    @apply rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+    @apply flex flex-col rounded-xl border border-card-line bg-card shadow-2xs;
 }
 
 @utility card-header {
-    @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5;
+    @apply flex items-center justify-between gap-3 border-b border-card-divider px-4 py-3 md:px-5;
 }
 
 @utility card-title {
-    @apply text-sm font-semibold text-slate-900;
+    @apply text-sm font-semibold text-foreground;
 }
 
 @utility form-label {
-    @apply mb-1.5 block text-[13px] font-medium text-slate-700;
+    @apply mb-2 block text-sm font-medium text-foreground;
 }
 
 @utility form-hint {
-    @apply mt-1 text-xs text-slate-500;
+    @apply mt-1.5 text-xs text-muted-foreground-1;
 }
 
 @utility form-input {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_1px_rgba(15,23,42,0.03)] placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+    @apply block w-full rounded-lg border border-layer-line bg-layer px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary-focus focus:outline-hidden focus:ring-1 focus:ring-primary-focus disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility form-error {
-    @apply mt-1 text-xs font-medium text-red-600;
+    @apply mt-1.5 text-xs text-red-600;
 }
 
 @utility btn {
-    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-x-2 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium focus:outline-hidden disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility btn-primary {
-    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:ring-brand-500/25;
+    @apply btn border-transparent bg-primary text-primary-foreground hover:bg-primary-hover focus:bg-primary-focus;
 }
 
 @utility btn-secondary {
-    @apply btn border border-slate-300 bg-white text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.04)] hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-slate-400/20;
+    @apply btn border-layer-line bg-layer text-layer-foreground shadow-2xs hover:bg-layer-hover focus:bg-layer-focus;
 }
 
 @utility btn-danger {
-    @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500/25;
+    @apply btn border-transparent bg-destructive text-destructive-foreground hover:bg-destructive-hover focus:bg-destructive-focus;
 }
 
 @utility btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+    @apply btn border-transparent text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground focus:bg-muted-focus;
 }
 
 @utility btn-sm {
-    @apply rounded-md px-2.5 py-1 text-xs;
+    @apply gap-x-1.5 px-2.5 py-1.5 text-xs;
 }
 
 @utility data-table {
-    @apply min-w-full text-sm;
+    @apply min-w-full divide-y divide-table-line text-sm;
 
     & thead th {
-        @apply sticky top-0 border-b border-slate-200 bg-slate-50/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur;
+        @apply sticky top-0 bg-muted px-4 py-3 text-start text-xs font-medium uppercase text-muted-foreground-1;
+    }
+
+    & tbody {
+        @apply divide-y divide-table-line;
     }
 
     & tbody td {
-        @apply border-b border-slate-100 px-4 py-2.5 align-middle text-slate-700;
+        @apply whitespace-nowrap px-4 py-3 align-middle text-foreground;
     }
 
     & tbody tr {
-        @apply transition-colors hover:bg-slate-50/70;
-    }
-
-    & tbody tr:last-child td {
-        @apply border-b-0;
+        @apply hover:bg-layer-hover;
     }
 
     & tfoot td {
-        @apply border-t border-slate-200 bg-slate-50 px-4 py-2.5;
+        @apply border-t border-table-line bg-muted px-4 py-3;
     }
 }
 
 @utility badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-current/15;
+    @apply inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
 }
 
 @utility tab-link {
-    @apply inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-1 pb-2.5 pt-1 text-sm font-medium text-slate-500 hover:border-slate-300 hover:text-slate-800;
+    @apply inline-flex items-center gap-x-2 whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm text-muted-foreground-1 hover:text-primary-hover focus:outline-hidden focus:text-primary-focus;
 }
 
 @utility tab-link-active {
-    @apply tab-link border-brand-600 text-brand-700 hover:border-brand-600 hover:text-brand-700;
+    @apply tab-link border-primary font-semibold text-primary hover:text-primary;
 }
 
 @utility chip {
-    @apply btn btn-sm border border-slate-300 bg-white text-slate-600 hover:bg-slate-50;
+    @apply btn btn-sm rounded-full border-layer-line bg-layer text-layer-foreground hover:bg-layer-hover;
 }
 
 @utility chip-active {
-    @apply btn btn-sm border border-brand-600 bg-brand-600 text-white hover:bg-brand-700;
+    @apply btn btn-sm rounded-full border-transparent bg-primary text-primary-foreground hover:bg-primary-hover;
 }
+
+
+/* Dark mode: soften light tinted panels, borders and text used for status colours. */
+.dark :is(.bg-emerald-50, .bg-emerald-100) { background-color: color-mix(in oklab, var(--color-emerald-500) 14%, transparent); }
+.dark :is(.border-emerald-200, .border-emerald-300) { border-color: color-mix(in oklab, var(--color-emerald-500) 30%, transparent); }
+.dark :is(.text-emerald-700, .text-emerald-800) { color: var(--color-emerald-400); }
+.dark :is(.bg-amber-50, .bg-amber-100) { background-color: color-mix(in oklab, var(--color-amber-500) 14%, transparent); }
+.dark :is(.border-amber-200, .border-amber-300) { border-color: color-mix(in oklab, var(--color-amber-500) 30%, transparent); }
+.dark :is(.text-amber-700, .text-amber-800) { color: var(--color-amber-400); }
+.dark :is(.bg-red-50, .bg-red-100) { background-color: color-mix(in oklab, var(--color-red-500) 14%, transparent); }
+.dark :is(.border-red-200, .border-red-300) { border-color: color-mix(in oklab, var(--color-red-500) 30%, transparent); }
+.dark :is(.text-red-700, .text-red-800) { color: var(--color-red-400); }
+.dark :is(.bg-sky-50, .bg-sky-100) { background-color: color-mix(in oklab, var(--color-sky-500) 14%, transparent); }
+.dark :is(.border-sky-200, .border-sky-300) { border-color: color-mix(in oklab, var(--color-sky-500) 30%, transparent); }
+.dark :is(.text-sky-700, .text-sky-800) { color: var(--color-sky-400); }
+.dark :is(.bg-teal-50, .bg-teal-100) { background-color: color-mix(in oklab, var(--color-teal-500) 14%, transparent); }
+.dark :is(.border-teal-200, .border-teal-300) { border-color: color-mix(in oklab, var(--color-teal-500) 30%, transparent); }
+.dark :is(.text-teal-700, .text-teal-800) { color: var(--color-teal-400); }
+.dark :is(.bg-yellow-50, .bg-yellow-100) { background-color: color-mix(in oklab, var(--color-yellow-500) 14%, transparent); }
+.dark :is(.border-yellow-200, .border-yellow-300) { border-color: color-mix(in oklab, var(--color-yellow-500) 30%, transparent); }
+.dark :is(.text-yellow-700, .text-yellow-800) { color: var(--color-yellow-400); }
+.dark :is(.bg-blue-50, .bg-blue-100) { background-color: color-mix(in oklab, var(--color-blue-500) 14%, transparent); }
+.dark :is(.border-blue-200, .border-blue-300) { border-color: color-mix(in oklab, var(--color-blue-500) 30%, transparent); }
+.dark :is(.text-blue-700, .text-blue-800) { color: var(--color-blue-400); }
+.dark :is(.bg-rose-50, .bg-rose-100) { background-color: color-mix(in oklab, var(--color-rose-500) 14%, transparent); }
+.dark :is(.border-rose-200, .border-rose-300) { border-color: color-mix(in oklab, var(--color-rose-500) 30%, transparent); }
+.dark :is(.text-rose-700, .text-rose-800) { color: var(--color-rose-400); }
+.dark :is(.bg-violet-50, .bg-violet-100) { background-color: color-mix(in oklab, var(--color-violet-500) 14%, transparent); }
+.dark :is(.border-violet-200, .border-violet-300) { border-color: color-mix(in oklab, var(--color-violet-500) 30%, transparent); }
+.dark :is(.text-violet-700, .text-violet-800) { color: var(--color-violet-400); }
+.dark .bg-slate-900 { background-color: var(--color-neutral-950); }
 
 @media print {
     aside, header, .no-print {
@@ -152,7 +169,7 @@ body {
         padding: 0 !important;
     }
 
-    .lg\:pl-64, .lg\:pl-\[72px\] {
+    .lg\:ps-65, .lg\:ps-\[72px\] {
         padding-left: 0 !important;
     }
 }

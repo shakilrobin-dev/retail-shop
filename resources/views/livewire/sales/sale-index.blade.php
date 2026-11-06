@@ -14,12 +14,12 @@
 
     <div class="card overflow-hidden">
         <x-filter-tabs :tabs="$tabs" :active="$status" model="status" />
-        <div class="border-t border-slate-200"></div>
+        <div class="border-t border-card-line"></div>
         <x-list-toolbar :placeholder="__('Invoice no or customer phone')">
-            <div class="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2">
-                <x-icon name="history" class="size-4 text-slate-400" />
+            <div class="flex items-center gap-1 rounded-lg border border-layer-line bg-layer px-2">
+                <x-icon name="history" class="size-4 text-muted-foreground" />
                 <input wire:model.live="from" type="date" class="border-0 py-1.5 text-sm focus:ring-0" title="{{ __('From') }}">
-                <span class="text-slate-400">–</span>
+                <span class="text-muted-foreground">–</span>
                 <input wire:model.live="to" type="date" class="border-0 py-1.5 text-sm focus:ring-0" title="{{ __('To') }}">
             </div>
             <select wire:model.live="userId" class="form-input w-40">
@@ -51,19 +51,19 @@
                     @forelse ($sales as $sale)
                         <tr wire:key="sale-{{ $sale->id }}" x-on:click="Livewire.navigate('{{ route('sales.show', $sale) }}')" class="cursor-pointer">
                             <x-table.check :value="$sale->id" />
-                            <td class="font-mono text-xs font-medium text-slate-900">{{ $sale->invoice_no }}</td>
-                            <td class="whitespace-nowrap text-slate-600">{{ shop_digits($sale->sold_at?->format('d M Y')) }}<div class="text-xs text-slate-400">{{ shop_digits($sale->sold_at?->format('h:i A')) }}</div></td>
+                            <td class="font-mono text-xs font-medium text-foreground">{{ $sale->invoice_no }}</td>
+                            <td class="whitespace-nowrap text-muted-foreground-2">{{ shop_digits($sale->sold_at?->format('d M Y')) }}<div class="text-xs text-muted-foreground">{{ shop_digits($sale->sold_at?->format('h:i A')) }}</div></td>
                             <td>
                                 @if ($sale->customer)
                                     <div class="flex items-center gap-2"><x-avatar :name="$sale->customer->name" size="size-6" /> <span>{{ $sale->customer->name }}</span></div>
                                 @else
-                                    <span class="text-slate-400">{{ __('Walk-in') }}</span>
+                                    <span class="text-muted-foreground">{{ __('Walk-in') }}</span>
                                 @endif
                             </td>
                             <td class="text-right tabular-nums">{{ shop_digits($sale->items_count) }}</td>
-                            <td class="text-right font-semibold tabular-nums text-slate-900">{{ money($sale->total) }}</td>
+                            <td class="text-right font-semibold tabular-nums text-foreground">{{ money($sale->total) }}</td>
                             <td><x-badge :tone="$sale->status === \App\Enums\SaleStatus::Voided ? 'red' : 'green'">{{ $sale->status->label() }}</x-badge></td>
-                            <td class="text-slate-500">{{ $sale->user?->name }}</td>
+                            <td class="text-muted-foreground-1">{{ $sale->user?->name }}</td>
                             <td class="text-right" x-on:click.stop>
                                 <a href="{{ route('sales.receipt', $sale) }}" target="_blank" class="btn-ghost btn-sm" title="{{ __('Print') }}"><x-icon name="printer" class="size-4" /></a>
                             </td>

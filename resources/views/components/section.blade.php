@@ -6,7 +6,7 @@
         <div class="card-header">
             <div>
                 @if ($title)<h2 class="card-title">{{ $title }}</h2>@endif
-                @if ($description)<p class="mt-0.5 text-xs text-slate-500">{{ $description }}</p>@endif
+                @if ($description)<p class="mt-0.5 text-xs text-muted-foreground-1">{{ $description }}</p>@endif
             </div>
             @if ($actions)<div class="flex items-center gap-2">{{ $actions }}</div>@endif
         </div>

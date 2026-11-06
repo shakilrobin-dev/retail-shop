@@ -16,7 +16,7 @@
     $currentTab = request()->routeIs('settings.general') ? (request('tab') ?: ($tab ?? 'shop')) : null;
 @endphp
 <x-page-header class="mb-0" :title="__('Settings')" :subtitle="__('Control how the shop, POS, receipts and staff work.')" />
-<nav class="-mt-1 flex gap-5 overflow-x-auto border-b border-slate-200">
+<nav class="-mt-1 flex gap-5 overflow-x-auto border-b border-card-line">
     @foreach ($settingsNav as [$routeName, $params, $label, $tabKey])
         @php $active = request()->routeIs($routeName) && ($tabKey === null || $currentTab === $tabKey); @endphp
         <a href="{{ route($routeName, $params) }}" wire:navigate class="{{ $active ? 'tab-link-active' : 'tab-link' }}">{{ $label }}</a>

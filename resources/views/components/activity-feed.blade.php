@@ -46,30 +46,30 @@
             <x-avatar :name="$who" size="size-7" />
             <div class="min-w-0 flex-1">
                 <div class="text-[13px]">
-                    <span class="font-medium text-slate-800">{{ $who }}</span>
-                    <span class="text-slate-500">{{ $events[$activity->event] ?? $activity->description }}</span>
+                    <span class="font-medium text-foreground">{{ $who }}</span>
+                    <span class="text-muted-foreground-1">{{ $events[$activity->event] ?? $activity->description }}</span>
                     @if ($subjects->count() > 1 && $activity->subject_type !== $subjects->first()->getMorphClass())
-                        <span class="text-slate-500">· {{ class_basename($activity->subject_type) === 'ProductUnit' ? __('unit') : class_basename($activity->subject_type) }}</span>
+                        <span class="text-muted-foreground-1">· {{ class_basename($activity->subject_type) === 'ProductUnit' ? __('unit') : class_basename($activity->subject_type) }}</span>
                     @endif
-                    <span class="text-xs text-slate-400" title="{{ $activity->created_at->format('d M Y h:i A') }}">· {{ $activity->created_at->diffForHumans() }}</span>
+                    <span class="text-xs text-muted-foreground" title="{{ $activity->created_at->format('d M Y h:i A') }}">· {{ $activity->created_at->diffForHumans() }}</span>
                 </div>
                 @if ($activity->event === 'updated' && $new)
-                    <ul class="mt-1 space-y-0.5 text-xs text-slate-600">
+                    <ul class="mt-1 space-y-0.5 text-xs text-muted-foreground-2">
                         @foreach ($new as $field => $value)
                             <li>
-                                <span class="text-slate-500">{{ __(Str::headline($field)) }}:</span>
-                                <span class="text-slate-400 line-through">{{ $format($old[$field] ?? null) }}</span>
-                                <span class="text-slate-400">→</span>
-                                <span class="font-medium text-slate-800">{{ $format($value) }}</span>
+                                <span class="text-muted-foreground-1">{{ __(Str::headline($field)) }}:</span>
+                                <span class="text-muted-foreground line-through">{{ $format($old[$field] ?? null) }}</span>
+                                <span class="text-muted-foreground">→</span>
+                                <span class="font-medium text-foreground">{{ $format($value) }}</span>
                             </li>
                         @endforeach
                     </ul>
                 @elseif ($activity->event !== 'updated' && $activity->event !== 'created' && $activity->description)
-                    <p class="mt-0.5 text-xs text-slate-600">{{ $activity->description }}</p>
+                    <p class="mt-0.5 text-xs text-muted-foreground-2">{{ $activity->description }}</p>
                 @endif
             </div>
         </div>
     @empty
-        <p class="text-sm text-slate-500">{{ __('No changes recorded yet.') }}</p>
+        <p class="text-sm text-muted-foreground-1">{{ __('No changes recorded yet.') }}</p>
     @endforelse
 </div>

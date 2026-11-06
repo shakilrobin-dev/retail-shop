@@ -4,14 +4,14 @@
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="flex flex-wrap items-center gap-2">
-        <div class="inline-flex rounded-lg bg-slate-200 p-0.5 text-sm">
-            <button type="button" wire:click="$set('mode', 'change')" @class(['rounded-md px-3 py-1.5', 'bg-white shadow-sm font-medium' => $mode === 'change'])>{{ __('Add / remove stock') }}</button>
-            <button type="button" wire:click="$set('mode', 'count')" @class(['rounded-md px-3 py-1.5', 'bg-white shadow-sm font-medium' => $mode === 'count'])>{{ __('Stock count (scan shelf)') }}</button>
+        <div class="inline-flex rounded-lg bg-surface-1 p-0.5 text-sm">
+            <button type="button" wire:click="$set('mode', 'change')" @class(['rounded-md px-3 py-1.5', 'bg-layer shadow-sm font-medium' => $mode === 'change'])>{{ __('Add / remove stock') }}</button>
+            <button type="button" wire:click="$set('mode', 'count')" @class(['rounded-md px-3 py-1.5', 'bg-layer shadow-sm font-medium' => $mode === 'count'])>{{ __('Stock count (scan shelf)') }}</button>
         </div>
     </div>
 
     <div class="card space-y-3 p-5">
-        <p class="text-sm text-slate-500">
+        <p class="text-sm text-muted-foreground-1">
             {{ $mode === 'count'
                 ? __('Scan every item on the shelf (each scan adds 1), or type the counted number. The system saves the difference.')
                 : __('Enter a minus number to remove (e.g. -2 damaged) or a plus number to add (e.g. 3 found). Quantities are in pieces.') }}
@@ -32,7 +32,7 @@
                         <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-8 text-center text-slate-400">{{ __('Scan products to add them.') }}</td></tr>
+                    <tr><td colspan="5" class="py-8 text-center text-muted-foreground">{{ __('Scan products to add them.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -57,12 +57,12 @@
                     <tr wire:key="radj-{{ $adjustment->id }}">
                         <td class="whitespace-nowrap">{{ shop_digits($adjustment->created_at->format('d M Y')) }}</td>
                         <td class="font-mono text-xs">{{ $adjustment->reference_no }}</td>
-                        <td>{{ $adjustment->reason->label() }}@if ($adjustment->note)<div class="text-xs text-slate-400">{{ $adjustment->note }}</div>@endif</td>
+                        <td>{{ $adjustment->reason->label() }}@if ($adjustment->note)<div class="text-xs text-muted-foreground">{{ $adjustment->note }}</div>@endif</td>
                         <td class="text-xs">@foreach ($adjustment->items as $item)<div>{{ $item->product->name }}: {{ $item->quantity > 0 ? '+' : '' }}{{ shop_digits($item->quantity + 0) }}</div>@endforeach</td>
-                        <td class="text-slate-500">{{ $adjustment->user?->name }}</td>
+                        <td class="text-muted-foreground-1">{{ $adjustment->user?->name }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-6 text-center text-slate-500">{{ __('No adjustments yet.') }}</td></tr>
+                    <tr><td colspan="5" class="py-6 text-center text-muted-foreground-1">{{ __('No adjustments yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

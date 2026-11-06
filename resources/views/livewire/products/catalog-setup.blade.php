@@ -6,10 +6,10 @@
         @endif
     </x-page-header>
 
-    <div class="mb-5 flex gap-6 border-b border-slate-200">
+    <div class="mb-5 flex gap-6 border-b border-card-line">
         @foreach (['categories' => [__('Categories'), $categoryCount], 'brands' => [__('Brands'), $brands->count()], 'units' => [__('Base units'), $units->count()]] as $key => [$label, $count])
             <button type="button" wire:click="$set('tab', '{{ $key }}')" class="{{ $tab === $key ? 'tab-link-active' : 'tab-link' }}">
-                {{ $label }} <span class="rounded-full bg-slate-100 px-1.5 text-[11px] text-slate-600">{{ shop_digits($count) }}</span>
+                {{ $label }} <span class="rounded-full bg-surface px-1.5 text-[11px] text-muted-foreground-2">{{ shop_digits($count) }}</span>
             </button>
         @endforeach
     </div>
@@ -33,27 +33,27 @@
                         @endphp
                         <div wire:key="cat-{{ $category->id }}"
                             @if ($categorySearch === '') x-show="! {{ json_encode($ancestorIds) }}.some(id => closed.includes(id))" @endif
-                            @class(['group flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50', 'opacity-50' => ! $category->is_active])>
+                            @class(['group flex items-center gap-2 px-4 py-2.5 hover:bg-layer-hover', 'opacity-50' => ! $category->is_active])>
                             <div class="flex min-w-0 flex-1 items-center gap-1.5" style="padding-left: {{ $row['depth'] * 22 }}px">
                                 @if ($row['has_children'] && $categorySearch === '')
                                     <button type="button" x-on:click="closed.includes({{ $category->id }}) ? closed = closed.filter(i => i !== {{ $category->id }}) : closed.push({{ $category->id }})"
-                                        class="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="{{ __('Expand / collapse') }}">
+                                        class="rounded p-0.5 text-muted-foreground hover:bg-muted-hover hover:text-foreground" aria-label="{{ __('Expand / collapse') }}">
                                         <span x-show="! closed.includes({{ $category->id }})"><x-icon name="chevron-down" class="size-4" /></span>
                                         <span x-show="closed.includes({{ $category->id }})" x-cloak><x-icon name="chevron-right" class="size-4" /></span>
                                     </button>
                                 @else
                                     <span class="w-5"></span>
                                 @endif
-                                <x-icon name="folder" @class(['size-4 shrink-0', 'text-brand-500' => $row['depth'] === 0, 'text-amber-500' => $row['depth'] === 1, 'text-slate-400' => $row['depth'] > 1]) />
+                                <x-icon name="folder" @class(['size-4 shrink-0', 'text-primary-500' => $row['depth'] === 0, 'text-amber-500' => $row['depth'] === 1, 'text-muted-foreground' => $row['depth'] > 1]) />
                                 <div class="min-w-0">
-                                    <div @class(['truncate text-sm', 'font-semibold text-slate-900' => $row['depth'] === 0, 'text-slate-700' => $row['depth'] > 0])>
+                                    <div @class(['truncate text-sm', 'font-semibold text-foreground' => $row['depth'] === 0, 'text-foreground' => $row['depth'] > 0])>
                                         {{ $categorySearch !== '' ? $row['path'] : $category->name }}
-                                        @if ($category->name_bn && app()->getLocale() !== 'bn')<span class="ml-1 text-xs font-normal text-slate-400">{{ $category->name_bn }}</span>@endif
+                                        @if ($category->name_bn && app()->getLocale() !== 'bn')<span class="ml-1 text-xs font-normal text-muted-foreground">{{ $category->name_bn }}</span>@endif
                                     </div>
                                 </div>
                                 @unless ($category->is_active)<x-badge>{{ __('Hidden') }}</x-badge>@endunless
                             </div>
-                            <a href="{{ route('products.index', ['categoryId' => $category->id]) }}" wire:navigate class="shrink-0 text-xs text-slate-500 hover:text-brand-700" title="{{ __('Products in this category and below') }}">
+                            <a href="{{ route('products.index', ['categoryId' => $category->id]) }}" wire:navigate class="shrink-0 text-xs text-muted-foreground-1 hover:text-primary-700" title="{{ __('Products in this category and below') }}">
                                 {{ trans_choice(':count product|:count products', $totals[$category->id] ?? 0, ['count' => shop_digits($totals[$category->id] ?? 0)]) }}
                             </a>
                             <div class="flex shrink-0 items-center gap-1 opacity-60 transition group-hover:opacity-100">
@@ -102,11 +102,11 @@
                 @endif
 
                 <x-section :title="__('How categories work')">
-                    <ul class="space-y-2 text-sm text-slate-600">
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('Use "Sub" to add a category inside another. Up to :levels levels.', ['levels' => \App\Services\CategoryTree::MAX_DEPTH]) }}</li>
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('Filtering by a category also shows products in all its sub-categories.') }}</li>
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('To move a category, edit it and choose a new parent.') }}</li>
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('Hidden categories cannot be chosen for new products.') }}</li>
+                    <ul class="space-y-2 text-sm text-muted-foreground-2">
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('Use "Sub" to add a category inside another. Up to :levels levels.', ['levels' => \App\Services\CategoryTree::MAX_DEPTH]) }}</li>
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('Filtering by a category also shows products in all its sub-categories.') }}</li>
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('To move a category, edit it and choose a new parent.') }}</li>
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('Hidden categories cannot be chosen for new products.') }}</li>
                     </ul>
                 </x-section>
             </div>
@@ -156,7 +156,7 @@
                     <input wire:model="unitNameBn" type="text" placeholder="{{ __('Name (Bangla)') }}" class="form-input">
                     <input wire:model="unitShortName" type="text" placeholder="{{ __('Short name') }}" class="form-input">
                     @error('unitShortName') <p class="form-error">{{ $message }}</p> @enderror
-                    <label class="flex items-center gap-2 text-sm text-slate-600"><input wire:model="unitAllowsDecimal" type="checkbox" class="rounded border-slate-300"> {{ __('Allows decimals (meter)') }}</label>
+                    <label class="flex items-center gap-2 text-sm text-muted-foreground-2"><input wire:model="unitAllowsDecimal" type="checkbox" class="rounded border-layer-line"> {{ __('Allows decimals (meter)') }}</label>
                     <div class="flex justify-end"><button type="submit" class="btn-primary">{{ __('Add unit') }}</button></div>
                 </form>
             </x-section>

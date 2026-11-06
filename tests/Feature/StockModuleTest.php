@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\StockMovementType;
 use App\Enums\TransferStatus;
+use App\Livewire\Products\ProductIndex;
 use App\Livewire\Stock\StockAdjustmentForm;
+use App\Livewire\Stock\StockOverview;
 use App\Livewire\Stock\StockTransferForm;
 use App\Livewire\Stock\StockTransferShow;
 use App\Models\Branch;
@@ -116,5 +118,25 @@ class StockModuleTest extends TestCase
         $this->get(route('stock.adjust'))->assertOk();
         $this->get(route('stock.transfers.index'))->assertOk();
         $this->get(route('stock.transfers.create'))->assertOk();
+    }
+
+    public function test_lists_sort_by_every_column(): void
+    {
+        $user = $this->actingAsRole('admin');
+        $product = $this->makeProduct(['name' => 'Earbuds']);
+        app(StockService::class)->move($user->branch, $product, 3, StockMovementType::Opening);
+
+        foreach (['name', 'stock', 'alert', 'value'] as $column) {
+            Livewire::test(StockOverview::class)->call('sortBy', $column)->call('sortBy', $column)->assertSee('Earbuds');
+        }
+
+        foreach (['name', 'sku', 'price', 'cost', 'stock'] as $column) {
+            Livewire::test(ProductIndex::class)->call('sortBy', $column)->assertSee('Earbuds');
+        }
+
+        Livewire::test(ProductIndex::class)
+            ->set('selected', [(string) $product->id])
+            ->call('bulkSetActive', false);
+        $this->assertFalse($product->fresh()->is_active);
     }
 }

@@ -12,16 +12,16 @@
     @endif
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
-        <div><div class="text-slate-500">{{ __('Invoice') }}</div><div class="font-mono font-medium">{{ $sale->invoice_no }}</div></div>
-        <div><div class="text-slate-500">{{ __('Date') }}</div><div>{{ shop_digits($sale->sold_at->format('d M Y h:i A')) }}</div></div>
-        <div><div class="text-slate-500">{{ __('Customer') }}</div><div>
+        <div><div class="text-muted-foreground-1">{{ __('Invoice') }}</div><div class="font-mono font-medium">{{ $sale->invoice_no }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Date') }}</div><div>{{ shop_digits($sale->sold_at->format('d M Y h:i A')) }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Customer') }}</div><div>
             @if ($sale->customer)
-                <a href="{{ route('customers.show', $sale->customer) }}" class="text-brand-600 hover:underline" wire:navigate>{{ $sale->customer->name }}</a> · {{ $sale->customer->phone }}
+                <a href="{{ route('customers.show', $sale->customer) }}" class="text-primary-600 hover:underline" wire:navigate>{{ $sale->customer->name }}</a> · {{ $sale->customer->phone }}
             @else
                 {{ __('Walk-in') }}
             @endif
         </div></div>
-        <div><div class="text-slate-500">{{ __('Cashier') }}</div><div>{{ $sale->user?->name }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Cashier') }}</div><div>{{ $sale->user?->name }}</div></div>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -65,11 +65,11 @@
             <tbody>
                 @foreach ($sale->items as $item)
                     <tr wire:key="sitem-{{ $item->id }}">
-                        <td>{{ $item->product_name }}@if ($item->unit_quantity > 1) <span class="text-xs text-slate-500">({{ $item->unit_name }})</span>@endif
-                            @if ($item->warranty_days)<div class="text-xs text-slate-400">{{ __('Warranty till :date', ['date' => shop_digits($sale->sold_at->copy()->addDays($item->warranty_days)->format('d M Y'))]) }}</div>@endif
+                        <td>{{ $item->product_name }}@if ($item->unit_quantity > 1) <span class="text-xs text-muted-foreground-1">({{ $item->unit_name }})</span>@endif
+                            @if ($item->warranty_days)<div class="text-xs text-muted-foreground">{{ __('Warranty till :date', ['date' => shop_digits($sale->sold_at->copy()->addDays($item->warranty_days)->format('d M Y'))]) }}</div>@endif
                         </td>
                         <td class="text-right">{{ shop_digits($item->quantity + 0) }}</td>
-                        <td class="text-right tabular-nums">{{ money($item->unit_price) }}@if ($item->discount_amount > 0)<div class="text-xs text-slate-400">− {{ money($item->discount_amount) }}</div>@endif</td>
+                        <td class="text-right tabular-nums">{{ money($item->unit_price) }}@if ($item->discount_amount > 0)<div class="text-xs text-muted-foreground">− {{ money($item->discount_amount) }}</div>@endif</td>
                         <td class="text-right tabular-nums">{{ money($item->line_total) }}</td>
                         <td class="text-right">{{ $item->returned_quantity > 0 ? shop_digits($item->returned_quantity + 0) : '—' }}</td>
                         @if ($showReturn)
@@ -77,7 +77,7 @@
                                 <input wire:model="returns.{{ $item->id }}.quantity" type="number" step="any" min="0" max="{{ $item->quantity - $item->returned_quantity }}" class="form-input">
                                 @error("returns.$item->id.quantity") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
-                            <td><label class="flex items-center gap-1 text-xs"><input wire:model="returns.{{ $item->id }}.restock" type="checkbox" class="rounded border-slate-300"> {{ __('Good condition') }}</label></td>
+                            <td><label class="flex items-center gap-1 text-xs"><input wire:model="returns.{{ $item->id }}.restock" type="checkbox" class="rounded border-layer-line"> {{ __('Good condition') }}</label></td>
                         @endif
                     </tr>
                 @endforeach
@@ -91,7 +91,7 @@
         </table>
 
         @if ($showReturn)
-            <div class="grid gap-3 border-t border-slate-200 p-5 md:grid-cols-4">
+            <div class="grid gap-3 border-t border-card-line p-5 md:grid-cols-4">
                 @error('returns') <p class="form-error md:col-span-4">{{ $message }}</p> @enderror
                 <div>
                     <label class="form-label">{{ __('Refund by') }}</label>
@@ -106,7 +106,7 @@
                     <input wire:model="return_reason" type="text" class="form-input">
                 </div>
                 <div class="flex items-end"><button type="submit" class="btn-danger w-full">{{ __('Save return & refund') }}</button></div>
-                <p class="text-xs text-slate-500 md:col-span-4">{{ __('For an exchange: save the return here, then sell the new item in POS.') }}</p>
+                <p class="text-xs text-muted-foreground-1 md:col-span-4">{{ __('For an exchange: save the return here, then sell the new item in POS.') }}</p>
             </div>
         @endif
     </form>
@@ -116,23 +116,23 @@
             <h3 class="mb-2 font-semibold">{{ __('Payments') }}</h3>
             @foreach ($sale->payments as $payment)
                 <div class="flex justify-between py-1">
-                    <span>{{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-slate-400">({{ $payment->transaction_ref }})</span>@endif</span>
+                    <span>{{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-muted-foreground">({{ $payment->transaction_ref }})</span>@endif</span>
                     <span @class(['tabular-nums', 'text-red-700' => $payment->direction === \App\Enums\PaymentDirection::Out])>{{ money($payment->amount) }}</span>
                 </div>
             @endforeach
-            @if ($sale->change_amount > 0)<div class="flex justify-between py-1 text-slate-500"><span>{{ __('Change given') }}</span><span class="tabular-nums">{{ money($sale->change_amount) }}</span></div>@endif
-            @if ($sale->note)<p class="mt-3 text-slate-600">{{ $sale->note }}</p>@endif
+            @if ($sale->change_amount > 0)<div class="flex justify-between py-1 text-muted-foreground-1"><span>{{ __('Change given') }}</span><span class="tabular-nums">{{ money($sale->change_amount) }}</span></div>@endif
+            @if ($sale->note)<p class="mt-3 text-muted-foreground-2">{{ $sale->note }}</p>@endif
         </div>
         @if ($sale->returns->isNotEmpty())
             <div class="card p-5 text-sm">
                 <h3 class="mb-2 font-semibold">{{ __('Returns') }}</h3>
                 @foreach ($sale->returns as $return)
-                    <div class="border-b border-slate-100 py-2 last:border-0">
+                    <div class="border-b border-card-divider py-2 last:border-0">
                         <div class="flex justify-between"><span class="font-mono text-xs">{{ $return->reference_no }} · {{ shop_digits($return->created_at->format('d M Y')) }} · {{ $return->user?->name }}</span><span class="tabular-nums">{{ money($return->total) }}</span></div>
                         @foreach ($return->items as $returnItem)
-                            <div class="text-xs text-slate-500">{{ $returnItem->saleItem->product_name }} × {{ shop_digits($returnItem->quantity + 0) }} @unless ($returnItem->restock)({{ __('damaged') }})@endunless</div>
+                            <div class="text-xs text-muted-foreground-1">{{ $returnItem->saleItem->product_name }} × {{ shop_digits($returnItem->quantity + 0) }} @unless ($returnItem->restock)({{ __('damaged') }})@endunless</div>
                         @endforeach
-                        @if ($return->reason)<div class="text-xs text-slate-500">{{ $return->reason }}</div>@endif
+                        @if ($return->reason)<div class="text-xs text-muted-foreground-1">{{ $return->reason }}</div>@endif
                     </div>
                 @endforeach
             </div>

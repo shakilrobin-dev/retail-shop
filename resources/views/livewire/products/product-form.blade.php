@@ -14,9 +14,9 @@
     {{-- Control panel --}}
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div class="min-w-0">
-            <a href="{{ route('products.index') }}" wire:navigate class="text-sm font-medium text-brand-600 hover:underline">{{ __('Products') }}</a>
-            <span class="mx-1 text-slate-300">/</span>
-            <span class="text-sm text-slate-700">{{ $product ? $product->name : __('New') }}</span>
+            <a href="{{ route('products.index') }}" wire:navigate class="text-sm font-medium text-primary-600 hover:underline">{{ __('Products') }}</a>
+            <span class="mx-1 text-muted-foreground">/</span>
+            <span class="text-sm text-foreground">{{ $product ? $product->name : __('New') }}</span>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             @if ($product)
@@ -24,7 +24,7 @@
                     <x-dropdown-item icon="clipboard" wire:click="duplicate">{{ __('Duplicate') }}</x-dropdown-item>
                     <x-dropdown-item icon="tag" :href="route('labels.index', ['product' => $product->id])" wire:navigate>{{ __('Print labels') }}</x-dropdown-item>
                     <x-dropdown-item icon="history" :href="route('stock.movements', ['productId' => $product->id])" wire:navigate>{{ __('Stock history') }}</x-dropdown-item>
-                    <div class="my-1 border-t border-slate-100"></div>
+                    <div class="my-1 border-t border-card-divider"></div>
                     <x-dropdown-item :icon="$is_active ? 'eye-off' : 'eye'" wire:click="toggleArchive" :danger="$is_active">{{ $is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
                 </x-dropdown>
             @endif
@@ -48,7 +48,7 @@
         {{-- Sheet --}}
         <div class="card">
             @if ($product)
-                <div class="flex flex-wrap justify-end gap-2 border-b border-slate-100 px-5 py-3">
+                <div class="flex flex-wrap justify-end gap-2 border-b border-card-divider px-5 py-3">
                     <x-smart-button icon="archive" :label="__('On hand')" :value="shop_digits($stats['onHand'] + 0).' '.$baseUnitName" :href="route('stock.movements', ['productId' => $product->id])" />
                     <x-smart-button icon="building" :label="__('All branches')" :value="shop_digits($stats['allBranches'] + 0)" />
                     <x-smart-button icon="trending-up" :label="__('Sold (30 days)')" :value="shop_digits($stats['sold30'] + 0)" />
@@ -58,16 +58,16 @@
 
             <div class="px-6 pb-2 pt-6">
                 <div class="flex items-start gap-4">
-                    <span class="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400"><x-icon name="cube" class="size-7" /></span>
+                    <span class="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-layer-line bg-muted text-muted-foreground"><x-icon name="cube" class="size-7" /></span>
                     <div class="min-w-0 flex-1">
-                        <label for="name" class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Product name') }}</label>
+                        <label for="name" class="text-xs font-medium uppercase tracking-wide text-muted-foreground-1">{{ __('Product name') }}</label>
                         <input wire:model="name" id="name" type="text" autofocus placeholder="{{ __('e.g. 20W Fast Charger Type-C') }}"
-                            class="mt-0.5 block w-full border-0 border-b-2 border-slate-200 bg-transparent px-0 py-1 text-2xl font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-300 focus:border-brand-500 focus:outline-none focus:ring-0">
+                            class="mt-0.5 block w-full border-0 border-b-2 border-card-line bg-transparent px-0 py-1 text-2xl font-semibold text-foreground placeholder:font-normal placeholder:text-muted-foreground focus:border-primary-500 focus:outline-none focus:ring-0">
                         @error('name') <p class="form-error">{{ $message }}</p> @enderror
                         <input wire:model="name_bn" type="text" placeholder="{{ __('Name in Bangla (optional)') }}"
-                            class="mt-2 block w-full border-0 border-b border-dashed border-slate-200 bg-transparent px-0 py-1 text-sm text-slate-700 placeholder:text-slate-300 focus:border-brand-500 focus:outline-none focus:ring-0">
+                            class="mt-2 block w-full border-0 border-b border-dashed border-card-line bg-transparent px-0 py-1 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary-500 focus:outline-none focus:ring-0">
                     </div>
-                    <label class="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500' }}">
+                    <label class="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-card-line bg-muted text-muted-foreground-1' }}">
                         <input wire:model.live="is_active" type="checkbox" class="sr-only">
                         <span class="size-2 rounded-full {{ $is_active ? 'bg-emerald-500' : 'bg-slate-400' }}"></span>
                         {{ $is_active ? __('Active') : __('Archived') }}
@@ -76,7 +76,7 @@
             </div>
 
             {{-- Notebook tabs --}}
-            <div class="mt-4 flex gap-6 border-b border-slate-200 px-6">
+            <div class="mt-4 flex gap-6 border-b border-card-line px-6">
                 @foreach (['general' => __('General information'), 'units' => __('Units & barcodes'), 'pricing' => __('Pricing & stock')] as $key => $label)
                     <button type="button" x-on:click="tab = '{{ $key }}'" :class="tab === '{{ $key }}' ? 'tab-link-active' : 'tab-link'">
                         {{ $label }}
@@ -91,7 +91,7 @@
                     <div class="space-y-4">
                         <x-form.field :label="__('Category')" for="category_id" required error="category_id">
                             <x-category-select wire:model="category_id" id="category_id" :options="$categoryOptions" :placeholder="__('Choose...')" />
-                            <a href="{{ route('catalog.setup') }}" target="_blank" class="mt-1 inline-block text-xs text-brand-600 hover:underline">{{ __('Manage categories') }} ↗</a>
+                            <a href="{{ route('catalog.setup') }}" target="_blank" class="mt-1 inline-block text-xs text-primary-600 hover:underline">{{ __('Manage categories') }} ↗</a>
                         </x-form.field>
                         <x-form.field :label="__('Brand')" for="brand_id">
                             <div class="flex gap-2">
@@ -133,12 +133,12 @@
                 {{-- Units & barcodes --}}
                 <div x-show="tab === 'units'" x-cloak class="space-y-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
-                        <p class="max-w-2xl text-sm text-slate-500">{{ $unitsHelp }}</p>
+                        <p class="max-w-2xl text-sm text-muted-foreground-1">{{ $unitsHelp }}</p>
                         <button type="button" wire:click="addPack" class="btn-secondary btn-sm"><x-icon name="plus" class="size-3.5" /> {{ __('Add pack / box') }}</button>
                     </div>
                     @error('units') <p class="form-error">{{ $message }}</p> @enderror
 
-                    <div class="overflow-hidden rounded-lg border border-slate-200">
+                    <div class="overflow-hidden rounded-lg border border-card-line">
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -155,7 +155,7 @@
                                     <tr wire:key="unit-{{ $unitIndex }}" class="hover:bg-transparent">
                                         <td class="align-top">
                                             <input wire:model="units.{{ $unitIndex }}.name" type="text" class="form-input" @disabled($unit['is_base'])>
-                                            <span class="mt-1 block text-[11px] font-medium uppercase tracking-wide {{ $unit['is_base'] ? 'text-brand-600' : 'text-slate-400' }}">{{ $unit['is_base'] ? __('Base unit') : __('Pack / box') }}</span>
+                                            <span class="mt-1 block text-[11px] font-medium uppercase tracking-wide {{ $unit['is_base'] ? 'text-primary-600' : 'text-muted-foreground' }}">{{ $unit['is_base'] ? __('Base unit') : __('Pack / box') }}</span>
                                             @error("units.$unitIndex.name") <p class="form-error">{{ $message }}</p> @enderror
                                         </td>
                                         <td class="align-top"><input wire:model="units.{{ $unitIndex }}.name_bn" type="text" class="form-input" @disabled($unit['is_base'])></td>
@@ -179,7 +179,7 @@
                                                     @error("units.$unitIndex.barcodes.$barcodeIndex.code") <p class="form-error">{{ $message }}</p> @enderror
                                                 </div>
                                             @endforeach
-                                            <button type="button" wire:click="addBarcode({{ $unitIndex }})" class="text-xs font-medium text-brand-600 hover:underline">+ {{ __('another barcode') }}</button>
+                                            <button type="button" wire:click="addBarcode({{ $unitIndex }})" class="text-xs font-medium text-primary-600 hover:underline">+ {{ __('another barcode') }}</button>
                                         </td>
                                         <td class="align-top">
                                             @unless ($unit['is_base'])
@@ -196,7 +196,7 @@
                 {{-- Pricing & stock --}}
                 <div x-show="tab === 'pricing'" x-cloak class="grid gap-x-10 gap-y-4 lg:grid-cols-2">
                     <div class="space-y-4">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Pricing') }}</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Pricing') }}</h3>
                         @can('products.view-cost')
                             <x-form.field :label="__('Cost price')" for="cost_price" required error="cost_price" :hint="__('Per base unit. Updated automatically from purchases (average cost).')">
                                 <input wire:model="cost_price" id="cost_price" type="number" step="0.01" min="0" class="form-input w-44 text-right">
@@ -210,10 +210,10 @@
                                 <input wire:model="vat_rate" id="vat_rate" type="number" step="0.01" min="0" class="form-input w-28 text-right">
                             </x-form.field>
                         @endif
-                        <p class="text-xs text-slate-500">{{ __('Selling prices are set per unit in "Units & barcodes".') }}</p>
+                        <p class="text-xs text-muted-foreground-1">{{ __('Selling prices are set per unit in "Units & barcodes".') }}</p>
                     </div>
                     <div class="space-y-4">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Inventory') }}</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Inventory') }}</h3>
                         <x-form.field :label="__('Low stock alert at')" for="reorder_level" :hint="__('Shown on the dashboard when stock falls to this level.')">
                             <input wire:model="reorder_level" id="reorder_level" type="number" step="1" min="0" class="form-input w-28 text-right">
                         </x-form.field>
@@ -235,10 +235,10 @@
                 </x-section>
             @else
                 <x-section :title="__('Tips')">
-                    <ul class="space-y-3 text-sm text-slate-600">
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('Scan the maker barcode into the barcode box, or press Generate to make a shop barcode.') }}</li>
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('Sell by box too? Add a pack in "Units & barcodes" with its own price and barcode.') }}</li>
-                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-brand-500" /> {{ __('After saving you can print barcode labels straight away.') }}</li>
+                    <ul class="space-y-3 text-sm text-muted-foreground-2">
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('Scan the maker barcode into the barcode box, or press Generate to make a shop barcode.') }}</li>
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('Sell by box too? Add a pack in "Units & barcodes" with its own price and barcode.') }}</li>
+                        <li class="flex gap-2"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-primary-500" /> {{ __('After saving you can print barcode labels straight away.') }}</li>
                     </ul>
                 </x-section>
             @endif

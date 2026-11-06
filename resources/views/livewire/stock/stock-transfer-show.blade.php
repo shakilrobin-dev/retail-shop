@@ -4,11 +4,11 @@
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
-        <div><div class="text-slate-500">{{ __('No') }}</div><div class="font-mono font-medium">{{ $transfer->reference_no }}</div></div>
-        <div><div class="text-slate-500">{{ __('From') }}</div><div>{{ $transfer->fromBranch->localName() }}</div><div class="text-xs text-slate-400">{{ $transfer->sender?->name }} · {{ shop_digits($transfer->sent_at?->format('d M h:i A')) }}</div></div>
-        <div><div class="text-slate-500">{{ __('To') }}</div><div>{{ $transfer->toBranch->localName() }}</div>@if ($transfer->received_at)<div class="text-xs text-slate-400">{{ $transfer->receiver?->name }} · {{ shop_digits($transfer->received_at->format('d M h:i A')) }}</div>@endif</div>
-        <div><div class="text-slate-500">{{ __('Status') }}</div><div class="font-medium">{{ $transfer->status->label() }}</div></div>
-        @if ($transfer->note)<div class="text-slate-600 md:col-span-4">{{ $transfer->note }}</div>@endif
+        <div><div class="text-muted-foreground-1">{{ __('No') }}</div><div class="font-mono font-medium">{{ $transfer->reference_no }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('From') }}</div><div>{{ $transfer->fromBranch->localName() }}</div><div class="text-xs text-muted-foreground">{{ $transfer->sender?->name }} · {{ shop_digits($transfer->sent_at?->format('d M h:i A')) }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('To') }}</div><div>{{ $transfer->toBranch->localName() }}</div>@if ($transfer->received_at)<div class="text-xs text-muted-foreground">{{ $transfer->receiver?->name }} · {{ shop_digits($transfer->received_at->format('d M h:i A')) }}</div>@endif</div>
+        <div><div class="text-muted-foreground-1">{{ __('Status') }}</div><div class="font-medium">{{ $transfer->status->label() }}</div></div>
+        @if ($transfer->note)<div class="text-muted-foreground-2 md:col-span-4">{{ $transfer->note }}</div>@endif
     </div>
 
     <div class="card overflow-x-auto">

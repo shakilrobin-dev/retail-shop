@@ -39,18 +39,18 @@
         {{-- Job info --}}
         <div class="card space-y-3 p-5 text-sm lg:col-span-2">
             <div class="grid gap-3 sm:grid-cols-3">
-                <div><div class="text-slate-500">{{ __('Job no') }}</div><div class="font-mono font-semibold">{{ $job->job_no }}</div></div>
-                <div><div class="text-slate-500">{{ __('Customer') }}</div><a href="{{ route('customers.show', $job->customer) }}" class="text-brand-600 hover:underline" wire:navigate>{{ $job->customer->name }}</a><div>{{ $job->customer->phone }}</div></div>
-                <div><div class="text-slate-500">{{ __('Received') }}</div><div>{{ shop_digits($job->created_at->format('d M Y h:i A')) }}</div><div class="text-xs text-slate-400">{{ $job->receiver?->name }}</div></div>
-                <div><div class="text-slate-500">{{ __('Device') }}</div><div>{{ __('repair_devices.'.$job->device_type) }} · {{ $job->device_brand }} {{ $job->device_model }} {{ $job->device_color }}</div></div>
-                <div><div class="text-slate-500">{{ __('IMEI / serial') }}</div><div class="font-mono">{{ $job->imei_serial ?? '—' }}</div></div>
-                <div><div class="text-slate-500">{{ __('Password / pattern') }}</div><div x-data="{ show: false }"><span x-show="show" x-cloak>{{ $job->device_password ?? '—' }}</span><button type="button" x-show="!show" x-on:click="show = true" class="text-xs text-brand-600 hover:underline">{{ __('Show') }}</button></div></div>
-                <div><div class="text-slate-500">{{ __('Delivery date') }}</div><div>{{ $job->estimated_delivery_at ? shop_digits($job->estimated_delivery_at->format('d M Y h:i A')) : '—' }}</div></div>
-                <div><div class="text-slate-500">{{ __('Estimated cost') }}</div><div>{{ $job->estimated_cost !== null ? money($job->estimated_cost) : '—' }}</div></div>
-                <div><div class="text-slate-500">{{ __('Accessories received') }}</div><div>{{ collect($job->accessories ?? [])->map(fn ($a) => __('repair_accessories.'.$a))->implode(', ') ?: '—' }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Job no') }}</div><div class="font-mono font-semibold">{{ $job->job_no }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Customer') }}</div><a href="{{ route('customers.show', $job->customer) }}" class="text-primary-600 hover:underline" wire:navigate>{{ $job->customer->name }}</a><div>{{ $job->customer->phone }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Received') }}</div><div>{{ shop_digits($job->created_at->format('d M Y h:i A')) }}</div><div class="text-xs text-muted-foreground">{{ $job->receiver?->name }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Device') }}</div><div>{{ __('repair_devices.'.$job->device_type) }} · {{ $job->device_brand }} {{ $job->device_model }} {{ $job->device_color }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('IMEI / serial') }}</div><div class="font-mono">{{ $job->imei_serial ?? '—' }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Password / pattern') }}</div><div x-data="{ show: false }"><span x-show="show" x-cloak>{{ $job->device_password ?? '—' }}</span><button type="button" x-show="!show" x-on:click="show = true" class="text-xs text-primary-600 hover:underline">{{ __('Show') }}</button></div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Delivery date') }}</div><div>{{ $job->estimated_delivery_at ? shop_digits($job->estimated_delivery_at->format('d M Y h:i A')) : '—' }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Estimated cost') }}</div><div>{{ $job->estimated_cost !== null ? money($job->estimated_cost) : '—' }}</div></div>
+                <div><div class="text-muted-foreground-1">{{ __('Accessories received') }}</div><div>{{ collect($job->accessories ?? [])->map(fn ($a) => __('repair_accessories.'.$a))->implode(', ') ?: '—' }}</div></div>
             </div>
-            <div><div class="text-slate-500">{{ __('Problem') }}</div><div class="whitespace-pre-line">{{ $job->problem }}</div></div>
-            @if ($job->condition_notes)<div><div class="text-slate-500">{{ __('Device condition') }}</div><div class="whitespace-pre-line">{{ $job->condition_notes }}</div></div>@endif
+            <div><div class="text-muted-foreground-1">{{ __('Problem') }}</div><div class="whitespace-pre-line">{{ $job->problem }}</div></div>
+            @if ($job->condition_notes)<div><div class="text-muted-foreground-1">{{ __('Device condition') }}</div><div class="whitespace-pre-line">{{ $job->condition_notes }}</div></div>@endif
             @if ($job->warrantyOf)<div class="rounded bg-amber-50 p-2 text-amber-800">{{ __('Warranty claim of') }} <a href="{{ route('repairs.show', $job->warrantyOf) }}" class="font-mono underline" wire:navigate>{{ $job->warrantyOf->job_no }}</a></div>@endif
             @if ($job->warranty_until)<div class="rounded bg-emerald-50 p-2 text-emerald-800">{{ __('Repair warranty till :date', ['date' => shop_digits($job->warranty_until->format('d M Y'))]) }}</div>@endif
         </div>
@@ -63,18 +63,18 @@
                 <div class="grid grid-cols-2 gap-2">
                     @foreach ($nextStatuses as $next)
                         <button type="button" wire:click="setStatus('{{ $next->value }}')" @disabled($job->status === $next)
-                            @class(['btn-sm btn', 'bg-brand-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
+                            @class(['btn-sm btn', 'bg-primary-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
                     @endforeach
                 </div>
 
             @endunless
-            <ol class="relative ml-2 space-y-4 border-l border-slate-200 pl-5 pt-1 text-xs">
+            <ol class="relative ml-2 space-y-4 border-l border-card-line pl-5 pt-1 text-xs">
                 @foreach ($job->statusHistories->sortByDesc('id') as $history)
                     <li class="relative">
-                        <span class="absolute -left-[26px] top-0.5 size-2.5 rounded-full border-2 border-white {{ $loop->first ? 'bg-brand-500' : 'bg-slate-300' }}"></span>
-                        <div class="font-medium text-slate-800">{{ $history->status->label() }}</div>
-                        <div class="text-slate-500">{{ shop_digits($history->created_at->format('d M, h:i A')) }} · {{ $history->user?->name }}</div>
-                        @if ($history->note)<div class="mt-0.5 text-slate-600">{{ $history->note }}</div>@endif
+                        <span class="absolute -left-[26px] top-0.5 size-2.5 rounded-full border-2 border-white {{ $loop->first ? 'bg-primary-500' : 'bg-slate-300' }}"></span>
+                        <div class="font-medium text-foreground">{{ $history->status->label() }}</div>
+                        <div class="text-muted-foreground-1">{{ shop_digits($history->created_at->format('d M, h:i A')) }} · {{ $history->user?->name }}</div>
+                        @if ($history->note)<div class="mt-0.5 text-muted-foreground-2">{{ $history->note }}</div>@endif
                     </li>
                 @endforeach
             </ol>
@@ -83,7 +83,7 @@
 
     {{-- Delivery / cancel / warranty panels --}}
     @if ($panel === 'deliver' && ! $isClosed)
-        <form wire:submit="deliver" class="card space-y-3 border-2 border-brand-200 p-5">
+        <form wire:submit="deliver" class="card space-y-3 border-2 border-primary-200 p-5">
             <h3 class="font-semibold">{{ __('Deliver device') }} · {{ __('Due') }}: {{ money(max(0, $due)) }}</h3>
             @foreach ($deliveryPayments as $index => $payment)
                 <div wire:key="dpay-{{ $index }}" class="flex flex-wrap gap-2">
@@ -96,7 +96,7 @@
                     <input wire:model="deliveryPayments.{{ $index }}.transaction_ref" type="text" placeholder="{{ __('Transaction ID (optional)') }}" class="form-input w-56">
                 </div>
             @endforeach
-            <button type="button" wire:click="addDeliveryPayment" class="text-xs text-brand-600 hover:underline">+ {{ __('split payment') }}</button>
+            <button type="button" wire:click="addDeliveryPayment" class="text-xs text-primary-600 hover:underline">+ {{ __('split payment') }}</button>
             @error('payments') <p class="form-error">{{ $message }}</p> @enderror
             <div class="flex gap-2">
                 <button type="button" wire:click="$set('panel', '')" class="btn-secondary">{{ __('Back') }}</button>
@@ -125,7 +125,7 @@
                 </select>
                 @error('refund_method_id') <p class="form-error">{{ $message }}</p> @enderror
             </div>
-            <p class="text-xs text-slate-500 md:col-span-4">{{ __('Used parts go back to stock. Paid amount above the fee is refunded.') }}</p>
+            <p class="text-xs text-muted-foreground-1 md:col-span-4">{{ __('Used parts go back to stock. Paid amount above the fee is refunded.') }}</p>
             <div class="flex gap-2 md:col-span-4">
                 <button type="button" wire:click="$set('panel', '')" class="btn-secondary">{{ __('Back') }}</button>
                 <button type="submit" wire:confirm="{{ __('Cancel this repair job?') }}" class="btn-danger">{{ __('Cancel job') }}</button>
@@ -165,7 +165,7 @@
                             <td class="text-right">@unless ($isClosed)<button type="button" wire:click="removePart({{ $part->id }})" wire:confirm="{{ __('Remove part and put back in stock?') }}" class="btn-secondary btn-sm">✕</button>@endunless</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-4 text-center text-slate-400">{{ __('No parts used yet.') }}</td></tr>
+                        <tr><td colspan="5" class="py-4 text-center text-muted-foreground">{{ __('No parts used yet.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -188,12 +188,12 @@
                 @endif
                 @unless ($isClosed)<button type="submit" class="btn-secondary btn-sm w-full">{{ __('Update bill') }}</button>@endunless
             </form>
-            <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($job->total) }}</span></div>
+            <div class="flex justify-between border-t border-card-line pt-2 text-base font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($job->total) }}</span></div>
             <div class="flex justify-between"><span>{{ __('Paid') }}</span><span class="tabular-nums">{{ money($job->paid_amount) }}</span></div>
             <div @class(['flex justify-between font-semibold', 'text-red-600' => $due > 0, 'text-emerald-700' => $due <= 0])><span>{{ $due >= 0 ? __('Due') : ($isClosed ? __('Refund due') : __('Advance balance')) }}</span><span class="tabular-nums">{{ money(abs($due)) }}</span></div>
 
             @unless ($isClosed)
-                <form wire:submit="addPayment" class="flex gap-1 border-t border-slate-200 pt-3">
+                <form wire:submit="addPayment" class="flex gap-1 border-t border-card-line pt-3">
                     <input wire:model="payment_amount" type="number" step="0.01" min="0" placeholder="{{ __('Advance') }}" class="form-input py-1">
                     <select wire:model="payment_method_id" class="form-input w-28 py-1">
                         @foreach ($paymentMethods as $method)
@@ -205,7 +205,7 @@
                 @error('payment_amount') <p class="form-error">{{ $message }}</p> @enderror
             @endunless
 
-            <div class="space-y-1 border-t border-slate-200 pt-2 text-xs text-slate-500">
+            <div class="space-y-1 border-t border-card-line pt-2 text-xs text-muted-foreground-1">
                 @foreach ($job->payments as $payment)
                     <div class="flex justify-between"><span>{{ shop_digits($payment->paid_at->format('d M')) }} · {{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }}</span><span class="tabular-nums">{{ money($payment->amount) }}</span></div>
                 @endforeach

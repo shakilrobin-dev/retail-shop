@@ -13,7 +13,7 @@
                     <div class="flex justify-between"><dt>{{ __('Opening cash') }}</dt><dd class="tabular-nums">{{ money($openSummary['opening']) }}</dd></div>
                     <div class="flex justify-between"><dt>{{ __('Cash in (sales, repairs)') }}</dt><dd class="tabular-nums text-emerald-700">+ {{ money($openSummary['cash_in']) }}</dd></div>
                     <div class="flex justify-between"><dt>{{ __('Cash out (refunds, expenses)') }}</dt><dd class="tabular-nums text-red-700">− {{ money($openSummary['cash_out']) }}</dd></div>
-                    <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold"><dt>{{ __('Cash that should be in drawer') }}</dt><dd class="tabular-nums">{{ money($openSummary['expected']) }}</dd></div>
+                    <div class="flex justify-between border-t border-card-line pt-2 text-base font-semibold"><dt>{{ __('Cash that should be in drawer') }}</dt><dd class="tabular-nums">{{ money($openSummary['expected']) }}</dd></div>
                 </dl>
                 <form wire:submit="close" class="mt-5 space-y-2">
                     <label class="form-label">{{ __('Count the cash in the drawer') }}</label>
@@ -41,11 +41,11 @@
                     @forelse ($summary['by_method'] as $method => $amount)
                         <div class="flex justify-between"><dt>{{ $method }}</dt><dd class="tabular-nums">{{ money($amount) }}</dd></div>
                     @empty
-                        <p class="text-slate-500">{{ __('No payments yet.') }}</p>
+                        <p class="text-muted-foreground-1">{{ __('No payments yet.') }}</p>
                     @endforelse
                 </dl>
                 @if ($viewShift)
-                    <dl class="mt-4 space-y-1.5 border-t border-slate-200 pt-3 text-sm">
+                    <dl class="mt-4 space-y-1.5 border-t border-card-line pt-3 text-sm">
                         <div class="flex justify-between"><dt>{{ __('Expected cash') }}</dt><dd class="tabular-nums">{{ money($viewShift->expected_cash) }}</dd></div>
                         <div class="flex justify-between"><dt>{{ __('Counted cash') }}</dt><dd class="tabular-nums">{{ money($viewShift->counted_cash) }}</dd></div>
                         <div @class(['flex justify-between font-semibold', 'text-red-700' => $viewShift->difference < 0, 'text-emerald-700' => $viewShift->difference >= 0])>
@@ -54,7 +54,7 @@
                     </dl>
                 @endif
             @else
-                <p class="text-sm text-slate-500">{{ __('Open the register to see live totals.') }}</p>
+                <p class="text-sm text-muted-foreground-1">{{ __('Open the register to see live totals.') }}</p>
             @endif
         </div>
     </div>
@@ -74,7 +74,7 @@
                         <td class="text-right"><button type="button" wire:click="$set('viewShiftId', {{ $shift->id }})" class="btn-secondary btn-sm">{{ __('View') }}</button></td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="py-6 text-center text-slate-500">{{ __('No closed registers yet.') }}</td></tr>
+                    <tr><td colspan="7" class="py-6 text-center text-muted-foreground-1">{{ __('No closed registers yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

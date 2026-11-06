@@ -3,7 +3,7 @@
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     @if ($branches->isEmpty())
-        <div class="card p-6 text-center text-slate-600">{{ __('There is only one branch. Add another branch in Settings to transfer stock.') }}</div>
+        <div class="card p-6 text-center text-muted-foreground-2">{{ __('There is only one branch. Add another branch in Settings to transfer stock.') }}</div>
     @else
         <div class="card grid gap-3 p-5 md:grid-cols-2">
             <div>
@@ -36,7 +36,7 @@
                             <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="py-8 text-center text-slate-400">{{ __('Scan products to send.') }}</td></tr>
+                        <tr><td colspan="4" class="py-8 text-center text-muted-foreground">{{ __('Scan products to send.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -1,9 +1,9 @@
 <div class="space-y-5">
     <x-page-header class="mb-0" :title="__('Stock history')" :subtitle="__('Every stock change: purchases, sales, returns, repairs, adjustments and transfers.')" :back="route('stock.index')" :backLabel="__('Stock')" />
     <div class="card">
-    <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
+    <div class="flex flex-wrap items-center gap-2 border-b border-card-divider p-3">
         @if ($product)
-            <span class="badge bg-brand-50 px-3 py-1.5 text-sm text-brand-700">{{ $product->localName() }}
+            <span class="badge bg-primary-50 px-3 py-1.5 text-sm text-primary-700">{{ $product->localName() }}
                 <button type="button" wire:click="$set('productId', null)" class="ml-1">✕</button></span>
         @endif
         <select wire:model.live="type" class="form-input w-44">
@@ -37,11 +37,11 @@
                     <tr wire:key="mv-{{ $movement->id }}">
                         <td class="whitespace-nowrap text-xs">{{ shop_digits($movement->created_at->format('d M Y h:i A')) }}</td>
                         <td>{{ $movement->product?->localName() }}</td>
-                        <td>{{ $movement->type->label() }}@if ($movement->note)<div class="text-xs text-slate-400">{{ $movement->note }}</div>@endif</td>
-                        <td class="font-mono text-xs">@if ($refUrl)<a href="{{ $refUrl }}" class="text-brand-600 hover:underline" wire:navigate>{{ $refText }}</a>@else{{ $refText }}@endif</td>
+                        <td>{{ $movement->type->label() }}@if ($movement->note)<div class="text-xs text-muted-foreground">{{ $movement->note }}</div>@endif</td>
+                        <td class="font-mono text-xs">@if ($refUrl)<a href="{{ $refUrl }}" class="text-primary-600 hover:underline" wire:navigate>{{ $refText }}</a>@else{{ $refText }}@endif</td>
                         <td @class(['text-right tabular-nums font-medium', 'text-emerald-700' => $movement->quantity > 0, 'text-red-700' => $movement->quantity < 0])>{{ $movement->quantity > 0 ? '+' : '' }}{{ shop_digits($movement->quantity + 0) }}</td>
                         <td class="text-right tabular-nums">{{ shop_digits($movement->balance_after + 0) }}</td>
-                        <td class="text-slate-500">{{ $movement->user?->name }}</td>
+                        <td class="text-muted-foreground-1">{{ $movement->user?->name }}</td>
                     </tr>
                 @empty
                     <x-empty :colspan="7" icon="history" :title="__('No stock changes yet.')" />

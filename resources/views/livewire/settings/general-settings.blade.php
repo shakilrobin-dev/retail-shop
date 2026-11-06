@@ -24,17 +24,17 @@
                     <label class="form-label">{{ __('Logo (for receipts)') }}</label>
                     <div class="flex items-center gap-4">
                         @if ($logo)
-                            <img src="{{ $logo->temporaryUrl() }}" alt="" class="h-16 rounded ring-1 ring-slate-200">
+                            <img src="{{ $logo->temporaryUrl() }}" alt="" class="h-16 rounded ring-1 ring-card-line">
                         @elseif ($logoPath)
-                            <img src="{{ asset('storage/'.$logoPath) }}" alt="" class="h-16 rounded ring-1 ring-slate-200">
+                            <img src="{{ asset('storage/'.$logoPath) }}" alt="" class="h-16 rounded ring-1 ring-card-line">
                             <button type="button" wire:click="removeLogo" class="text-xs text-red-600 hover:underline">{{ __('Remove') }}</button>
                         @endif
-                        <input wire:model="logo" type="file" accept="image/*" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100">
+                        <input wire:model="logo" type="file" accept="image/*" class="text-sm text-muted-foreground-2 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100">
                     </div>
                     @error('logo') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
             </div>
-            <p class="text-xs text-slate-500">{{ __('Branch address and phone are set in Branches.') }}</p>
+            <p class="text-xs text-muted-foreground-1">{{ __('Branch address and phone are set in Branches.') }}</p>
         @endif
 
         @if ($tab === 'receipt')
@@ -67,11 +67,11 @@
             </div>
             <div class="space-y-2">
                 @foreach ([$toggle('receipt_show_logo', __('Show logo on receipt')), $toggle('cash_drawer_enabled', __('Cash drawer connected to printer'), __('Set "open cash drawer" in the Rongta driver. Adds an "Open cash drawer" button in POS.'))] as $field)
-                    <label class="flex items-start gap-2 text-sm"><input wire:model="values.{{ $field['key'] }}" type="checkbox" class="mt-0.5 rounded border-slate-300"><span>{{ $field['label'] }}@if ($field['help'])<span class="block text-xs text-slate-500">{{ $field['help'] }}</span>@endif</span></label>
+                    <label class="flex items-start gap-2 text-sm"><input wire:model="values.{{ $field['key'] }}" type="checkbox" class="mt-0.5 rounded border-layer-line"><span>{{ $field['label'] }}@if ($field['help'])<span class="block text-xs text-muted-foreground-1">{{ $field['help'] }}</span>@endif</span></label>
                 @endforeach
             </div>
-            <div class="rounded-lg bg-slate-50 p-4 text-xs text-slate-600">
-                <p class="font-medium text-slate-800">{{ __('Rongta printer setup (one time)') }}</p>
+            <div class="rounded-lg bg-muted p-4 text-xs text-muted-foreground-2">
+                <p class="font-medium text-foreground">{{ __('Rongta printer setup (one time)') }}</p>
                 <ol class="mt-1 list-decimal space-y-0.5 pl-4">
                     <li>{{ __('Install the Rongta Windows driver and set paper width to 80mm (or 58mm).') }}</li>
                     <li>{{ __('Make Rongta the default printer in Windows.') }}</li>
@@ -109,23 +109,23 @@
             </div>
             <div class="space-y-2">
                 @foreach ([$toggle('label_show_shop_name', __('Show shop name on label')), $toggle('label_show_price', __('Show price on label'))] as $field)
-                    <label class="flex items-center gap-2 text-sm"><input wire:model="values.{{ $field['key'] }}" type="checkbox" class="rounded border-slate-300"> {{ $field['label'] }}</label>
+                    <label class="flex items-center gap-2 text-sm"><input wire:model="values.{{ $field['key'] }}" type="checkbox" class="rounded border-layer-line"> {{ $field['label'] }}</label>
                 @endforeach
             </div>
         @endif
 
         @if ($tab === 'pos')
             <div class="grid gap-4 md:grid-cols-3">
-                <label class="flex items-center gap-2 text-sm md:col-span-3"><input wire:model.live="values.vat_enabled" type="checkbox" class="rounded border-slate-300"> <span class="font-medium">{{ __('Charge VAT') }}</span></label>
+                <label class="flex items-center gap-2 text-sm md:col-span-3"><input wire:model.live="values.vat_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Charge VAT') }}</span></label>
                 @if ($values['vat_enabled'])
                     <div><label class="form-label">{{ __('Default VAT % for new products') }}</label><input wire:model="values.vat_default_rate" type="number" step="0.01" min="0" class="form-input"></div>
                     <div><label class="form-label">{{ __('VAT / BIN number') }}</label><input wire:model="values.vat_bin" type="text" class="form-input"></div>
-                    <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.vat_inclusive" type="checkbox" class="rounded border-slate-300"> {{ __('Prices already include VAT') }}</label>
+                    <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.vat_inclusive" type="checkbox" class="rounded border-layer-line"> {{ __('Prices already include VAT') }}</label>
                 @endif
-                <div class="border-t border-slate-200 pt-4 md:col-span-3"></div>
+                <div class="border-t border-card-line pt-4 md:col-span-3"></div>
                 <div><label class="form-label">{{ __('Max discount for staff (%)') }}</label><input wire:model="values.pos_max_discount_percent" type="number" step="0.5" min="0" max="100" class="form-input"></div>
-                <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_price_edit" type="checkbox" class="rounded border-slate-300"> {{ __('Staff can change price in POS') }}</label>
-                <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_negative_stock" type="checkbox" class="rounded border-slate-300"> {{ __('Allow selling with zero stock') }}</label>
+                <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_price_edit" type="checkbox" class="rounded border-layer-line"> {{ __('Staff can change price in POS') }}</label>
+                <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_negative_stock" type="checkbox" class="rounded border-layer-line"> {{ __('Allow selling with zero stock') }}</label>
             </div>
         @endif
 
@@ -134,18 +134,18 @@
                 <div><label class="form-label">{{ __('Default repair warranty (days)') }}</label><input wire:model="values.repair_default_warranty_days" type="number" min="0" class="form-input"></div>
                 <div class="md:col-span-2"><label class="form-label">{{ __('Job slip terms (English)') }}</label><textarea wire:model="values.repair_terms" rows="2" class="form-input"></textarea></div>
                 <div class="md:col-span-3"><label class="form-label">{{ __('Job slip terms (Bangla)') }}</label><textarea wire:model="values.repair_terms_bn" rows="2" class="form-input"></textarea></div>
-                <label class="flex items-center gap-2 text-sm md:col-span-3"><input wire:model.live="values.technicians_enabled" type="checkbox" class="rounded border-slate-300"> <span class="font-medium">{{ __('Use technicians (assign jobs to technicians)') }}</span></label>
+                <label class="flex items-center gap-2 text-sm md:col-span-3"><input wire:model.live="values.technicians_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Use technicians (assign jobs to technicians)') }}</span></label>
             </div>
         @endif
 
         @if ($tab === 'sms')
-            <label class="flex items-center gap-2 text-sm"><input wire:model.live="values.sms_enabled" type="checkbox" class="rounded border-slate-300"> <span class="font-medium">{{ __('Send SMS to customers') }}</span></label>
+            <label class="flex items-center gap-2 text-sm"><input wire:model.live="values.sms_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Send SMS to customers') }}</span></label>
             @if ($values['sms_enabled'])
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="md:col-span-2">
                         <label class="form-label">{{ __('SMS API URL') }}</label>
                         <input wire:model="values.sms_api_url" type="text" class="form-input font-mono text-xs" placeholder="https://bulksmsbd.net/api/smsapi?api_key={api_key}&type=text&number={phone}&senderid={sender}&message={message}">
-                        <p class="mt-1 text-xs text-slate-500">{{ __('Use {phone}, {message}, {api_key} and {sender} where your SMS company needs them.') }}</p>
+                        <p class="mt-1 text-xs text-muted-foreground-1">{{ __('Use {phone}, {message}, {api_key} and {sender} where your SMS company needs them.') }}</p>
                         @error('values.sms_api_url') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div><label class="form-label">{{ __('API key') }}</label><input wire:model="values.sms_api_key" type="password" class="form-input" autocomplete="off"></div>
@@ -154,7 +154,7 @@
                         <label class="form-label">{{ __('Send SMS when') }}</label>
                         <div class="flex flex-wrap gap-4 text-sm">
                             @foreach ($smsEvents as $event => $label)
-                                <label class="flex items-center gap-2"><input wire:model="values.sms_events" type="checkbox" value="{{ $event }}" class="rounded border-slate-300"> {{ __($label) }}</label>
+                                <label class="flex items-center gap-2"><input wire:model="values.sms_events" type="checkbox" value="{{ $event }}" class="rounded border-layer-line"> {{ __($label) }}</label>
                             @endforeach
                         </div>
                     </div>
@@ -162,7 +162,7 @@
             @endif
         @endif
 
-        <div class="flex justify-end border-t border-slate-200 pt-4">
+        <div class="flex justify-end border-t border-card-line pt-4">
             <button type="submit" class="btn-primary">{{ __('Save settings') }}</button>
         </div>
     </form>
@@ -179,8 +179,8 @@
             <ul class="divide-y divide-slate-100 text-sm">
                 @foreach ($technicians as $technician)
                     <li wire:key="tech-{{ $technician->id }}" @class(['flex justify-between py-2', 'opacity-50' => ! $technician->is_active])>
-                        <span>{{ $technician->name }} <span class="text-slate-400">{{ $technician->phone }}</span></span>
-                        <button type="button" wire:click="toggleTechnician({{ $technician->id }})" class="text-xs text-slate-500 hover:underline">{{ $technician->is_active ? __('Deactivate') : __('Activate') }}</button>
+                        <span>{{ $technician->name }} <span class="text-muted-foreground">{{ $technician->phone }}</span></span>
+                        <button type="button" wire:click="toggleTechnician({{ $technician->id }})" class="text-xs text-muted-foreground-1 hover:underline">{{ $technician->is_active ? __('Deactivate') : __('Activate') }}</button>
                     </li>
                 @endforeach
             </ul>
@@ -191,7 +191,7 @@
         <form wire:submit="sendTestSms" class="card flex flex-wrap items-end gap-2 p-6">
             <div><label class="form-label">{{ __('Test phone number') }}</label><input wire:model="testPhone" type="text" class="form-input"></div>
             <button type="submit" class="btn-secondary">{{ __('Send test SMS') }}</button>
-            <p class="w-full text-xs text-slate-500">{{ __('Save settings first, then send a test.') }}</p>
+            <p class="w-full text-xs text-muted-foreground-1">{{ __('Save settings first, then send a test.') }}</p>
         </form>
     @endif
 </div>

@@ -19,12 +19,12 @@
                         <td>{{ __('permission_labels.'.$permission) }}</td>
                         <td class="text-center text-emerald-600">✓</td>
                         @foreach (array_keys($matrix) as $roleName)
-                            <td class="text-center"><input wire:model="matrix.{{ $roleName }}" type="checkbox" value="{{ $permission }}" class="rounded border-slate-300"></td>
+                            <td class="text-center"><input wire:model="matrix.{{ $roleName }}" type="checkbox" value="{{ $permission }}" class="rounded border-layer-line"></td>
                         @endforeach
                     </tr>
                 @endforeach
             </tbody>
         </table>
-        <div class="flex justify-end border-t border-slate-200 p-4"><button type="submit" class="btn-primary">{{ __('Save permissions') }}</button></div>
+        <div class="flex justify-end border-t border-card-line p-4"><button type="submit" class="btn-primary">{{ __('Save permissions') }}</button></div>
     </form>
 </div>

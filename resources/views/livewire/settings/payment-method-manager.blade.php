@@ -27,7 +27,7 @@
                             <button type="button" wire:click="move({{ $method->id }}, -1)" class="btn-secondary btn-sm">↑</button>
                             <button type="button" wire:click="move({{ $method->id }}, 1)" class="btn-secondary btn-sm">↓</button>
                         </td>
-                        <td>{{ $method->name }} @if ($method->name_bn)<span class="text-slate-500">· {{ $method->name_bn }}</span>@endif</td>
+                        <td>{{ $method->name }} @if ($method->name_bn)<span class="text-muted-foreground-1">· {{ $method->name_bn }}</span>@endif</td>
                         <td>{{ $method->type->label() }}</td>
                         <td class="whitespace-nowrap text-right">
                             <button type="button" wire:click="edit({{ $method->id }})" class="btn-secondary btn-sm">{{ __('Edit') }}</button>

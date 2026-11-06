@@ -3,8 +3,8 @@
     <x-flash />
 
     <div class="card overflow-hidden">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <p class="text-sm text-slate-500">{{ __('People who can log in. Each user works in one branch; admins can see all branches.') }}</p>
+        <div class="flex items-center justify-between border-b border-card-divider px-4 py-3">
+            <p class="text-sm text-muted-foreground-1">{{ __('People who can log in. Each user works in one branch; admins can see all branches.') }}</p>
             <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New user') }}</button>
         </div>
         <div class="overflow-x-auto">
@@ -16,15 +16,15 @@
                             <td>
                                 <div class="flex items-center gap-3">
                                     <x-avatar :name="$user->name" />
-                                    <div><div class="font-medium text-slate-900">{{ $user->name }}</div><div class="font-mono text-xs text-slate-500">{{ $user->username }}</div></div>
+                                    <div><div class="font-medium text-foreground">{{ $user->name }}</div><div class="font-mono text-xs text-muted-foreground-1">{{ $user->username }}</div></div>
                                 </div>
                             </td>
                             <td><x-badge :tone="$user->roles->first()?->name === 'admin' ? 'brand' : 'slate'">{{ __(ucfirst($user->roles->first()?->name ?? '')) }}</x-badge></td>
-                            <td class="text-slate-600">{{ $user->branch?->localName() ?? __('All branches') }}</td>
-                            <td class="text-slate-600">{{ $user->locale === 'bn' ? 'বাংলা' : 'English' }}</td>
-                            <td class="text-xs text-slate-500">{{ $user->last_login_at ? shop_digits($user->last_login_at->diffForHumans()) : __('Never') }}</td>
+                            <td class="text-muted-foreground-2">{{ $user->branch?->localName() ?? __('All branches') }}</td>
+                            <td class="text-muted-foreground-2">{{ $user->locale === 'bn' ? 'বাংলা' : 'English' }}</td>
+                            <td class="text-xs text-muted-foreground-1">{{ $user->last_login_at ? shop_digits($user->last_login_at->diffForHumans()) : __('Never') }}</td>
                             <td><x-badge :tone="$user->is_active ? 'green' : 'slate'">{{ $user->is_active ? __('Active') : __('Disabled') }}</x-badge></td>
-                            <td class="text-right"><x-icon name="chevron-right" class="size-4 text-slate-300" /></td>
+                            <td class="text-right"><x-icon name="chevron-right" class="size-4 text-muted-foreground" /></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -65,11 +65,11 @@
             <x-form.field :label="__('Language')" stacked>
                 <select wire:model="locale" class="form-input"><option value="en">English</option><option value="bn">বাংলা</option></select>
             </x-form.field>
-            <label class="flex items-center gap-2 text-sm"><input wire:model="is_active" type="checkbox" class="rounded border-slate-300"> {{ __('Active (can log in)') }}</label>
+            <label class="flex items-center gap-2 text-sm"><input wire:model="is_active" type="checkbox" class="rounded border-layer-line"> {{ __('Active (can log in)') }}</label>
         </form>
         @if ($editingId)
-            <div class="mt-6 border-t border-slate-200 pt-5">
-                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('History') }}</h3>
+            <div class="mt-6 border-t border-card-line pt-5">
+                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('History') }}</h3>
                 <x-activity-feed :subjects="\App\Models\User::find($editingId)" :limit="10" />
             </div>
         @endif

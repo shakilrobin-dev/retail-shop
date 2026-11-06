@@ -4,13 +4,13 @@
 <div {{ $attributes->merge(['class' => 'mb-5 flex flex-wrap items-end justify-between gap-3']) }}>
     <div class="min-w-0">
         @if ($back)
-            <a href="{{ $back }}" wire:navigate class="mb-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-brand-700">
+            <a href="{{ $back }}" wire:navigate class="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground-1 hover:text-primary-700">
                 <x-icon name="arrow-left" class="size-3.5" /> {{ $backLabel ?? __('Back') }}
             </a>
         @endif
-        <h1 class="truncate text-xl font-semibold tracking-tight text-slate-900">{{ $title }}</h1>
+        <h1 class="truncate text-xl font-semibold tracking-tight text-foreground">{{ $title }}</h1>
         @if ($subtitle)
-            <p class="mt-0.5 text-sm text-slate-500">{{ $subtitle }}</p>
+            <p class="mt-0.5 text-sm text-muted-foreground-1">{{ $subtitle }}</p>
         @endif
     </div>
     @if (trim($slot))

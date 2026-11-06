@@ -7,11 +7,11 @@
 
     <div class="grid gap-5 xl:grid-cols-[1fr_20rem]">
         <div class="card overflow-hidden">
-            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-                <div class="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2">
-                    <x-icon name="history" class="size-4 text-slate-400" />
+            <div class="flex flex-wrap items-center gap-2 border-b border-card-divider px-4 py-3">
+                <div class="flex items-center gap-1 rounded-lg border border-layer-line bg-layer px-2">
+                    <x-icon name="history" class="size-4 text-muted-foreground" />
                     <input wire:model.live="from" type="date" class="border-0 py-1.5 text-sm focus:ring-0">
-                    <span class="text-slate-400">–</span>
+                    <span class="text-muted-foreground">–</span>
                     <input wire:model.live="to" type="date" class="border-0 py-1.5 text-sm focus:ring-0">
                 </div>
                 <select wire:model.live="categoryFilter" class="form-input w-48">
@@ -36,11 +36,11 @@
                     <tbody>
                         @forelse ($expenses as $expense)
                             <tr wire:key="exp-{{ $expense->id }}">
-                                <td class="whitespace-nowrap text-slate-600">{{ shop_digits($expense->expense_date->format('d M Y')) }}</td>
+                                <td class="whitespace-nowrap text-muted-foreground-2">{{ shop_digits($expense->expense_date->format('d M Y')) }}</td>
                                 <td><x-badge>{{ $expense->category->localName() }}</x-badge></td>
-                                <td class="text-slate-700">{{ $expense->note ?? '—' }}<div class="text-xs text-slate-400">{{ $expense->user?->name }}</div></td>
-                                <td class="text-xs text-slate-600">{{ $expense->payments->first()?->paymentMethod->localName() }}</td>
-                                <td class="text-right font-semibold tabular-nums text-slate-900">{{ money($expense->amount) }}</td>
+                                <td class="text-foreground">{{ $expense->note ?? '—' }}<div class="text-xs text-muted-foreground">{{ $expense->user?->name }}</div></td>
+                                <td class="text-xs text-muted-foreground-2">{{ $expense->payments->first()?->paymentMethod->localName() }}</td>
+                                <td class="text-right font-semibold tabular-nums text-foreground">{{ money($expense->amount) }}</td>
                                 <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-4" /></button></td>
                             </tr>
                         @empty
@@ -59,14 +59,14 @@
             <div class="space-y-3">
                 @forelse ($byCategory as $row)
                     <div>
-                        <div class="flex justify-between text-sm"><span class="text-slate-700">{{ $row->category?->localName() }}</span><span class="font-medium tabular-nums">{{ money($row->total) }}</span></div>
-                        <div class="mt-1 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-brand-500" style="width: {{ round($row->total / $max * 100) }}%"></div></div>
+                        <div class="flex justify-between text-sm"><span class="text-foreground">{{ $row->category?->localName() }}</span><span class="font-medium tabular-nums">{{ money($row->total) }}</span></div>
+                        <div class="mt-1 h-1.5 rounded-full bg-surface"><div class="h-full rounded-full bg-primary-500" style="width: {{ round($row->total / $max * 100) }}%"></div></div>
                     </div>
                 @empty
-                    <p class="text-sm text-slate-500">{{ __('No expenses in this period.') }}</p>
+                    <p class="text-sm text-muted-foreground-1">{{ __('No expenses in this period.') }}</p>
                 @endforelse
             </div>
-            <div class="mt-4 flex justify-between border-t border-slate-200 pt-3 text-sm font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($total) }}</span></div>
+            <div class="mt-4 flex justify-between border-t border-card-line pt-3 text-sm font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($total) }}</span></div>
         </x-section>
     </div>
 
@@ -95,7 +95,7 @@
                         <option value="{{ $method->id }}">{{ $method->localName() }}</option>
                     @endforeach
                 </select>
-                <label class="mt-2 flex items-center gap-2 text-sm text-slate-600"><input wire:model="from_drawer" type="checkbox" class="rounded border-slate-300"> {{ __('Cash taken from the cash drawer') }}</label>
+                <label class="mt-2 flex items-center gap-2 text-sm text-muted-foreground-2"><input wire:model="from_drawer" type="checkbox" class="rounded border-layer-line"> {{ __('Cash taken from the cash drawer') }}</label>
             </x-form.field>
             <x-form.field :label="__('Note')" stacked><input wire:model="note" type="text" class="form-input" placeholder="{{ __('e.g. November shop rent') }}"></x-form.field>
         </form>

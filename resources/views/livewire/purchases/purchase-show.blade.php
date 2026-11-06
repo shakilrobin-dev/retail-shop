@@ -4,10 +4,10 @@
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
-        <div><div class="text-slate-500">{{ __('Purchase no') }}</div><div class="font-mono font-medium">{{ $purchase->reference_no }}</div></div>
-        <div><div class="text-slate-500">{{ __('Date') }}</div><div>{{ shop_digits($purchase->purchase_date->format('d M Y')) }}</div></div>
-        <div><div class="text-slate-500">{{ __('Supplier') }}</div><div>{{ $purchase->supplier?->name ?? '—' }} @if ($purchase->supplier_invoice_no)<span class="text-slate-400">· {{ $purchase->supplier_invoice_no }}</span>@endif</div></div>
-        <div><div class="text-slate-500">{{ __('Entered by') }}</div><div>{{ $purchase->user?->name }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Purchase no') }}</div><div class="font-mono font-medium">{{ $purchase->reference_no }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Date') }}</div><div>{{ shop_digits($purchase->purchase_date->format('d M Y')) }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Supplier') }}</div><div>{{ $purchase->supplier?->name ?? '—' }} @if ($purchase->supplier_invoice_no)<span class="text-muted-foreground">· {{ $purchase->supplier_invoice_no }}</span>@endif</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Entered by') }}</div><div>{{ $purchase->user?->name }}</div></div>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -31,7 +31,7 @@
                 @foreach ($purchase->items as $item)
                     <tr wire:key="pitem-{{ $item->id }}">
                         <td>{{ $item->product->name }}</td>
-                        <td class="text-right">{{ shop_digits($item->quantity + 0) }} {{ $item->productUnit->name }}@if ($item->unit_quantity > 1)<div class="text-xs text-slate-400">= {{ shop_digits($item->base_quantity + 0) }} {{ __('pcs') }}</div>@endif</td>
+                        <td class="text-right">{{ shop_digits($item->quantity + 0) }} {{ $item->productUnit->name }}@if ($item->unit_quantity > 1)<div class="text-xs text-muted-foreground">= {{ shop_digits($item->base_quantity + 0) }} {{ __('pcs') }}</div>@endif</td>
                         <td class="text-right tabular-nums">{{ money($item->unit_cost) }}</td>
                         <td class="text-right tabular-nums">{{ money($item->line_total) }}</td>
                         <td class="text-right">{{ $item->returned_base_quantity > 0 ? shop_digits($item->returned_base_quantity + 0) : '—' }}</td>
@@ -54,7 +54,7 @@
         </table>
 
         @if ($showReturn)
-            <div class="grid gap-3 border-t border-slate-200 p-5 md:grid-cols-4">
+            <div class="grid gap-3 border-t border-card-line p-5 md:grid-cols-4">
                 @error('returns') <p class="form-error md:col-span-4">{{ $message }}</p> @enderror
                 <div>
                     <label class="form-label">{{ __('Money received by') }}</label>
@@ -69,7 +69,7 @@
                     <input wire:model="return_note" type="text" class="form-input">
                 </div>
                 <div class="flex flex-col justify-end gap-2">
-                    <label class="flex items-center gap-2 text-xs"><input wire:model="into_drawer" type="checkbox" class="rounded border-slate-300"> {{ __('Cash put in drawer') }}</label>
+                    <label class="flex items-center gap-2 text-xs"><input wire:model="into_drawer" type="checkbox" class="rounded border-layer-line"> {{ __('Cash put in drawer') }}</label>
                     <button type="submit" class="btn-danger">{{ __('Save return') }}</button>
                 </div>
             </div>
@@ -80,9 +80,9 @@
         <div class="card p-5 text-sm">
             <h3 class="mb-2 font-semibold">{{ __('Payments') }}</h3>
             @foreach ($purchase->payments as $payment)
-                <div class="flex justify-between py-1"><span>{{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-slate-400">({{ $payment->transaction_ref }})</span>@endif</span><span class="tabular-nums">{{ money($payment->amount) }}</span></div>
+                <div class="flex justify-between py-1"><span>{{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-muted-foreground">({{ $payment->transaction_ref }})</span>@endif</span><span class="tabular-nums">{{ money($payment->amount) }}</span></div>
             @endforeach
-            @if ($purchase->note)<p class="mt-3 text-slate-600">{{ $purchase->note }}</p>@endif
+            @if ($purchase->note)<p class="mt-3 text-muted-foreground-2">{{ $purchase->note }}</p>@endif
         </div>
         @if ($purchase->returns->isNotEmpty())
             <div class="card p-5 text-sm">

@@ -33,16 +33,16 @@
                                 <div class="flex items-center gap-3">
                                     <x-avatar :name="$customer->name" />
                                     <div>
-                                        <div class="font-medium text-slate-900">{{ $customer->name }}</div>
-                                        <div class="text-xs text-slate-500">{{ $customer->phone ?? '—' }}</div>
+                                        <div class="font-medium text-foreground">{{ $customer->name }}</div>
+                                        <div class="text-xs text-muted-foreground-1">{{ $customer->phone ?? '—' }}</div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="max-w-56 truncate text-slate-500">{{ $customer->address ?? '—' }}</td>
+                            <td class="max-w-56 truncate text-muted-foreground-1">{{ $customer->address ?? '—' }}</td>
                             <td class="text-right tabular-nums">{{ shop_digits($customer->sales_count) }}</td>
                             <td class="text-right font-medium tabular-nums">{{ money($customer->sales_sum_total) }}</td>
                             <td class="text-right tabular-nums">{{ shop_digits($customer->repair_jobs_count) }}</td>
-                            <td class="whitespace-nowrap text-xs text-slate-500">{{ shop_digits($customer->created_at->format('d M Y')) }}</td>
+                            <td class="whitespace-nowrap text-xs text-muted-foreground-1">{{ shop_digits($customer->created_at->format('d M Y')) }}</td>
                             <td class="text-right" x-on:click.stop>
                                 <button type="button" wire:click="edit({{ $customer->id }})" class="btn-ghost btn-sm" title="{{ __('Edit') }}"><x-icon name="pencil" class="size-4" /></button>
                             </td>
@@ -64,8 +64,8 @@
             <x-form.field :label="__('Notes')" stacked><textarea wire:model="notes" rows="3" class="form-input"></textarea></x-form.field>
         </form>
         @if ($editingId)
-            <div class="mt-6 border-t border-slate-200 pt-5">
-                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('History') }}</h3>
+            <div class="mt-6 border-t border-card-line pt-5">
+                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('History') }}</h3>
                 <x-activity-feed :subjects="\App\Models\Customer::find($editingId)" :limit="10" />
             </div>
         @endif

@@ -1,11 +1,11 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-page-header class="mb-0" :title="$customer->name" :subtitle="$customer->phone" :back="route('customers.index')" :backLabel="__('Customers')" />
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
-        <div><div class="text-slate-500">{{ __('Name') }}</div><div class="font-medium">{{ $customer->name }}</div></div>
-        <div><div class="text-slate-500">{{ __('Phone') }}</div><div>{{ $customer->phone ?? '—' }}</div></div>
-        <div><div class="text-slate-500">{{ __('Total spent') }}</div><div class="font-medium">{{ money($totalSpent) }}</div></div>
-        <div><div class="text-slate-500">{{ __('Address') }}</div><div>{{ $customer->address ?? '—' }}</div></div>
-        @if ($customer->notes)<div class="md:col-span-4 text-slate-600">{{ $customer->notes }}</div>@endif
+        <div><div class="text-muted-foreground-1">{{ __('Name') }}</div><div class="font-medium">{{ $customer->name }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Phone') }}</div><div>{{ $customer->phone ?? '—' }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Total spent') }}</div><div class="font-medium">{{ money($totalSpent) }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Address') }}</div><div>{{ $customer->address ?? '—' }}</div></div>
+        @if ($customer->notes)<div class="md:col-span-4 text-muted-foreground-2">{{ $customer->notes }}</div>@endif
     </div>
 
     <div class="card overflow-x-auto">
@@ -14,7 +14,7 @@
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Invoice') }}</th><th>{{ __('Items') }}</th><th class="text-right">{{ __('Total') }}</th><th></th></tr></thead>
             <tbody>
                 @forelse ($sales as $sale)
-                    <tr wire:key="csale-{{ $sale->id }}" @class(['text-slate-400 line-through' => $sale->status === \App\Enums\SaleStatus::Voided])>
+                    <tr wire:key="csale-{{ $sale->id }}" @class(['text-muted-foreground line-through' => $sale->status === \App\Enums\SaleStatus::Voided])>
                         <td class="whitespace-nowrap">{{ shop_digits($sale->sold_at?->format('d M Y')) }}</td>
                         <td class="font-mono text-xs">{{ $sale->invoice_no }}</td>
                         <td class="text-xs">
@@ -22,7 +22,7 @@
                                 <div>{{ $item->product_name }} × {{ shop_digits($item->quantity + 0) }}
                                     @if ($item->warranty_days)
                                         @php $until = $sale->sold_at->copy()->addDays($item->warranty_days); @endphp
-                                        <span @class(['badge', 'bg-emerald-50 text-emerald-700' => $until->isFuture(), 'bg-slate-100 text-slate-500' => $until->isPast()])>
+                                        <span @class(['badge', 'bg-emerald-50 text-emerald-700' => $until->isFuture(), 'bg-surface text-muted-foreground-1' => $until->isPast()])>
                                             {{ $until->isFuture() ? __('Warranty till :date', ['date' => shop_digits($until->format('d M Y'))]) : __('Warranty over') }}
                                         </span>
                                     @endif
@@ -33,7 +33,7 @@
                         <td class="text-right"><a href="{{ route('sales.show', $sale) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('View') }}</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-6 text-center text-slate-500">{{ __('No purchases yet.') }}</td></tr>
+                    <tr><td colspan="5" class="py-6 text-center text-muted-foreground-1">{{ __('No purchases yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -54,7 +54,7 @@
                         <td class="text-right"><a href="{{ route('repairs.show', $repair) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('View') }}</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-6 text-center text-slate-500">{{ __('No repairs yet.') }}</td></tr>
+                    <tr><td colspan="6" class="py-6 text-center text-muted-foreground-1">{{ __('No repairs yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

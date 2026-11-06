@@ -5,7 +5,7 @@
         <input wire:model.live.debounce.300ms="search" wire:keydown.enter.prevent="addFromSearch" id="label-search" type="search" autofocus class="form-input">
 
         @if ($results->isNotEmpty())
-            <div class="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200">
+            <div class="mt-2 divide-y divide-slate-100 rounded-lg border border-card-line">
                 @foreach ($results as $result)
                     <div wire:key="result-{{ $result->id }}" class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                         <span class="font-medium">{{ $result->localName() }}</span>
@@ -34,21 +34,21 @@
             <tbody>
                 @forelse ($rows as $index => $row)
                     <tr wire:key="row-{{ $row['barcode_id'] }}">
-                        <td>{{ $row['product'] }} @if ($row['unit'])<span class="text-xs text-slate-500">({{ $row['unit'] }})</span>@endif</td>
+                        <td>{{ $row['product'] }} @if ($row['unit'])<span class="text-xs text-muted-foreground-1">({{ $row['unit'] }})</span>@endif</td>
                         <td class="font-mono text-xs">{{ $row['code'] }}</td>
                         <td>{{ $row['price'] }}</td>
                         <td><input wire:model.live="rows.{{ $index }}.quantity" type="number" min="1" max="500" class="form-input"></td>
                         <td class="text-right"><button type="button" wire:click="removeRow({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-8 text-center text-slate-500">{{ __('Scan or search products to add them here.') }}</td></tr>
+                    <tr><td colspan="5" class="py-8 text-center text-muted-foreground-1">{{ __('Scan or search products to add them here.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-slate-500">
+        <p class="text-sm text-muted-foreground-1">
             {{ __('Label output') }}:
             <strong>{{ $labelOutput === 'thermal' ? __('Thermal label printer').' ('.$labelSize.' mm)' : __('A4 sticker sheet').' ('.$labelLayout.')' }}</strong>
             · {{ __('Change in Settings') }}

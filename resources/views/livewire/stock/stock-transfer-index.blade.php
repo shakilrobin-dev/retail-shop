@@ -16,7 +16,7 @@
                         <td>{{ $transfer->toBranch->localName() }}</td>
                         <td class="text-right">{{ shop_digits($transfer->items_count) }}</td>
                         <td>
-                            <span @class(['badge', 'bg-amber-50 text-amber-700' => $transfer->status === \App\Enums\TransferStatus::InTransit, 'bg-emerald-50 text-emerald-700' => $transfer->status === \App\Enums\TransferStatus::Received, 'bg-slate-100 text-slate-500' => $transfer->status === \App\Enums\TransferStatus::Cancelled])>{{ $transfer->status->label() }}</span>
+                            <span @class(['badge', 'bg-amber-50 text-amber-700' => $transfer->status === \App\Enums\TransferStatus::InTransit, 'bg-emerald-50 text-emerald-700' => $transfer->status === \App\Enums\TransferStatus::Received, 'bg-surface text-muted-foreground-1' => $transfer->status === \App\Enums\TransferStatus::Cancelled])>{{ $transfer->status->label() }}</span>
                             @if ($transfer->status === \App\Enums\TransferStatus::InTransit && $transfer->to_branch_id === $branchId)<span class="badge bg-red-50 text-red-700">{{ __('Waiting for you') }}</span>@endif
                         </td>
                         <td class="text-right"><a href="{{ route('stock.transfers.show', $transfer) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('Open') }}</a></td>

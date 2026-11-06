@@ -4,9 +4,9 @@
 @php $active = $sort === $field; @endphp
 <th {{ $attributes->merge(['class' => $align === 'right' ? 'text-right' : '']) }} aria-sort="{{ $active ? ($dir === 'desc' ? 'descending' : 'ascending') : 'none' }}">
     <button type="button" wire:click="sortBy('{{ $field }}')"
-        class="group inline-flex items-center gap-1 uppercase tracking-wider {{ $active ? 'text-slate-800' : 'hover:text-slate-700' }} {{ $align === 'right' ? 'flex-row-reverse' : '' }}">
+        class="group inline-flex items-center gap-1 uppercase tracking-wider {{ $active ? 'text-foreground' : 'hover:text-foreground' }} {{ $align === 'right' ? 'flex-row-reverse' : '' }}">
         <span>{{ $slot }}</span>
-        <svg class="size-3 {{ $active ? 'text-brand-600' : 'text-slate-300 group-hover:text-slate-400' }}" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+        <svg class="size-3 {{ $active ? 'text-primary-600' : 'text-muted-foreground group-hover:text-muted-foreground' }}" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
             @if ($active && $dir === 'desc')
                 <path d="M6 9 2.5 4.5h7L6 9Z" />
             @elseif ($active)

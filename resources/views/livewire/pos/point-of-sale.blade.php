@@ -20,9 +20,9 @@
         {{-- Register closed: ask for opening cash --}}
         <div class="mx-auto mt-10 max-w-md card p-6 text-center">
             <h2 class="text-lg font-semibold">{{ __('Cash register is closed') }}</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ __('Count the cash in the drawer and open the register to start selling.') }}</p>
+            <p class="mt-1 text-sm text-muted-foreground-1">{{ __('Count the cash in the drawer and open the register to start selling.') }}</p>
             @if ($lastShift?->counted_cash !== null)
-                <p class="mt-2 text-xs text-slate-400">{{ __('Last closing cash') }}: {{ money($lastShift->counted_cash) }}</p>
+                <p class="mt-2 text-xs text-muted-foreground">{{ __('Last closing cash') }}: {{ money($lastShift->counted_cash) }}</p>
             @endif
             @can('cash-shifts.manage')
                 <form wire:submit="openRegister" class="mt-4 flex gap-2">
@@ -69,7 +69,7 @@
                                 <tr wire:key="cart-{{ $line['product_unit_id'] }}-{{ $index }}">
                                     <td>
                                         <div class="font-medium">{{ $line['name'] }}</div>
-                                        <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-slate-400' => $needed <= $line['stock']])>
+                                        <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-muted-foreground' => $needed <= $line['stock']])>
                                             {{ __('In stock') }}: {{ shop_digits($line['stock'] + 0) }}
                                         </div>
                                         @error("cart.$index") <p class="form-error">{{ $message }}</p> @enderror
@@ -82,7 +82,7 @@
                                                 @endforeach
                                             </select>
                                         @else
-                                            <span class="text-sm text-slate-600">{{ collect($line['units'])->first()['name'] }}</span>
+                                            <span class="text-sm text-muted-foreground-2">{{ collect($line['units'])->first()['name'] }}</span>
                                         @endif
                                     </td>
                                     <td>
@@ -103,7 +103,7 @@
                                         <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input py-1"></td>
                                     @endcan
                                     <td class="text-right font-medium tabular-nums">{{ money(max(0, (float) $line['quantity'] * (float) $line['unit_price'] - (float) $line['discount_amount'])) }}</td>
-                                    <td><button type="button" wire:click="removeLine({{ $index }})" class="text-slate-400 hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
+                                    <td><button type="button" wire:click="removeLine({{ $index }})" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                                 </tr>
                             @empty
                                 <x-empty :colspan="7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
@@ -112,21 +112,21 @@
                     </table>
                 </div>
 
-                <div class="flex flex-wrap gap-2 text-xs text-slate-500">
+                <div class="flex flex-wrap gap-2 text-xs text-muted-foreground-1">
                     @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
-                        <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{{ $key }}</kbd> {{ $label }}</span>
+                        <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-card-line bg-layer px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground-2">{{ $key }}</kbd> {{ $label }}</span>
                     @endforeach
                 </div>
 
                 @if ($quickItems->isNotEmpty())
                     <div class="card p-4">
-                        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Quick items') }}</h3>
+                        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Quick items') }}</h3>
                         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
                             @foreach ($quickItems as $quick)
                                 <button type="button" wire:click="pickUnit({{ $quick->id }})" wire:key="quick-{{ $quick->id }}"
-                                    class="flex min-h-16 flex-col justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left transition hover:border-brand-400 hover:bg-brand-50">
-                                    <span class="line-clamp-2 text-xs font-medium text-slate-800">{{ $quick->product->localName() }}@unless ($quick->is_base) ({{ $quick->localName() }})@endunless</span>
-                                    <span class="mt-1 text-xs font-semibold tabular-nums text-brand-700">{{ money($quick->selling_price) }}</span>
+                                    class="flex min-h-16 flex-col justify-between rounded-lg border border-card-line bg-layer p-2.5 text-left transition hover:border-primary-400 hover:bg-primary-50">
+                                    <span class="line-clamp-2 text-xs font-medium text-foreground">{{ $quick->product->localName() }}@unless ($quick->is_base) ({{ $quick->localName() }})@endunless</span>
+                                    <span class="mt-1 text-xs font-semibold tabular-nums text-primary-700">{{ money($quick->selling_price) }}</span>
                                 </button>
                             @endforeach
                         </div>
@@ -153,14 +153,14 @@
                 <div class="card p-4">
                     @if ($customer)
                         <div class="flex items-center justify-between text-sm">
-                            <div><div class="font-medium">{{ $customer->name }}</div><div class="text-slate-500">{{ $customer->phone }}</div></div>
-                            <button type="button" wire:click="$set('customerId', null)" class="text-xs text-slate-500 hover:underline">{{ __('Change') }}</button>
+                            <div><div class="font-medium">{{ $customer->name }}</div><div class="text-muted-foreground-1">{{ $customer->phone }}</div></div>
+                            <button type="button" wire:click="$set('customerId', null)" class="text-xs text-muted-foreground-1 hover:underline">{{ __('Change') }}</button>
                         </div>
                     @else
                         <label class="form-label">{{ __('Customer (optional)') }}</label>
                         <input wire:model.live.debounce.300ms="customerSearch" type="search" placeholder="{{ __('Phone number') }}" class="form-input">
                         @foreach ($customerResults as $result)
-                            <button type="button" wire:click="selectCustomer({{ $result->id }})" wire:key="cust-{{ $result->id }}" class="mt-1 block w-full rounded px-2 py-1 text-left text-sm hover:bg-slate-100">
+                            <button type="button" wire:click="selectCustomer({{ $result->id }})" wire:key="cust-{{ $result->id }}" class="mt-1 block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted-hover">
                                 {{ $result->name }} · {{ $result->phone }}
                             </button>
                         @endforeach
@@ -189,14 +189,14 @@
                             </div>
                         </div>
                         @if ($totals['discount_amount'] > 0)
-                            <div class="flex justify-between text-slate-500"><span></span><span class="tabular-nums">− {{ money($totals['discount_amount']) }}</span></div>
+                            <div class="flex justify-between text-muted-foreground-1"><span></span><span class="tabular-nums">− {{ money($totals['discount_amount']) }}</span></div>
                         @endif
                         @error('discountValue') <p class="form-error">{{ $message }}</p> @enderror
                     @endcan
                     @if ($vatEnabled && $totals['vat_amount'] > 0)
                         <div class="flex justify-between"><span>{{ __('VAT') }}</span><span class="tabular-nums">{{ money($totals['vat_amount']) }}</span></div>
                     @endif
-                    <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium uppercase tracking-wide text-slate-300">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
+                    <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium uppercase tracking-wide text-muted-foreground">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
                 </div>
 
                 @if ($showPayment)
@@ -229,7 +229,7 @@
                             @endforeach
                         </div>
                         @error('payments') <p class="form-error text-sm">{{ $message }}</p> @enderror
-                        <div class="space-y-1 border-t border-slate-200 pt-2 text-sm">
+                        <div class="space-y-1 border-t border-card-line pt-2 text-sm">
                             <div class="flex justify-between"><span>{{ __('Paid') }}</span><span class="tabular-nums">{{ money($paid) }}</span></div>
                             @if ($due > 0)
                                 <div class="flex justify-between font-semibold text-red-600"><span>{{ __('Due') }}</span><span class="tabular-nums">{{ money($due) }}</span></div>
@@ -253,7 +253,7 @@
                     </div>
                     @if ($drawerEnabled)
                         @can('pos.open-drawer')
-                            <a href="{{ route('pos.drawer') }}" target="_blank" class="block text-center text-xs text-slate-500 hover:underline">{{ __('Open cash drawer (no sale)') }}</a>
+                            <a href="{{ route('pos.drawer') }}" target="_blank" class="block text-center text-xs text-muted-foreground-1 hover:underline">{{ __('Open cash drawer (no sale)') }}</a>
                         @endcan
                     @endif
                 @endif
@@ -264,12 +264,12 @@
     {{-- Sale completed --}}
     @if ($completedSale)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" x-init="$nextTick(() => $refs.newSale?.focus())">
-            <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+            <div class="w-full max-w-sm rounded-2xl bg-layer p-6 text-center shadow-xl">
                 <x-icon name="check" class="mx-auto size-12 text-emerald-600" />
                 <h2 class="mt-2 text-lg font-semibold">{{ __('Sale completed') }}</h2>
-                <p class="font-mono text-sm text-slate-500">{{ $completedSale->invoice_no }}</p>
-                <div class="mt-4 rounded-lg bg-slate-50 p-3">
-                    <div class="text-sm text-slate-500">{{ __('Change to return') }}</div>
+                <p class="font-mono text-sm text-muted-foreground-1">{{ $completedSale->invoice_no }}</p>
+                <div class="mt-4 rounded-lg bg-muted p-3">
+                    <div class="text-sm text-muted-foreground-1">{{ __('Change to return') }}</div>
                     <div class="text-3xl font-bold text-emerald-700">{{ money($completedSale->change_amount) }}</div>
                 </div>
                 <div class="mt-5 flex flex-col gap-2">

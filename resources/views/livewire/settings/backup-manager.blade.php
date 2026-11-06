@@ -3,7 +3,7 @@
     <x-flash />
 
     <div class="card flex flex-wrap items-center justify-between gap-3 p-5">
-        <div class="text-sm text-slate-600">
+        <div class="text-sm text-muted-foreground-2">
             <p>{{ __('A backup is made automatically every night (last 14 are kept).') }}</p>
             <p>{{ __('Download a backup at least once a week and keep it on your computer or Google Drive.') }}</p>
         </div>
@@ -28,7 +28,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="py-8 text-center text-slate-500">{{ __('No backups yet.') }}</td></tr>
+                    <tr><td colspan="4" class="py-8 text-center text-muted-foreground-1">{{ __('No backups yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

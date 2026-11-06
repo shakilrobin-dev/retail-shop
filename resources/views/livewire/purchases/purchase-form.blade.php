@@ -67,7 +67,7 @@
                             <td class="text-right"><button type="button" wire:click="removeItem({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="py-8 text-center text-slate-500">{{ __('Scan products from the supplier invoice.') }}</td></tr>
+                        <tr><td colspan="7" class="py-8 text-center text-muted-foreground-1">{{ __('Scan products from the supplier invoice.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -87,7 +87,7 @@
                 <span>{{ __('Discount') }}</span>
                 <input wire:model.live.debounce.400ms="discount" type="number" step="0.01" min="0" class="form-input w-36 text-right">
             </div>
-            <div class="flex justify-between border-t border-slate-200 pt-3 text-lg font-semibold"><span>{{ __('Total paid') }}</span><span class="tabular-nums">{{ money($this->total()) }}</span></div>
+            <div class="flex justify-between border-t border-card-line pt-3 text-lg font-semibold"><span>{{ __('Total paid') }}</span><span class="tabular-nums">{{ money($this->total()) }}</span></div>
             <div class="grid grid-cols-2 gap-2">
                 <select wire:model="payment_method_id" class="form-input">
                     @foreach ($paymentMethods as $method)
@@ -96,8 +96,8 @@
                 </select>
                 <input wire:model="transaction_ref" type="text" placeholder="{{ __('Transaction ID (optional)') }}" class="form-input">
             </div>
-            <label class="flex items-center gap-2 text-sm text-slate-600">
-                <input wire:model="paid_from_drawer" type="checkbox" class="rounded border-slate-300"> {{ __('Cash taken from the cash drawer') }}
+            <label class="flex items-center gap-2 text-sm text-muted-foreground-2">
+                <input wire:model="paid_from_drawer" type="checkbox" class="rounded border-layer-line"> {{ __('Cash taken from the cash drawer') }}
             </label>
             <button type="submit" class="btn-primary w-full py-3" wire:loading.attr="disabled">{{ __('Save purchase & add stock') }}</button>
         </div>

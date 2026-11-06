@@ -12,7 +12,7 @@
             <input wire:model="customerName" type="text" class="form-input">
             @error('customerName') <p class="form-error">{{ $message }}</p> @enderror
         </div>
-        <div class="flex items-end text-sm text-slate-500">
+        <div class="flex items-end text-sm text-muted-foreground-1">
             @if ($knownCustomer)
                 <span class="badge bg-emerald-50 text-emerald-700">{{ __('Old customer') }} · {{ __(':count repairs', ['count' => shop_digits($knownCustomer->repair_jobs_count)]) }}</span>
             @endif
@@ -58,7 +58,7 @@
             <label class="form-label">{{ __('Accessories received') }}</label>
             <div class="flex flex-wrap gap-3 pt-1 text-sm">
                 @foreach (\App\Livewire\Repairs\RepairForm::ACCESSORIES as $accessory)
-                    <label class="flex items-center gap-1"><input wire:model="accessories" type="checkbox" value="{{ $accessory }}" class="rounded border-slate-300"> {{ __('repair_accessories.'.$accessory) }}</label>
+                    <label class="flex items-center gap-1"><input wire:model="accessories" type="checkbox" value="{{ $accessory }}" class="rounded border-layer-line"> {{ __('repair_accessories.'.$accessory) }}</label>
                 @endforeach
             </div>
         </div>
