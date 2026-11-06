@@ -1,0 +1,57 @@
+<?php
+
+return [
+    'accepted' => ':attribute গ্রহণ করতে হবে।',
+    'after_or_equal' => ':attribute অবশ্যই :date বা তার পরের তারিখ হতে হবে।',
+    'alpha_dash' => ':attribute-এ শুধু অক্ষর, সংখ্যা, ড্যাশ ও আন্ডারস্কোর চলবে।',
+    'alpha_num' => ':attribute-এ শুধু অক্ষর ও সংখ্যা চলবে।',
+    'array' => ':attribute অবশ্যই একটি তালিকা হতে হবে।',
+    'before_or_equal' => ':attribute অবশ্যই :date বা তার আগের তারিখ হতে হবে।',
+    'boolean' => ':attribute সঠিক নয়।',
+    'date' => ':attribute সঠিক তারিখ নয়।',
+    'digits_between' => ':attribute :min থেকে :max সংখ্যার হতে হবে।',
+    'email' => ':attribute সঠিক ইমেইল নয়।',
+    'exists' => 'নির্বাচিত :attribute সঠিক নয়।',
+    'gt' => [
+        'numeric' => ':attribute অবশ্যই :value এর বেশি হতে হবে।',
+    ],
+    'image' => ':attribute অবশ্যই ছবি হতে হবে।',
+    'in' => 'নির্বাচিত :attribute সঠিক নয়।',
+    'integer' => ':attribute অবশ্যই পূর্ণসংখ্যা হতে হবে।',
+    'max' => [
+        'numeric' => ':attribute :max এর বেশি হতে পারবে না।',
+        'file' => ':attribute :max কিলোবাইটের বেশি হতে পারবে না।',
+        'string' => ':attribute :max অক্ষরের বেশি হতে পারবে না।',
+        'array' => ':attribute-এ :max টির বেশি থাকতে পারবে না।',
+    ],
+    'min' => [
+        'numeric' => ':attribute কমপক্ষে :min হতে হবে।',
+        'string' => ':attribute কমপক্ষে :min অক্ষরের হতে হবে।',
+        'array' => ':attribute-এ কমপক্ষে :min টি থাকতে হবে।',
+    ],
+    'not_in' => 'নির্বাচিত :attribute সঠিক নয়।',
+    'numeric' => ':attribute অবশ্যই সংখ্যা হতে হবে।',
+    'password' => [
+        'min' => ':attribute কমপক্ষে :min অক্ষরের হতে হবে।',
+    ],
+    'regex' => ':attribute এর ফরম্যাট সঠিক নয়।',
+    'required' => ':attribute দিতে হবে।',
+    'required_if' => ':attribute দিতে হবে।',
+    'string' => ':attribute অবশ্যই লেখা হতে হবে।',
+    'unique' => 'এই :attribute আগেই ব্যবহার হয়েছে।',
+    'enum' => 'নির্বাচিত :attribute সঠিক নয়।',
+
+    'attributes' => [
+        'name' => 'নাম',
+        'phone' => 'ফোন',
+        'email' => 'ইমেইল',
+        'username' => 'ইউজারনেম',
+        'password' => 'পাসওয়ার্ড',
+        'category_id' => 'ক্যাটাগরি',
+        'cost_price' => 'ক্রয়মূল্য',
+        'amount' => 'টাকার পরিমাণ',
+        'problem' => 'সমস্যা',
+        'code' => 'কোড',
+        'sku' => 'SKU',
+    ],
+];

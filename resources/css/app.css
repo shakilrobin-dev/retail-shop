@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', 'Hind Siliguri', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-bangla: 'Hind Siliguri', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Bangla pages use the Bangla font first so Bangla text is clear. */
+html:lang(bn) body {
+    font-family: var(--font-bangla);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Shared UI pieces used by all modules. */
+@utility card {
+    @apply rounded-xl bg-white shadow-sm ring-1 ring-slate-200;
+}
+
+@utility form-label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+}
+
+@utility form-input {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100;
+}
+
+@utility form-error {
+    @apply mt-1 text-xs text-red-600;
+}
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+@utility btn-primary {
+    @apply btn bg-indigo-600 text-white hover:bg-indigo-700;
+}
+
+@utility btn-secondary {
+    @apply btn bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50;
+}
+
+@utility btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+}
+
+@utility btn-sm {
+    @apply px-2.5 py-1 text-xs;
+}
+
+@utility data-table {
+    @apply min-w-full divide-y divide-slate-200 text-sm;
+    & th {
+        @apply bg-slate-50 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+    & td {
+        @apply px-4 py-2.5 align-middle;
+    }
+}
+
+@utility badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+}

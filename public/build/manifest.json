@@ -1,0 +1,93 @@
+{
+  "_fonts-Dr9d80Sl.css": {
+    "file": "assets/fonts-Dr9d80Sl.css",
+    "src": "_fonts-Dr9d80Sl.css"
+  },
+  "_hind-siliguri-400-normal-B2m00w2e.woff": {
+    "file": "assets/hind-siliguri-400-normal-B2m00w2e.woff",
+    "src": "_hind-siliguri-400-normal-B2m00w2e.woff"
+  },
+  "_hind-siliguri-400-normal-esES0U7a.woff2": {
+    "file": "assets/hind-siliguri-400-normal-esES0U7a.woff2",
+    "src": "_hind-siliguri-400-normal-esES0U7a.woff2"
+  },
+  "_hind-siliguri-400-normal-qtENw2Fc.woff": {
+    "file": "assets/hind-siliguri-400-normal-qtENw2Fc.woff",
+    "src": "_hind-siliguri-400-normal-qtENw2Fc.woff"
+  },
+  "_hind-siliguri-400-normal-rHQ7AW0H.woff2": {
+    "file": "assets/hind-siliguri-400-normal-rHQ7AW0H.woff2",
+    "src": "_hind-siliguri-400-normal-rHQ7AW0H.woff2"
+  },
+  "_hind-siliguri-500-normal-6-4w_u8d.woff": {
+    "file": "assets/hind-siliguri-500-normal-6-4w_u8d.woff",
+    "src": "_hind-siliguri-500-normal-6-4w_u8d.woff"
+  },
+  "_hind-siliguri-500-normal-CDy0O77J.woff": {
+    "file": "assets/hind-siliguri-500-normal-CDy0O77J.woff",
+    "src": "_hind-siliguri-500-normal-CDy0O77J.woff"
+  },
+  "_hind-siliguri-500-normal-S8HLIV69.woff2": {
+    "file": "assets/hind-siliguri-500-normal-S8HLIV69.woff2",
+    "src": "_hind-siliguri-500-normal-S8HLIV69.woff2"
+  },
+  "_hind-siliguri-500-normal-UuhTmLlo.woff2": {
+    "file": "assets/hind-siliguri-500-normal-UuhTmLlo.woff2",
+    "src": "_hind-siliguri-500-normal-UuhTmLlo.woff2"
+  },
+  "_hind-siliguri-600-normal-Cgt-s7Wl.woff": {
+    "file": "assets/hind-siliguri-600-normal-Cgt-s7Wl.woff",
+    "src": "_hind-siliguri-600-normal-Cgt-s7Wl.woff"
+  },
+  "_hind-siliguri-600-normal-DHrLfb92.woff2": {
+    "file": "assets/hind-siliguri-600-normal-DHrLfb92.woff2",
+    "src": "_hind-siliguri-600-normal-DHrLfb92.woff2"
+  },
+  "_hind-siliguri-600-normal-DLZF4s8q.woff2": {
+    "file": "assets/hind-siliguri-600-normal-DLZF4s8q.woff2",
+    "src": "_hind-siliguri-600-normal-DLZF4s8q.woff2"
+  },
+  "_hind-siliguri-600-normal-D_VSXRuy.woff": {
+    "file": "assets/hind-siliguri-600-normal-D_VSXRuy.woff",
+    "src": "_hind-siliguri-600-normal-D_VSXRuy.woff"
+  },
+  "_instrument-sans-400-normal-D1W7dsQl.woff": {
+    "file": "assets/instrument-sans-400-normal-D1W7dsQl.woff",
+    "src": "_instrument-sans-400-normal-D1W7dsQl.woff"
+  },
+  "_instrument-sans-400-normal-DRC__1Mx.woff2": {
+    "file": "assets/instrument-sans-400-normal-DRC__1Mx.woff2",
+    "src": "_instrument-sans-400-normal-DRC__1Mx.woff2"
+  },
+  "_instrument-sans-500-normal-Dk9ku72i.woff2": {
+    "file": "assets/instrument-sans-500-normal-Dk9ku72i.woff2",
+    "src": "_instrument-sans-500-normal-Dk9ku72i.woff2"
+  },
+  "_instrument-sans-500-normal-Z6ESRlEs.woff": {
+    "file": "assets/instrument-sans-500-normal-Z6ESRlEs.woff",
+    "src": "_instrument-sans-500-normal-Z6ESRlEs.woff"
+  },
+  "_instrument-sans-600-normal-B7fBEWYG.woff2": {
+    "file": "assets/instrument-sans-600-normal-B7fBEWYG.woff2",
+    "src": "_instrument-sans-600-normal-B7fBEWYG.woff2"
+  },
+  "_instrument-sans-600-normal-B9e8oLYv.woff": {
+    "file": "assets/instrument-sans-600-normal-B9e8oLYv.woff",
+    "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-C3ORe82j.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BvRk9kiK.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}

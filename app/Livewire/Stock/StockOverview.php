@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Livewire\Stock;
+
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductStock;
+use App\Services\CurrentBranch;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Url;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+class StockOverview extends Component
+{
+    use WithPagination;
+
+    #[Url(as: 'q')]
+    public string $search = '';
+
+    #[Url]
+    public ?int $categoryId = null;
+
+    #[Url]
+    public string $filter = '';
+
+    public function updated(): void
+    {
+        $this->resetPage();
+    }
+
+    public function render(): View
+    {
+        $branchId = app(CurrentBranch::class)->get()?->id;
+        $stockSql = '(select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?)';
+
+        $query = Product::query()
+            ->with(['units', 'category'])
+            ->addSelect(['products.*', 'branch_stock' => ProductStock::query()->select('quantity')
+                ->whereColumn('product_stocks.product_id', 'products.id')->where('product_stocks.branch_id', $branchId)->limit(1)])
+            ->where('is_active', true)
+            ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
+                ->where('name', 'like', "%{$this->search}%")->orWhere('sku', $this->search)
+                ->orWhereHas('barcodes', fn (Builder $query) => $query->where('code', $this->search))))
+            ->when($this->categoryId, fn (Builder $query) => $query->whereIn('category_id', Category::query()->where('parent_id', $this->categoryId)->pluck('id')->push($this->categoryId)))
+            ->when($this->filter === 'low', fn (Builder $query) => $query->where('reorder_level', '>', 0)->whereRaw("COALESCE({$stockSql}, 0) <= products.reorder_level", [$branchId]))
+            ->when($this->filter === 'out', fn (Builder $query) => $query->whereRaw("COALESCE({$stockSql}, 0) <= 0", [$branchId]));
+
+        $value = (float) ProductStock::query()
+            ->join('products', 'products.id', '=', 'product_stocks.product_id')
+            ->where('product_stocks.branch_id', $branchId)
+            ->where('product_stocks.quantity', '>', 0)
+            ->selectRaw('SUM(product_stocks.quantity * products.cost_price) as value')
+            ->value('value');
+
+        return view('livewire.stock.stock-overview', [
+            'products' => $query->orderBy('name')->paginate(30),
+            'stockValue' => $value,
+            'categories' => Category::query()->whereNull('parent_id')->orderBy('name')->get(),
+        ])->title(__('Stock'));
+    }
+}
