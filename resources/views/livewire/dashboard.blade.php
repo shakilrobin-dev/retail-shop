@@ -1,76 +1,119 @@
 @php
-    $cards = [
-        [__('Today\'s sales'), money($todaySalesTotal), __(':count invoices', ['count' => shop_digits($todayInvoiceCount)]), 'cart', 'bg-indigo-50 text-indigo-600'],
-        [__('Today\'s repair income'), money($todayRepairIncome), null, 'wrench', 'bg-emerald-50 text-emerald-600'],
-        [__('Repairs in progress'), shop_digits($pendingRepairCount), null, 'wrench', 'bg-amber-50 text-amber-600'],
-        [__('Ready for delivery'), shop_digits($readyRepairCount), null, 'check', 'bg-sky-50 text-sky-600'],
-        [__('Low stock items'), shop_digits($lowStockCount), null, 'warning', 'bg-red-50 text-red-600'],
-        [__('Active products'), shop_digits($productCount), null, 'cube', 'bg-slate-100 text-slate-600'],
-    ];
+    $doneSteps = $setupSteps->where(2, true)->count();
+    $gridValues = [$chartMax, $chartMax / 2, 0];
 @endphp
+<div>
+    <x-page-header :title="__('Welcome, :name', ['name' => auth()->user()->name])" :subtitle="__('Summary for today').' · '.shop_digits(now()->format('l, d M Y'))">
+        @can('repairs.manage')<a href="{{ route('repairs.create') }}" class="btn-secondary" wire:navigate><x-icon name="wrench" class="size-4" /> {{ __('New repair job') }}</a>@endcan
+        @can('purchases.manage')<a href="{{ route('purchases.create') }}" class="btn-secondary" wire:navigate><x-icon name="truck" class="size-4" /> {{ __('New purchase') }}</a>@endcan
+        @can('pos.sell')<a href="{{ route('pos') }}" class="btn-primary" wire:navigate><x-icon name="cart" class="size-4" /> {{ __('Open POS') }}</a>@endcan
+    </x-page-header>
 
-<div class="space-y-6">
-    <div>
-        <h2 class="text-xl font-semibold">{{ __('Welcome, :name', ['name' => auth()->user()->name]) }}</h2>
-        <p class="text-sm text-slate-500">{{ __('Summary for today') }} · {{ shop_digits(now()->format('d M Y')) }}</p>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <x-stat :label="__('Today\'s sales')" :value="money($todaySalesTotal)" :hint="__(':count invoices', ['count' => shop_digits($todayInvoiceCount)])" icon="cart" tone="brand" :href="auth()->user()->can('pos.sell') ? route('sales.index') : null" />
+        <x-stat :label="__('Today\'s repair income')" :value="money($todayRepairIncome)" icon="wrench" tone="green" />
+        <x-stat :label="__('Repairs in progress')" :value="shop_digits($pendingRepairCount)" icon="history" tone="amber" :href="auth()->user()->can('repairs.manage') ? route('repairs.index') : null" />
+        <x-stat :label="__('Ready for delivery')" :value="shop_digits($readyRepairCount)" icon="check" tone="sky" :href="auth()->user()->can('repairs.manage') ? route('repairs.index', ['status' => 'ready']) : null" />
+        <x-stat :label="__('Low stock items')" :value="shop_digits($lowStockCount)" icon="warning" tone="red" :href="auth()->user()->can('products.manage') ? route('products.index', ['stockFilter' => 'low']) : null" />
+        <x-stat :label="__('Active products')" :value="shop_digits($productCount)" icon="cube" tone="slate" :href="auth()->user()->can('products.manage') ? route('products.index') : null" />
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        @foreach ($cards as [$label, $value, $hint, $icon, $iconClass])
-            <div class="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                <div class="rounded-lg p-2.5 {{ $iconClass }}">
-                    <x-icon :name="$icon" class="size-6" />
+    <div class="mt-5 grid gap-5 xl:grid-cols-3">
+        {{-- Sales last 14 days --}}
+        <x-section :title="__('Sales – last 14 days')" class="xl:col-span-2">
+            @can('reports.view')
+                <x-slot:actions><a href="{{ route('reports.index', ['tab' => 'daily']) }}" wire:navigate class="text-xs font-medium text-brand-600 hover:underline">{{ __('View as table') }} →</a></x-slot:actions>
+            @endcan
+            <div class="flex gap-3">
+                <div class="flex h-48 flex-col justify-between text-right text-[11px] tabular-nums text-slate-400">
+                    @foreach ($gridValues as $gridValue)
+                        <span class="leading-none">{{ shop_digits(number_format($gridValue)) }}</span>
+                    @endforeach
                 </div>
-                <div class="min-w-0">
-                    <div class="text-sm text-slate-500">{{ $label }}</div>
-                    <div class="mt-1 text-2xl font-semibold tabular-nums">{{ $value }}</div>
-                    @if ($hint)
-                        <div class="mt-0.5 text-xs text-slate-400">{{ $hint }}</div>
-                    @endif
+                <div class="relative flex-1">
+                    <div class="pointer-events-none absolute inset-x-0 top-0 h-48">
+                        <div class="absolute inset-x-0 top-0 border-t border-dashed border-slate-200"></div>
+                        <div class="absolute inset-x-0 top-1/2 border-t border-dashed border-slate-200"></div>
+                        <div class="absolute inset-x-0 bottom-0 border-t border-slate-300"></div>
+                    </div>
+                    <div class="relative flex h-48 items-end gap-0.5">
+                        @foreach ($chart as $point)
+                            @php $height = $point['total'] > 0 ? max(2, round($point['total'] / $chartMax * 100, 1)) : 0; @endphp
+                            <div x-data="{ tip: false }" x-on:mouseenter="tip = true" x-on:mouseleave="tip = false" x-on:focus="tip = true" x-on:blur="tip = false"
+                                class="group relative flex h-full flex-1 items-end justify-center outline-none" tabindex="0"
+                                aria-label="{{ $point['date']->format('d M') }}: {{ money($point['total']) }}">
+                                <div @class(['w-full max-w-6 rounded-t transition-colors group-hover:bg-brand-700', 'bg-brand-600' => $point['date']->isToday(), 'bg-brand-500' => ! $point['date']->isToday()]) style="height: {{ $height }}%"></div>
+                                <div x-cloak x-show="tip" class="pointer-events-none absolute bottom-full z-10 mb-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
+                                    <div class="font-medium">{{ shop_digits($point['date']->format('D, d M')) }}</div>
+                                    <div class="tabular-nums">{{ money($point['total']) }} · {{ __(':count invoices', ['count' => shop_digits($point['invoices'])]) }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-2 flex gap-0.5 text-center text-[10px] text-slate-400">
+                        @foreach ($chart as $point)
+                            <span @class(['flex-1', 'font-semibold text-slate-700' => $point['date']->isToday()])>{{ $loop->index % 2 === 1 || $loop->last ? shop_digits($point['date']->format('d/m')) : '' }}</span>
+                        @endforeach
+                    </div>
                 </div>
             </div>
-        @endforeach
+        </x-section>
+
+        @if ($doneSteps < $setupSteps->count())
+            <x-section :title="__('Get your shop ready')" :description="__(':done of :total done', ['done' => shop_digits($doneSteps), 'total' => shop_digits($setupSteps->count())])">
+                <div class="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-emerald-500" style="width: {{ $setupSteps->count() ? round($doneSteps / $setupSteps->count() * 100) : 0 }}%"></div>
+                </div>
+                <ul class="space-y-1">
+                    @foreach ($setupSteps as [$label, $url, $done])
+                        <li>
+                            <a href="{{ $url }}" wire:navigate class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-slate-50">
+                                <span @class(['flex size-5 shrink-0 items-center justify-center rounded-full border', 'border-emerald-500 bg-emerald-500 text-white' => $done, 'border-slate-300' => ! $done])>
+                                    @if ($done)<svg class="size-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd"/></svg>@endif
+                                </span>
+                                <span @class(['flex-1', 'text-slate-400 line-through' => $done, 'text-slate-700' => ! $done])>{{ $label }}</span>
+                                @unless ($done)<x-icon name="chevron-right" class="size-4 text-slate-300" />@endunless
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-section>
+        @else
+            @include('livewire.partials.dashboard-low-stock')
+        @endif
     </div>
 
-    <div class="flex flex-wrap gap-2">
-        @can('pos.sell')<a href="{{ route('pos') }}" class="btn-primary py-3" wire:navigate>{{ __('POS / Sale') }}</a>@endcan
-        @can('repairs.manage')<a href="{{ route('repairs.create') }}" class="btn-secondary py-3" wire:navigate>+ {{ __('New repair job') }}</a>@endcan
-        @can('purchases.manage')<a href="{{ route('purchases.create') }}" class="btn-secondary py-3" wire:navigate>+ {{ __('New purchase') }}</a>@endcan
-        @can('products.manage')<a href="{{ route('products.create') }}" class="btn-secondary py-3" wire:navigate>+ {{ __('New product') }}</a>@endcan
-    </div>
-
-    <div class="grid gap-4 lg:grid-cols-2">
-        <div class="card overflow-x-auto">
-            <h3 class="px-4 pt-4 font-semibold">{{ __('Recent sales') }}</h3>
+    <div class="mt-5 grid gap-5 xl:grid-cols-2">
+        <x-section :title="__('Recent sales')" :padding="false">
+            @can('pos.sell')
+                <x-slot:actions><a href="{{ route('sales.index') }}" wire:navigate class="text-xs font-medium text-brand-600 hover:underline">{{ __('View all') }} →</a></x-slot:actions>
+            @endcan
             <table class="data-table">
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse ($recentSales as $sale)
                         <tr wire:key="dsale-{{ $sale->id }}">
-                            <td class="text-xs text-slate-500">{{ shop_digits($sale->sold_at->format('h:i A')) }}</td>
-                            <td class="font-mono text-xs">@can('pos.sell')<a href="{{ route('sales.show', $sale) }}" class="text-indigo-600 hover:underline" wire:navigate>{{ $sale->invoice_no }}</a>@endcan</td>
+                            <td class="w-20 text-xs text-slate-500">{{ shop_digits($sale->sold_at->format('h:i A')) }}</td>
+                            <td class="font-mono text-xs">@can('pos.sell')<a href="{{ route('sales.show', $sale) }}" class="text-brand-600 hover:underline" wire:navigate>{{ $sale->invoice_no }}</a>@else{{ $sale->invoice_no }}@endcan</td>
                             <td>{{ $sale->customer?->name ?? __('Walk-in') }}</td>
-                            <td class="text-right tabular-nums">{{ money($sale->total) }}</td>
+                            <td class="text-right font-medium tabular-nums">{{ money($sale->total) }}</td>
                         </tr>
                     @empty
-                        <tr><td class="py-6 text-center text-slate-500">{{ __('No sales in this period.') }}</td></tr>
+                        <x-empty :colspan="4" icon="receipt" :title="__('No sales yet.')" />
                     @endforelse
                 </tbody>
             </table>
-        </div>
-        <div class="card overflow-x-auto">
-            <h3 class="px-4 pt-4 font-semibold">{{ __('Low stock items') }}</h3>
-            <table class="data-table">
-                <tbody class="divide-y divide-slate-100">
-                    @forelse ($lowStock as $stock)
-                        <tr wire:key="dlow-{{ $stock->id }}">
-                            <td>{{ $stock->product->localName() }}</td>
-                            <td class="text-right"><span class="badge bg-amber-50 text-amber-700">{{ shop_digits($stock->quantity + 0) }} / {{ shop_digits($stock->product->reorder_level + 0) }}</span></td>
-                        </tr>
-                    @empty
-                        <tr><td class="py-6 text-center text-slate-500">{{ __('No products found.') }}</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        </x-section>
+
+        @if ($doneSteps < $setupSteps->count())
+            @include('livewire.partials.dashboard-low-stock')
+        @else
+            <x-section :title="__('Keyboard shortcuts')">
+                <div class="grid gap-2 text-sm sm:grid-cols-2">
+                    @foreach ([['F2', __('Search product in POS')], ['F8', __('Hold sale')], ['F10', __('Pay / complete sale')], ['Ctrl K', __('Search anything')]] as [$key, $label])
+                        <div class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2"><kbd class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">{{ $key }}</kbd> <span class="text-slate-600">{{ $label }}</span></div>
+                    @endforeach
+                </div>
+            </x-section>
+        @endif
     </div>
 </div>

@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 
@@ -45,7 +45,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Username') }}</th><th>{{ __('Role') }}</th><th>{{ __('Branch') }}</th><th>{{ __('Last login') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($users as $user)
                     <tr wire:key="user-{{ $user->id }}" @class(['opacity-50' => ! $user->is_active])>
                         <td class="font-medium">{{ $user->name }}</td>

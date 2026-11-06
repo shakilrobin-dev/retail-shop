@@ -5,12 +5,16 @@ namespace App\Livewire;
 use App\Enums\PaymentDirection;
 use App\Enums\RepairStatus;
 use App\Enums\SaleStatus;
+use App\Models\CashShift;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\RepairJob;
 use App\Models\Sale;
+use App\Models\Setting;
+use App\Models\User;
 use App\Services\CurrentBranch;
+use App\Services\Settings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -30,7 +34,35 @@ class Dashboard extends Component
             [RepairStatus::Received, RepairStatus::Diagnosing, RepairStatus::WaitingForParts, RepairStatus::Repairing],
         );
 
+        $days = collect(range(13, 0))->push(0)->map(fn (int $daysAgo) => today()->subDays($daysAgo));
+        $salesByDay = Sale::query()
+            ->where('branch_id', $branchId)
+            ->where('status', SaleStatus::Completed)
+            ->where('sold_at', '>=', $days->first()->copy()->startOfDay())
+            ->selectRaw('DATE(sold_at) as day, SUM(total) as total, COUNT(*) as invoices')
+            ->groupBy('day')
+            ->get()
+            ->keyBy(fn ($row) => (string) $row->day);
+        $chart = $days->map(fn ($day) => [
+            'date' => $day,
+            'total' => (float) ($salesByDay[$day->toDateString()]->total ?? 0),
+            'invoices' => (int) ($salesByDay[$day->toDateString()]->invoices ?? 0),
+        ]);
+
+        $settings = app(Settings::class);
+        $setupSteps = [
+            [__('Set your shop name and logo'), route('settings.general', ['tab' => 'shop']), $settings->get('shop_name') !== config('shop.defaults.shop_name'), 'settings.manage'],
+            [__('Add branch address and phone (shown on receipts)'), route('settings.branches'), (bool) app(CurrentBranch::class)->get()?->address, 'branches.manage'],
+            [__('Open the cash register for the first time'), route('cash-register'), CashShift::query()->exists(), 'cash-shifts.manage'],
+            [__('Add products with barcodes'), route('products.create'), Product::query()->exists(), 'products.manage'],
+            [__('Add staff users'), route('settings.users'), User::query()->count() > 1, 'users.manage'],
+            [__('Choose receipt printing (ON / OFF / Ask)'), route('settings.general', ['tab' => 'receipt']), Setting::query()->where('key', 'receipt_print_mode')->exists(), 'settings.manage'],
+        ];
+
         return view('livewire.dashboard', [
+            'chart' => $chart,
+            'chartMax' => max(1, (float) $chart->max('total')),
+            'setupSteps' => collect($setupSteps)->filter(fn (array $step): bool => auth()->user()->can($step[3]))->values(),
             'todaySalesTotal' => (float) (clone $todaySales)->sum('total'),
             'todayInvoiceCount' => (clone $todaySales)->count(),
             'todayRepairIncome' => (float) Payment::query()

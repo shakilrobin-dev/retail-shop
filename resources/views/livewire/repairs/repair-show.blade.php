@@ -1,19 +1,19 @@
-<div class="mx-auto max-w-6xl space-y-4"
+<div class="mx-auto max-w-6xl space-y-5"
     x-data
     x-init="
         @if (session('print_slip')) window.open('{{ route('repairs.slip', $job) }}', '_blank'); @endif
         @if (session('print_bill')) window.open('{{ route('repairs.bill', $job) }}', '_blank'); @endif
     ">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Repair').' '.$job->job_no" :subtitle="trim($job->device_brand.' '.$job->device_model).' · '.$job->customer->name" :back="route('repairs.index')" :backLabel="__('Repairs')" />
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
     @error('status') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="flex flex-wrap items-center gap-2">
-        <a href="{{ route('repairs.index') }}" class="btn-secondary" wire:navigate>← {{ __('Repairs') }}</a>
         <a href="{{ route('repairs.slip', $job) }}" target="_blank" class="btn-secondary">{{ __('Print job slip') }}</a>
         <a href="{{ route('repairs.bill', $job) }}" target="_blank" class="btn-secondary">{{ __('Print bill') }}</a>
         <div class="flex-1"></div>
-        <span class="badge bg-indigo-50 px-3 py-1 text-sm text-indigo-700">{{ $job->status->label() }}</span>
+        <span class="badge bg-brand-50 px-3 py-1 text-sm text-brand-700">{{ $job->status->label() }}</span>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -21,11 +21,11 @@
         <div class="card space-y-3 p-5 text-sm lg:col-span-2">
             <div class="grid gap-3 sm:grid-cols-3">
                 <div><div class="text-slate-500">{{ __('Job no') }}</div><div class="font-mono font-semibold">{{ $job->job_no }}</div></div>
-                <div><div class="text-slate-500">{{ __('Customer') }}</div><a href="{{ route('customers.show', $job->customer) }}" class="text-indigo-600 hover:underline" wire:navigate>{{ $job->customer->name }}</a><div>{{ $job->customer->phone }}</div></div>
+                <div><div class="text-slate-500">{{ __('Customer') }}</div><a href="{{ route('customers.show', $job->customer) }}" class="text-brand-600 hover:underline" wire:navigate>{{ $job->customer->name }}</a><div>{{ $job->customer->phone }}</div></div>
                 <div><div class="text-slate-500">{{ __('Received') }}</div><div>{{ shop_digits($job->created_at->format('d M Y h:i A')) }}</div><div class="text-xs text-slate-400">{{ $job->receiver?->name }}</div></div>
                 <div><div class="text-slate-500">{{ __('Device') }}</div><div>{{ __('repair_devices.'.$job->device_type) }} · {{ $job->device_brand }} {{ $job->device_model }} {{ $job->device_color }}</div></div>
                 <div><div class="text-slate-500">{{ __('IMEI / serial') }}</div><div class="font-mono">{{ $job->imei_serial ?? '—' }}</div></div>
-                <div><div class="text-slate-500">{{ __('Password / pattern') }}</div><div x-data="{ show: false }"><span x-show="show" x-cloak>{{ $job->device_password ?? '—' }}</span><button type="button" x-show="!show" x-on:click="show = true" class="text-xs text-indigo-600 hover:underline">{{ __('Show') }}</button></div></div>
+                <div><div class="text-slate-500">{{ __('Password / pattern') }}</div><div x-data="{ show: false }"><span x-show="show" x-cloak>{{ $job->device_password ?? '—' }}</span><button type="button" x-show="!show" x-on:click="show = true" class="text-xs text-brand-600 hover:underline">{{ __('Show') }}</button></div></div>
                 <div><div class="text-slate-500">{{ __('Delivery date') }}</div><div>{{ $job->estimated_delivery_at ? shop_digits($job->estimated_delivery_at->format('d M Y h:i A')) : '—' }}</div></div>
                 <div><div class="text-slate-500">{{ __('Estimated cost') }}</div><div>{{ $job->estimated_cost !== null ? money($job->estimated_cost) : '—' }}</div></div>
                 <div><div class="text-slate-500">{{ __('Accessories received') }}</div><div>{{ collect($job->accessories ?? [])->map(fn ($a) => __('repair_accessories.'.$a))->implode(', ') ?: '—' }}</div></div>
@@ -44,7 +44,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     @foreach ($nextStatuses as $next)
                         <button type="button" wire:click="setStatus('{{ $next->value }}')" @disabled($job->status === $next)
-                            @class(['btn-sm btn', 'bg-indigo-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
+                            @class(['btn-sm btn', 'bg-brand-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
                     @endforeach
                 </div>
                 <div class="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
@@ -65,7 +65,7 @@
 
     {{-- Delivery / cancel / warranty panels --}}
     @if ($panel === 'deliver' && ! $isClosed)
-        <form wire:submit="deliver" class="card space-y-3 border-2 border-indigo-200 p-5">
+        <form wire:submit="deliver" class="card space-y-3 border-2 border-brand-200 p-5">
             <h3 class="font-semibold">{{ __('Deliver device') }} · {{ __('Due') }}: {{ money(max(0, $due)) }}</h3>
             @foreach ($deliveryPayments as $index => $payment)
                 <div wire:key="dpay-{{ $index }}" class="flex flex-wrap gap-2">
@@ -78,7 +78,7 @@
                     <input wire:model="deliveryPayments.{{ $index }}.transaction_ref" type="text" placeholder="{{ __('Transaction ID (optional)') }}" class="form-input w-56">
                 </div>
             @endforeach
-            <button type="button" wire:click="addDeliveryPayment" class="text-xs text-indigo-600 hover:underline">+ {{ __('split payment') }}</button>
+            <button type="button" wire:click="addDeliveryPayment" class="text-xs text-brand-600 hover:underline">+ {{ __('split payment') }}</button>
             @error('payments') <p class="form-error">{{ $message }}</p> @enderror
             <div class="flex gap-2">
                 <button type="button" wire:click="$set('panel', '')" class="btn-secondary">{{ __('Back') }}</button>
@@ -137,7 +137,7 @@
             @endunless
             <table class="data-table">
                 <thead><tr><th>{{ __('Part') }}</th><th class="text-right">{{ __('Qty') }}</th><th class="text-right">{{ __('Price') }}</th><th class="text-right">{{ __('Total') }}</th><th></th></tr></thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse ($job->parts as $part)
                         <tr wire:key="part-{{ $part->id }}">
                             <td>{{ $part->product_name }}</td>

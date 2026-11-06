@@ -10,13 +10,14 @@
     ];
 @endphp
 <div class="space-y-4">
-    <div class="flex flex-wrap gap-1">
+    <x-page-header class="mb-0" :title="__('Reports')" :subtitle="__('Profit, sales and stock reports. Export any report to Excel.')" />
+    <nav class="no-print flex gap-5 overflow-x-auto border-b border-slate-200">
         @foreach ($tabLabels as $key => $label)
-            <button type="button" wire:click="$set('tab', '{{ $key }}')" @class(['btn btn-sm', 'bg-indigo-600 text-white' => $activeTab === $key, 'btn-secondary' => $activeTab !== $key])>{{ $label }}</button>
+            <button type="button" wire:click="$set('tab', '{{ $key }}')" class="{{ $activeTab === $key ? 'tab-link-active' : 'tab-link' }}">{{ $label }}</button>
         @endforeach
-    </div>
+    </nav>
 
-    <div class="card flex flex-wrap items-end gap-2 p-4">
+    <div class="no-print card flex flex-wrap items-end gap-2 p-3">
         @if ($activeTab === 'dead-stock')
             <div>
                 <label class="form-label">{{ __('Not sold in (days)') }}</label>
@@ -26,7 +27,7 @@
             <input wire:model.live="from" type="date" class="form-input w-auto">
             <input wire:model.live="to" type="date" class="form-input w-auto">
             @foreach (['today' => __('Today'), 'yesterday' => __('Yesterday'), 'week' => __('This week'), 'month' => __('This month'), 'last-month' => __('Last month'), 'year' => __('This year')] as $key => $label)
-                <button type="button" wire:click="setPeriod('{{ $key }}')" class="btn-secondary btn-sm">{{ $label }}</button>
+                <button type="button" wire:click="setPeriod('{{ $key }}')" class="chip">{{ $label }}</button>
             @endforeach
         @endif
         @if ($canSeeAll)
@@ -77,7 +78,7 @@
                 @switch($activeTab)
                     @case('daily')
                         <thead><tr><th>{{ __('Date') }}</th><th class="text-right">{{ __('Invoices') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($rows as $row)
                                 <tr><td>{{ shop_digits(\Illuminate\Support\Carbon::parse($row->day)->format('D, d M Y')) }}</td><td class="text-right">{{ shop_digits($row->invoices) }}</td><td class="text-right tabular-nums">{{ money($row->sales) }}</td><td class="text-right tabular-nums">{{ money($row->profit) }}</td></tr>
                             @empty
@@ -90,7 +91,7 @@
                         @break
                     @case('products')
                         <thead><tr><th>#</th><th>{{ __('Product') }}</th><th class="text-right">{{ __('Qty sold (pcs)') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($rows as $row)
                                 <tr><td class="text-slate-400">{{ shop_digits($loop->iteration) }}</td><td>{{ $row->name }}</td><td class="text-right">{{ shop_digits($row->quantity + 0) }}</td><td class="text-right tabular-nums">{{ money($row->revenue) }}</td><td class="text-right tabular-nums">{{ money($row->profit) }}</td></tr>
                             @empty
@@ -99,18 +100,21 @@
                         </tbody>
                         @break
                     @case('categories')
-                        <thead><tr><th>{{ __('Category') }}</th><th class="text-right">{{ __('Qty sold (pcs)') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <thead><tr><th>
+                            <span>{{ __('Category') }}</span>
+                            <label class="ml-3 inline-flex items-center gap-1.5 normal-case tracking-normal"><input wire:model.live="mainCategories" type="checkbox" class="rounded border-slate-300"> {{ __('Main categories only') }}</label>
+                        </th><th class="text-right">{{ __('Qty sold (pcs)') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
+                        <tbody>
                             @forelse ($rows as $row)
-                                <tr><td>{{ app()->getLocale() === 'bn' && $row->name_bn ? $row->name_bn : $row->name }}</td><td class="text-right">{{ shop_digits($row->quantity + 0) }}</td><td class="text-right tabular-nums">{{ money($row->revenue) }}</td><td class="text-right tabular-nums">{{ money($row->profit) }}</td></tr>
+                                <tr><td>{{ $row['name'] }}</td><td class="text-right">{{ shop_digits($row['quantity'] + 0) }}</td><td class="text-right tabular-nums">{{ money($row['revenue']) }}</td><td class="text-right tabular-nums">{{ money($row['profit']) }}</td></tr>
                             @empty
-                                <tr><td colspan="4" class="py-8 text-center text-slate-500">{{ __('No sales in this period.') }}</td></tr>
+                                <x-empty :colspan="4" icon="chart" :title="__('No sales in this period.')" />
                             @endforelse
                         </tbody>
                         @break
                     @case('payments')
                         <thead><tr><th>{{ __('Payment method') }}</th><th class="text-right">{{ __('Money in') }}</th><th class="text-right">{{ __('Money out') }}</th><th class="text-right">{{ __('Net') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($rows as $row)
                                 <tr><td>{{ app()->getLocale() === 'bn' && $row->name_bn ? $row->name_bn : $row->name }}</td><td class="text-right tabular-nums">{{ money($row->money_in) }}</td><td class="text-right tabular-nums">{{ money($row->money_out) }}</td><td class="text-right font-medium tabular-nums">{{ money($row->money_in - $row->money_out) }}</td></tr>
                             @empty
@@ -120,7 +124,7 @@
                         @break
                     @case('staff')
                         <thead><tr><th>{{ __('Staff') }}</th><th class="text-right">{{ __('Invoices') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Discounts given') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($rows as $row)
                                 <tr><td>{{ $row->name ?? '—' }}</td><td class="text-right">{{ shop_digits($row->invoices) }}</td><td class="text-right tabular-nums">{{ money($row->sales) }}</td><td class="text-right tabular-nums">{{ money($row->discounts) }}</td></tr>
                             @empty
@@ -130,7 +134,7 @@
                         @break
                     @case('dead-stock')
                         <thead><tr><th>{{ __('Product') }}</th><th class="text-right">{{ __('In stock') }}</th><th class="text-right">{{ __('Money stuck (cost)') }}</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($rows as $row)
                                 <tr><td>{{ $row->name }} <span class="text-xs text-slate-400">{{ $row->sku }}</span></td><td class="text-right">{{ shop_digits($row->quantity + 0) }}</td><td class="text-right tabular-nums">{{ money($row->value) }}</td></tr>
                             @empty

@@ -1,4 +1,5 @@
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="mx-auto max-w-5xl space-y-5">
+    <x-page-header class="mb-0" :title="__('Print barcode labels')" :subtitle="__('Scan or search products, set how many labels, then print.')" :back="route('products.index')" :backLabel="__('Products')" />
     <div class="card p-5">
         <label class="form-label" for="label-search">{{ __('Scan barcode or search product') }}</label>
         <input wire:model.live.debounce.300ms="search" wire:keydown.enter.prevent="addFromSearch" id="label-search" type="search" autofocus class="form-input">
@@ -30,7 +31,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Barcode') }}</th><th>{{ __('Price') }}</th><th class="w-32">{{ __('Labels') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($rows as $index => $row)
                     <tr wire:key="row-{{ $row['barcode_id'] }}">
                         <td>{{ $row['product'] }} @if ($row['unit'])<span class="text-xs text-slate-500">({{ $row['unit'] }})</span>@endif</td>

@@ -32,9 +32,9 @@ class DemoDataSeeder extends Seeder
 
         $items = [
             // name, name_bn, category, brand, models, cost, price, stock, barcode, warranty, pack [name, qty, price, barcode]
-            ['20W Fast Charger Type-C', '২০ ওয়াট ফাস্ট চার্জার', 'Chargers', 'Anker', null, 450, 750, 25, '6901234500011', 180, null],
-            ['USB Type-C Cable 1m', 'টাইপ-সি ক্যাবল ১ মিটার', 'Cables', 'Baseus', null, 90, 180, 60, '6901234500028', 30, null],
-            ['Lightning Cable 1m', 'লাইটনিং ক্যাবল ১ মিটার', 'Cables', 'Baseus', 'iPhone', 150, 300, 30, '6901234500035', 30, null],
+            ['20W Fast Charger Type-C', '২০ ওয়াট ফাস্ট চার্জার', 'Wall chargers', 'Anker', null, 450, 750, 25, '6901234500011', 180, null],
+            ['USB Type-C Cable 1m', 'টাইপ-সি ক্যাবল ১ মিটার', 'Type-C', 'Baseus', null, 90, 180, 60, '6901234500028', 30, null],
+            ['Lightning Cable 1m', 'লাইটনিং ক্যাবল ১ মিটার', 'Lightning', 'Baseus', 'iPhone', 150, 300, 30, '6901234500035', 30, null],
             ['Samsung A15 Back Cover', 'স্যামসাং A15 ব্যাক কভার', 'Covers & Cases', null, 'Samsung A15', 60, 150, 20, null, null, null],
             ['Tempered Glass 9D', 'টেম্পার্ড গ্লাস ৯ডি', 'Screen Protectors', null, 'All models', 25, 100, 100, null, null, null],
             ['Wired Earphone', 'তারযুক্ত ইয়ারফোন', 'Earphones & Headphones', 'Realme', null, 120, 250, 15, '6901234500042', 7, null],

@@ -4,10 +4,10 @@ namespace App\Livewire\Products;
 
 use App\Models\Barcode;
 use App\Models\Brand;
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\Unit;
 use App\Services\BarcodeService;
+use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\ProductService;
 use App\Services\Settings;
@@ -285,7 +285,7 @@ class ProductForm extends Component
     public function render(): View
     {
         return view('livewire.products.product-form', [
-            'categories' => Category::query()->with('parent')->where('is_active', true)->orderBy('parent_id')->orderBy('name')->get(),
+            'categoryOptions' => app(CategoryTree::class)->flat(onlyActive: true),
             'brands' => Brand::query()->where('is_active', true)->orderBy('name')->get(),
             'unitOptions' => Unit::query()->orderBy('id')->get(),
             'vatEnabled' => app(Settings::class)->bool('vat_enabled'),

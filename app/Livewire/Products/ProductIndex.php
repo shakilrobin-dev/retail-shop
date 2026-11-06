@@ -3,9 +3,9 @@
 namespace App\Livewire\Products;
 
 use App\Models\Brand;
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -70,10 +70,7 @@ class ProductIndex extends Component
                         ->orWhereHas('barcodes', fn (Builder $query) => $query->where('code', $term));
                 });
             })
-            ->when($this->categoryId, function (Builder $query): void {
-                $childIds = Category::query()->where('parent_id', $this->categoryId)->pluck('id');
-                $query->whereIn('category_id', $childIds->push($this->categoryId));
-            })
+            ->when($this->categoryId, fn (Builder $query) => $query->whereIn('category_id', app(CategoryTree::class)->withDescendants($this->categoryId)))
             ->when($this->brandId, fn (Builder $query) => $query->where('brand_id', $this->brandId))
             ->when($this->stockFilter === 'low', fn (Builder $query) => $query->where('reorder_level', '>', 0)
                 ->whereRaw('COALESCE((select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?), 0) <= products.reorder_level', [$branchId]))
@@ -84,7 +81,7 @@ class ProductIndex extends Component
 
         return view('livewire.products.product-index', [
             'products' => $products,
-            'categories' => Category::query()->with('parent')->orderBy('name')->get(),
+            'categoryOptions' => app(CategoryTree::class)->flat(),
             'brands' => Brand::query()->orderBy('name')->get(),
         ])->title(__('Products'));
     }

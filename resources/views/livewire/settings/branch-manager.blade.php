@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 
@@ -24,7 +24,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Code') }}</th><th>{{ __('Name') }}</th><th>{{ __('Address') }}</th><th>{{ __('Phone') }}</th><th class="text-right">{{ __('Users') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($branches as $branch)
                     <tr wire:key="branch-{{ $branch->id }}" @class(['opacity-50' => ! $branch->is_active])>
                         <td class="font-mono">{{ $branch->code }}</td>

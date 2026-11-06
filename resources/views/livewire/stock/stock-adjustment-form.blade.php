@@ -1,9 +1,9 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Adjust / count stock')" :subtitle="__('Fix stock for damaged, lost or found items, or count the shelf.')" :back="route('stock.index')" :backLabel="__('Stock')" />
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="flex flex-wrap items-center gap-2">
-        <a href="{{ route('stock.index') }}" class="btn-secondary" wire:navigate>← {{ __('Stock') }}</a>
         <div class="inline-flex rounded-lg bg-slate-200 p-0.5 text-sm">
             <button type="button" wire:click="$set('mode', 'change')" @class(['rounded-md px-3 py-1.5', 'bg-white shadow-sm font-medium' => $mode === 'change'])>{{ __('Add / remove stock') }}</button>
             <button type="button" wire:click="$set('mode', 'count')" @class(['rounded-md px-3 py-1.5', 'bg-white shadow-sm font-medium' => $mode === 'count'])>{{ __('Stock count (scan shelf)') }}</button>
@@ -21,7 +21,7 @@
 
         <table class="data-table">
             <thead><tr><th>{{ __('Product') }}</th><th class="text-right">{{ __('In system') }}</th><th class="w-40">{{ $mode === 'count' ? __('Counted') : __('Change (+/−)') }}</th><th class="text-right">{{ __('After') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($lines as $index => $line)
                     @php $after = $mode === 'count' ? (float) $line['value'] : $line['current'] + (float) $line['value']; @endphp
                     <tr wire:key="adj-{{ $line['product_id'] }}">
@@ -52,7 +52,7 @@
         <h3 class="px-4 pt-4 font-semibold">{{ __('Recent adjustments') }}</h3>
         <table class="data-table">
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('No') }}</th><th>{{ __('Reason') }}</th><th>{{ __('Items') }}</th><th>{{ __('By') }}</th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($recent as $adjustment)
                     <tr wire:key="radj-{{ $adjustment->id }}">
                         <td class="whitespace-nowrap">{{ shop_digits($adjustment->created_at->format('d M Y')) }}</td>

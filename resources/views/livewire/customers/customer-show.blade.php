@@ -1,4 +1,5 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
+    <x-page-header class="mb-0" :title="$customer->name" :subtitle="$customer->phone" :back="route('customers.index')" :backLabel="__('Customers')" />
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
         <div><div class="text-slate-500">{{ __('Name') }}</div><div class="font-medium">{{ $customer->name }}</div></div>
         <div><div class="text-slate-500">{{ __('Phone') }}</div><div>{{ $customer->phone ?? '—' }}</div></div>
@@ -7,13 +8,11 @@
         @if ($customer->notes)<div class="md:col-span-4 text-slate-600">{{ $customer->notes }}</div>@endif
     </div>
 
-    <a href="{{ route('customers.index') }}" class="btn-secondary" wire:navigate>← {{ __('Customers') }}</a>
-
     <div class="card overflow-x-auto">
         <h3 class="px-4 pt-4 font-semibold">{{ __('Purchases & warranty') }}</h3>
         <table class="data-table">
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Invoice') }}</th><th>{{ __('Items') }}</th><th class="text-right">{{ __('Total') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($sales as $sale)
                     <tr wire:key="csale-{{ $sale->id }}" @class(['text-slate-400 line-through' => $sale->status === \App\Enums\SaleStatus::Voided])>
                         <td class="whitespace-nowrap">{{ shop_digits($sale->sold_at?->format('d M Y')) }}</td>
@@ -44,7 +43,7 @@
         <h3 class="px-4 pt-4 font-semibold">{{ __('Repairs') }}</h3>
         <table class="data-table">
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Job no') }}</th><th>{{ __('Device') }}</th><th>{{ __('Status') }}</th><th class="text-right">{{ __('Total') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($repairs as $repair)
                     <tr wire:key="crepair-{{ $repair->id }}">
                         <td>{{ shop_digits($repair->created_at->format('d M Y')) }}</td>

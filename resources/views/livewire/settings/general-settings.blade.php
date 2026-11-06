@@ -1,7 +1,7 @@
 @php
     $toggle = fn (string $key, string $label, ?string $help = null) => ['key' => $key, 'label' => $label, 'help' => $help];
 @endphp
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 

@@ -1,4 +1,5 @@
 <form wire:submit="save" class="space-y-4">
+    <x-page-header class="mb-0" :title="__('New purchase')" :subtitle="__('Scan products from the supplier invoice, check costs, then save.')" :back="route('purchases.index')" :backLabel="__('Purchases')" />
     <div class="card grid gap-3 p-5 md:grid-cols-4">
         <div>
             <label class="form-label">{{ __('Supplier') }}</label>
@@ -40,7 +41,7 @@
                         <th></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse ($items as $index => $item)
                         <tr wire:key="item-{{ $index }}-{{ $item['product_id'] }}">
                             <td class="font-medium">{{ $item['name'] }}</td>

@@ -1,33 +1,34 @@
 <div class="w-full max-w-sm">
-    <div class="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 class="text-center text-2xl font-semibold">{{ app(\App\Services\Settings::class)->get('shop_name') }}</h1>
-        <p class="mt-1 text-center text-sm text-slate-500">{{ __('Log in to continue') }}</p>
+    <h1 class="text-2xl font-semibold tracking-tight">{{ __('Welcome back') }}</h1>
+    <p class="mt-1 text-sm text-slate-500">{{ __('Log in to continue') }}</p>
 
-        <form wire:submit="login" class="mt-8 space-y-5">
-            <div>
-                <label for="username" class="block text-sm font-medium text-slate-700">{{ __('Username or email') }}</label>
-                <input wire:model="username" id="username" type="text" autocomplete="username" autofocus
-                    class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                @error('username') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+    <form wire:submit="login" class="mt-8 space-y-5">
+        <div>
+            <label for="username" class="form-label">{{ __('Username or email') }}</label>
+            <input wire:model="username" id="username" type="text" autocomplete="username" autofocus class="form-input py-2.5">
+            @error('username') <p class="form-error">{{ $message }}</p> @enderror
+        </div>
+
+        <div x-data="{ show: false }">
+            <label for="password" class="form-label">{{ __('Password') }}</label>
+            <div class="relative">
+                <input wire:model="password" id="password" x-bind:type="show ? 'text' : 'password'" type="password" autocomplete="current-password" class="form-input py-2.5 pr-10">
+                <button type="button" x-on:click="show = !show" class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600" aria-label="{{ __('Show password') }}">
+                    <span x-show="!show"><x-icon name="eye" class="size-4" /></span>
+                    <span x-show="show" x-cloak><x-icon name="eye-off" class="size-4" /></span>
+                </button>
             </div>
+            @error('password') <p class="form-error">{{ $message }}</p> @enderror
+        </div>
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-slate-700">{{ __('Password') }}</label>
-                <input wire:model="password" id="password" type="password" autocomplete="current-password"
-                    class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-            </div>
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+            <input wire:model="remember" type="checkbox" class="rounded border-slate-300 text-brand-600">
+            {{ __('Remember me') }}
+        </label>
 
-            <label class="flex items-center gap-2 text-sm text-slate-600">
-                <input wire:model="remember" type="checkbox" class="rounded border-slate-300 text-indigo-600">
-                {{ __('Remember me') }}
-            </label>
-
-            <button type="submit" wire:loading.attr="disabled"
-                class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
-                <span wire:loading.remove wire:target="login">{{ __('Log in') }}</span>
-                <span wire:loading wire:target="login">{{ __('Please wait...') }}</span>
-            </button>
-        </form>
-    </div>
+        <button type="submit" wire:loading.attr="disabled" class="btn-primary w-full py-2.5">
+            <span wire:loading.remove wire:target="login">{{ __('Log in') }}</span>
+            <span wire:loading wire:target="login">{{ __('Please wait...') }}</span>
+        </button>
+    </form>
 </div>

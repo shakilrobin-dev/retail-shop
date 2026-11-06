@@ -1,10 +1,39 @@
-@if (session('success'))
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
-        class="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
-        <span>{{ session('success') }}</span>
-        <button type="button" x-on:click="show = false" class="text-emerald-600">✕</button>
-    </div>
-@endif
-@if (session('error'))
-    <div class="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200">{{ session('error') }}</div>
-@endif
+@props(['global' => false])
+
+{{--
+    Toast messages (top-right).
+    The layout renders it with "global" on full page loads (messages after a redirect).
+    Inside components it only shows messages from Livewire updates, so nothing shows twice.
+--}}
+@php
+    $isLivewireUpdate = request()->hasHeader('X-Livewire');
+    $show = ($global && ! $isLivewireUpdate) || (! $global && $isLivewireUpdate);
+    $success = $show ? session('success') : null;
+    $error = $show ? session('error') : null;
+@endphp
+<div wire:key="flash-{{ $global ? 'global' : 'local' }}-{{ $success || $error ? uniqid() : 'none' }}" x-data="{
+        toasts: [],
+        add(type, message) {
+            if (! message) return;
+            const id = Date.now() + Math.random();
+            this.toasts.push({ id, type, message });
+            setTimeout(() => this.remove(id), type === 'error' ? 8000 : 4500);
+        },
+        remove(id) { this.toasts = this.toasts.filter(t => t.id !== id) },
+    }"
+    x-init="
+        @if ($success) add('success', @js($success)); @endif
+        @if ($error) add('error', @js($error)); @endif
+    "
+    @if ($global) x-on:toast.window="add($event.detail.type ?? 'success', $event.detail.message)" @endif
+    class="pointer-events-none fixed right-4 top-4 z-[60] flex w-full max-w-sm flex-col gap-2">
+    <template x-for="toast in toasts" :key="toast.id">
+        <div x-transition.opacity.duration.200ms
+            class="pointer-events-auto flex items-start gap-3 rounded-xl border bg-white p-3.5 shadow-lg"
+            :class="toast.type === 'error' ? 'border-red-200' : 'border-emerald-200'">
+            <span class="mt-0.5 size-2 shrink-0 rounded-full" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'"></span>
+            <p class="flex-1 text-sm text-slate-700" x-text="toast.message"></p>
+            <button type="button" x-on:click="remove(toast.id)" class="text-slate-400 hover:text-slate-600" aria-label="{{ __('Close') }}">✕</button>
+        </div>
+    </template>
+</div>

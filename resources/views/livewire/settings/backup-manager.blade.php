@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 
@@ -16,7 +16,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('File') }}</th><th class="text-right">{{ __('Size') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($backups as $backup)
                     <tr wire:key="bk-{{ $backup['name'] }}">
                         <td class="whitespace-nowrap">{{ shop_digits(\Illuminate\Support\Carbon::createFromTimestamp($backup['date'])->timezone(config('app.timezone'))->format('d M Y h:i A')) }}</td>

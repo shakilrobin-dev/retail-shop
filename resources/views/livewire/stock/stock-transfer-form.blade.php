@@ -1,4 +1,5 @@
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="mx-auto max-w-5xl space-y-5">
+    <x-page-header class="mb-0" :title="__('Send stock to branch')" :back="route('stock.transfers.index')" :backLabel="__('Transfers')" />
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     @if ($branches->isEmpty())
@@ -26,7 +27,7 @@
             @error('lines') <p class="form-error">{{ $message }}</p> @enderror
             <table class="data-table">
                 <thead><tr><th>{{ __('Product') }}</th><th class="text-right">{{ __('Available') }}</th><th class="w-40">{{ __('Send (pieces)') }}</th><th></th></tr></thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse ($lines as $index => $line)
                         <tr wire:key="tl-{{ $line['product_id'] }}">
                             <td>{{ $line['name'] }}</td>

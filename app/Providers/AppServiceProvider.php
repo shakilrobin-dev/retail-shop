@@ -10,6 +10,7 @@ use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\StockAdjustment;
 use App\Models\StockTransfer;
+use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\Settings;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(Settings::class);
         $this->app->scoped(CurrentBranch::class);
+        $this->app->scoped(CategoryTree::class);
     }
 
     /**

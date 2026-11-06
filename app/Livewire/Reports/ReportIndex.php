@@ -32,6 +32,10 @@ class ReportIndex extends Component
     #[Url]
     public int $deadDays = 60;
 
+    /** Category report: add sub-categories into their main category. */
+    #[Url]
+    public bool $mainCategories = false;
+
     public function mount(): void
     {
         $this->authorize('reports.view');
@@ -80,7 +84,7 @@ class ReportIndex extends Component
             'summary' => ['summary' => $reports->summary($branchId, $from, $to)],
             'daily' => ['rows' => $reports->daily($branchId, $from, $to)],
             'products' => ['rows' => $reports->topProducts($branchId, $from, $to)],
-            'categories' => ['rows' => $reports->byCategory($branchId, $from, $to)],
+            'categories' => ['rows' => $reports->byCategory($branchId, $from, $to, $this->mainCategories)],
             'payments' => ['rows' => $reports->byPaymentMethod($branchId, $from, $to)],
             'staff' => ['rows' => $reports->byStaff($branchId, $from, $to)],
             'dead-stock' => ['rows' => $reports->deadStock($branchId, max(1, $this->deadDays))],
@@ -92,7 +96,7 @@ class ReportIndex extends Component
         return view('livewire.reports.report-index', $data + [
             'activeTab' => $tab,
             'canSeeAll' => $user->canAccessAllBranches() && Branch::query()->count() > 1,
-            'exportUrl' => route('reports.export', ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays]),
+            'exportUrl' => route('reports.export', ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0]),
         ])->title(__('Reports'));
     }
 }

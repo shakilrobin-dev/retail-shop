@@ -1,15 +1,13 @@
-<div class="space-y-4">
+<div class="space-y-5">
     <x-flash />
-    <div class="flex flex-wrap gap-2">
-        <a href="{{ route('stock.index') }}" class="btn-secondary" wire:navigate>← {{ __('Stock') }}</a>
-        <div class="flex-1"></div>
-        <a href="{{ route('stock.transfers.create') }}" class="btn-primary" wire:navigate>+ {{ __('Send stock to branch') }}</a>
-    </div>
+    <x-page-header class="mb-0" :title="__('Stock transfers')" :subtitle="__('Send stock to another branch. The receiving branch confirms what arrived.')">
+        <a href="{{ route('stock.transfers.create') }}" class="btn-primary" wire:navigate><x-icon name="transfer" class="size-4" /> {{ __('Send stock to branch') }}</a>
+    </x-page-header>
 
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Date') }}</th><th>{{ __('No') }}</th><th>{{ __('From') }}</th><th>{{ __('To') }}</th><th class="text-right">{{ __('Items') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($transfers as $transfer)
                     <tr wire:key="tr-{{ $transfer->id }}">
                         <td class="whitespace-nowrap">{{ shop_digits($transfer->sent_at?->format('d M Y')) }}</td>
@@ -24,7 +22,7 @@
                         <td class="text-right"><a href="{{ route('stock.transfers.show', $transfer) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('Open') }}</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="py-8 text-center text-slate-500">{{ __('No transfers yet.') }}</td></tr>
+                    <x-empty :colspan="7" icon="transfer" :title="__('No transfers yet.')" />
                 @endforelse
             </tbody>
         </table>

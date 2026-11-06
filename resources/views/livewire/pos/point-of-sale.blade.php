@@ -55,7 +55,7 @@
                                 <th class="w-10"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($cart as $index => $line)
                                 @php
                                     $unitQty = $line['units'][$line['product_unit_id']]['quantity'] ?? 1;

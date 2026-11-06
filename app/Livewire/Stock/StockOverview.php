@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Stock;
 
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,7 +43,7 @@ class StockOverview extends Component
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$this->search}%")->orWhere('sku', $this->search)
                 ->orWhereHas('barcodes', fn (Builder $query) => $query->where('code', $this->search))))
-            ->when($this->categoryId, fn (Builder $query) => $query->whereIn('category_id', Category::query()->where('parent_id', $this->categoryId)->pluck('id')->push($this->categoryId)))
+            ->when($this->categoryId, fn (Builder $query) => $query->whereIn('category_id', app(CategoryTree::class)->withDescendants($this->categoryId)))
             ->when($this->filter === 'low', fn (Builder $query) => $query->where('reorder_level', '>', 0)->whereRaw("COALESCE({$stockSql}, 0) <= products.reorder_level", [$branchId]))
             ->when($this->filter === 'out', fn (Builder $query) => $query->whereRaw("COALESCE({$stockSql}, 0) <= 0", [$branchId]));
 
@@ -57,7 +57,7 @@ class StockOverview extends Component
         return view('livewire.stock.stock-overview', [
             'products' => $query->orderBy('name')->paginate(30),
             'stockValue' => $value,
-            'categories' => Category::query()->whereNull('parent_id')->orderBy('name')->get(),
+            'categoryOptions' => app(CategoryTree::class)->flat(),
         ])->title(__('Stock'));
     }
 }

@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 
@@ -20,7 +20,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Order') }}</th><th>{{ __('Name') }}</th><th>{{ __('Type') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($methods as $method)
                     <tr wire:key="pm-{{ $method->id }}" @class(['opacity-50' => ! $method->is_active])>
                         <td class="whitespace-nowrap">

@@ -1,9 +1,8 @@
-<div class="space-y-4">
+<div class="space-y-5">
     <x-flash />
-    <div class="flex flex-wrap gap-2">
-        <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Search name or phone') }}" class="form-input max-w-sm">
-        <button type="button" wire:click="create" class="btn-primary">+ {{ __('New customer') }}</button>
-    </div>
+    <x-page-header class="mb-0" :title="__('Customers')" :subtitle="__('Purchase and repair history of every customer.')">
+        <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New customer') }}</button>
+    </x-page-header>
 
     @if ($showForm)
         <form wire:submit="save" class="card grid gap-3 p-5 md:grid-cols-2">
@@ -32,10 +31,17 @@
         </form>
     @endif
 
-    <div class="card overflow-x-auto">
+    <div class="card">
+        <div class="border-b border-slate-100 p-3">
+            <div class="relative max-w-md">
+                <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Search name or phone') }}" class="form-input pl-9">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Phone') }}</th><th class="text-right">{{ __('Purchases') }}</th><th class="text-right">{{ __('Total spent') }}</th><th class="text-right">{{ __('Repairs') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($customers as $customer)
                     <tr wire:key="customer-{{ $customer->id }}">
                         <td class="font-medium">{{ $customer->name }}</td>
@@ -49,10 +55,11 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-8 text-center text-slate-500">{{ __('No customers found.') }}</td></tr>
+                    <x-empty :colspan="6" icon="users" :title="__('No customers found.')" />
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
     {{ $customers->links() }}
 </div>

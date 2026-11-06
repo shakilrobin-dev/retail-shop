@@ -78,27 +78,41 @@ class ShopSetupSeeder extends Seeder
 
         $categories = [
             ['Accessories', 'এক্সেসরিজ', [
-                ['Chargers', 'চার্জার'],
-                ['Cables', 'ক্যাবল'],
-                ['Covers & Cases', 'কভার ও কেস'],
-                ['Screen Protectors', 'স্ক্রিন প্রটেক্টর'],
-                ['Earphones & Headphones', 'ইয়ারফোন ও হেডফোন'],
-                ['Power Banks', 'পাওয়ার ব্যাংক'],
+                ['Chargers', 'চার্জার', [
+                    ['Wall chargers', 'ওয়াল চার্জার', []],
+                    ['Car chargers', 'কার চার্জার', []],
+                    ['Wireless chargers', 'ওয়্যারলেস চার্জার', []],
+                ]],
+                ['Cables', 'ক্যাবল', [
+                    ['Type-C', 'টাইপ-সি', []],
+                    ['Lightning', 'লাইটনিং', []],
+                    ['Micro USB', 'মাইক্রো ইউএসবি', []],
+                ]],
+                ['Covers & Cases', 'কভার ও কেস', []],
+                ['Screen Protectors', 'স্ক্রিন প্রটেক্টর', []],
+                ['Earphones & Headphones', 'ইয়ারফোন ও হেডফোন', []],
+                ['Power Banks', 'পাওয়ার ব্যাংক', []],
             ]],
             ['Spare Parts', 'স্পেয়ার পার্টস', [
-                ['Displays', 'ডিসপ্লে'],
-                ['Batteries', 'ব্যাটারি'],
-                ['Charging Ports', 'চার্জিং পোর্ট'],
-                ['Small Parts', 'ছোট পার্টস'],
+                ['Displays', 'ডিসপ্লে', []],
+                ['Batteries', 'ব্যাটারি', []],
+                ['Charging Ports', 'চার্জিং পোর্ট', []],
+                ['Small Parts', 'ছোট পার্টস', []],
             ]],
             ['Electronics', 'ইলেকট্রনিক্স', []],
         ];
-        foreach ($categories as [$name, $nameBn, $children]) {
-            $parent = Category::query()->firstOrCreate(['name' => $name, 'parent_id' => null], ['name_bn' => $nameBn]);
 
-            foreach ($children as [$childName, $childNameBn]) {
-                Category::query()->firstOrCreate(['name' => $childName, 'parent_id' => $parent->id], ['name_bn' => $childNameBn]);
-            }
+        $this->seedCategories($categories);
+    }
+
+    /**
+     * @param  list<array{0: string, 1: string, 2: array<int, mixed>}>  $categories
+     */
+    private function seedCategories(array $categories, ?int $parentId = null): void
+    {
+        foreach ($categories as [$name, $nameBn, $children]) {
+            $category = Category::query()->firstOrCreate(['name' => $name, 'parent_id' => $parentId], ['name_bn' => $nameBn]);
+            $this->seedCategories($children, $category->id);
         }
     }
 }

@@ -1,7 +1,9 @@
-<div class="space-y-4">
+<div class="space-y-5">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Expenses')" :subtitle="__('Rent, salary, bills and other shop costs. Cash from the drawer reduces the expected cash.')" />
 
     <form wire:submit="save" class="card grid gap-3 p-5 md:grid-cols-6">
+        <h2 class="card-title md:col-span-6">{{ __('Add expense') }}</h2>
         <div>
             <label class="form-label">{{ __('Date') }}</label>
             <input wire:model="expense_date" type="date" class="form-input">
@@ -59,7 +61,7 @@
         <div class="card overflow-x-auto lg:col-span-2">
             <table class="data-table">
                 <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Category') }}</th><th>{{ __('Note') }}</th><th>{{ __('Paid by') }}</th><th class="text-right">{{ __('Amount') }}</th><th></th></tr></thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse ($expenses as $expense)
                         <tr wire:key="exp-{{ $expense->id }}">
                             <td class="whitespace-nowrap">{{ shop_digits($expense->expense_date->format('d M Y')) }}</td>
@@ -70,7 +72,7 @@
                             <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="py-8 text-center text-slate-500">{{ __('No expenses in this period.') }}</td></tr>
+                        <x-empty :colspan="6" icon="banknotes" :title="__('No expenses in this period.')" />
                     @endforelse
                 </tbody>
             </table>

@@ -1,5 +1,6 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Cash register')" :subtitle="__('Open the register with starting cash, close it by counting the drawer.')" />
 
     <div class="grid gap-4 md:grid-cols-2">
         <div class="card p-5">
@@ -61,7 +62,7 @@
     <div class="card overflow-x-auto">
         <table class="data-table">
             <thead><tr><th>{{ __('Opened') }}</th><th>{{ __('Closed') }}</th><th>{{ __('By') }}</th><th class="text-right">{{ __('Expected') }}</th><th class="text-right">{{ __('Counted') }}</th><th class="text-right">{{ __('Difference') }}</th><th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($history as $shift)
                     <tr wire:key="shift-{{ $shift->id }}">
                         <td>{{ shop_digits($shift->opened_at->format('d M h:i A')) }}</td>

@@ -1,4 +1,5 @@
-<form wire:submit="save" class="mx-auto max-w-5xl space-y-4">
+<form wire:submit="save" class="mx-auto max-w-6xl space-y-5">
+    <x-page-header class="mb-0" :title="__('New repair job')" :subtitle="__('Take the device, fill in the details and print the job slip for the customer.')" :back="route('repairs.index')" :backLabel="__('Repairs')" />
     <div class="card grid gap-3 p-5 md:grid-cols-3">
         <h2 class="font-semibold md:col-span-3">{{ __('Customer') }}</h2>
         <div>

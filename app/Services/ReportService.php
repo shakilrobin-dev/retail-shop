@@ -119,18 +119,31 @@ class ReportService
     }
 
     /**
-     * @return Collection<int, object>
+     * Sales per category. $mainOnly = true adds sub-categories up into their main category.
+     *
+     * @return Collection<int, array{name: string, quantity: float, revenue: float, profit: float}>
      */
-    public function byCategory(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function byCategory(?int $branchId, CarbonInterface $from, CarbonInterface $to, bool $mainOnly = false): Collection
     {
-        return SaleItem::query()
+        $rows = SaleItem::query()
             ->join('products', 'products.id', '=', 'sale_items.product_id')
-            ->join('categories', 'categories.id', '=', 'products.category_id')
             ->whereIn('sale_items.sale_id', $this->completedSales($branchId, $from, $to)->select('id'))
-            ->selectRaw('categories.name as name, categories.name_bn as name_bn, SUM(sale_items.base_quantity) as quantity, SUM(sale_items.line_total) as revenue, SUM(sale_items.line_total - sale_items.unit_cost * sale_items.quantity) as profit')
-            ->groupBy('categories.id', 'categories.name', 'categories.name_bn')
-            ->orderByDesc('revenue')
+            ->selectRaw('products.category_id as category_id, SUM(sale_items.base_quantity) as quantity, SUM(sale_items.line_total) as revenue, SUM(sale_items.line_total - sale_items.unit_cost * sale_items.quantity) as profit')
+            ->groupBy('products.category_id')
             ->get();
+
+        $tree = app(CategoryTree::class);
+
+        return $rows
+            ->groupBy(fn ($row): string => $mainOnly ? explode(' › ', $tree->path((int) $row->category_id))[0] : $tree->path((int) $row->category_id))
+            ->map(fn (Collection $group, string $name): array => [
+                'name' => $name,
+                'quantity' => (float) $group->sum('quantity'),
+                'revenue' => round((float) $group->sum('revenue'), 2),
+                'profit' => round((float) $group->sum('profit'), 2),
+            ])
+            ->sortByDesc('revenue')
+            ->values();
     }
 
     /**

@@ -74,7 +74,7 @@ class UserManager extends Component
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'alpha_dash', 'max:50', Rule::unique('users', 'username')->ignore($this->editingId)],
+            'username' => ['required', 'regex:/^[A-Za-z0-9._-]+$/', 'max:50', Rule::unique('users', 'username')->ignore($this->editingId)],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editingId)],
             'phone' => ['nullable', 'string', 'max:20'],
             'password' => [$this->editingId ? 'nullable' : 'required', Password::min(6)],

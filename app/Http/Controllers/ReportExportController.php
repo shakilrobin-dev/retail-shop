@@ -35,7 +35,7 @@ class ReportExportController extends Controller
             'summary' => [['Item', 'Amount'], collect($reports->summary($branchId, $from, $to))->map(fn ($value, $key) => [$key, $value])->values()->all()],
             'daily' => [['Date', 'Invoices', 'Sales', 'Profit'], $reports->daily($branchId, $from, $to)->map(fn ($row) => [$row->day, $row->invoices, $row->sales, $row->profit])->all()],
             'products' => [['Product', 'Qty (pcs)', 'Sales', 'Profit'], $reports->topProducts($branchId, $from, $to, 1000)->map(fn ($row) => [$row->name, $row->quantity + 0, $row->revenue, $row->profit])->all()],
-            'categories' => [['Category', 'Qty (pcs)', 'Sales', 'Profit'], $reports->byCategory($branchId, $from, $to)->map(fn ($row) => [$row->name, $row->quantity + 0, $row->revenue, $row->profit])->all()],
+            'categories' => [['Category', 'Qty (pcs)', 'Sales', 'Profit'], $reports->byCategory($branchId, $from, $to, $request->boolean('main'))->map(fn ($row) => [$row['name'], $row['quantity'] + 0, $row['revenue'], $row['profit']])->all()],
             'payments' => [['Payment method', 'Money in', 'Money out', 'Net'], $reports->byPaymentMethod($branchId, $from, $to)->map(fn ($row) => [$row->name, $row->money_in, $row->money_out, $row->money_in - $row->money_out])->all()],
             'staff' => [['Staff', 'Invoices', 'Sales', 'Discounts'], $reports->byStaff($branchId, $from, $to)->map(fn ($row) => [$row->name, $row->invoices, $row->sales, $row->discounts])->all()],
             'dead-stock' => [['Product', 'SKU', 'Qty', 'Value at cost'], $reports->deadStock($branchId, (int) ($validated['deadDays'] ?? 60))->map(fn ($row) => [$row->name, $row->sku, $row->quantity + 0, $row->value])->all()],

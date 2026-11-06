@@ -1,5 +1,6 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Purchase').' '.$purchase->reference_no" :subtitle="$purchase->supplier?->name" :back="route('purchases.index')" :backLabel="__('Purchases')" />
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
@@ -10,7 +11,6 @@
     </div>
 
     <div class="flex flex-wrap gap-2">
-        <a href="{{ route('purchases.index') }}" class="btn-secondary" wire:navigate>← {{ __('Purchases') }}</a>
         <a href="{{ route('labels.index', ['purchase' => $purchase->id]) }}" class="btn-secondary" wire:navigate>{{ __('Print barcode labels') }}</a>
         <button type="button" wire:click="$toggle('showReturn')" class="btn-secondary">{{ __('Return to supplier') }}</button>
     </div>
@@ -27,7 +27,7 @@
                     @if ($showReturn)<th class="w-40">{{ __('Return now (pieces)') }}</th>@endif
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($purchase->items as $item)
                     <tr wire:key="pitem-{{ $item->id }}">
                         <td>{{ $item->product->name }}</td>

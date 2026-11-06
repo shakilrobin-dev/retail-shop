@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     @include('settings.nav')
     <x-flash />
 
@@ -13,7 +13,7 @@
                     @endforeach
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($permissions as $permission)
                     <tr wire:key="perm-{{ $permission }}">
                         <td>{{ __('permission_labels.'.$permission) }}</td>

@@ -1,47 +1,51 @@
-<div class="space-y-4">
+@php $tree = app(\App\Services\CategoryTree::class); @endphp
+<div>
     <x-flash />
-    <div class="flex flex-wrap items-end gap-2">
-        <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Search or scan') }}" class="form-input max-w-xs">
-        <select wire:model.live="categoryId" class="form-input w-auto">
-            <option value="">{{ __('All categories') }}</option>
-            @foreach ($categories as $category)
-                <option value="{{ $category->id }}">{{ $category->localName() }}</option>
-            @endforeach
-        </select>
-        <select wire:model.live="filter" class="form-input w-auto">
-            <option value="">{{ __('All products') }}</option>
-            <option value="low">{{ __('Low stock') }}</option>
-            <option value="out">{{ __('Out of stock') }}</option>
-        </select>
-        <div class="flex-1"></div>
-        <a href="{{ route('stock.movements') }}" class="btn-secondary" wire:navigate>{{ __('Stock history') }}</a>
-        <a href="{{ route('stock.transfers.index') }}" class="btn-secondary" wire:navigate>{{ __('Transfers') }}</a>
-        <a href="{{ route('stock.adjust') }}" class="btn-primary" wire:navigate>{{ __('Adjust / count stock') }}</a>
-    </div>
+    <x-page-header :title="__('Stock')" :subtitle="__('Stock in this branch, counted in base units.')">
+        <a href="{{ route('stock.movements') }}" class="btn-secondary" wire:navigate><x-icon name="history" class="size-4" /> {{ __('Stock history') }}</a>
+        @can('stock.transfer')<a href="{{ route('stock.transfers.index') }}" class="btn-secondary" wire:navigate><x-icon name="transfer" class="size-4" /> {{ __('Transfers') }}</a>@endcan
+        <a href="{{ route('stock.adjust') }}" class="btn-primary" wire:navigate><x-icon name="clipboard" class="size-4" /> {{ __('Adjust / count stock') }}</a>
+    </x-page-header>
 
     @can('products.view-cost')
-        <div class="card p-4"><span class="text-sm text-slate-500">{{ __('Stock value (at cost) in this branch') }}:</span> <span class="text-lg font-semibold">{{ money($stockValue) }}</span></div>
+        <div class="mb-5 grid gap-4 sm:grid-cols-3">
+            <x-stat :label="__('Stock value (at cost) in this branch')" :value="money($stockValue)" icon="banknotes" tone="brand" />
+        </div>
     @endcan
 
-    <div class="card overflow-x-auto">
-        <table class="data-table">
-            <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Category') }}</th><th class="text-right">{{ __('Stock') }}</th><th class="text-right">{{ __('Alert at') }}</th>@can('products.view-cost')<th class="text-right">{{ __('Value') }}</th>@endcan<th></th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
-                @forelse ($products as $product)
-                    @php $qty = (float) $product->branch_stock; $low = $product->reorder_level > 0 && $qty <= (float) $product->reorder_level; @endphp
-                    <tr wire:key="stock-{{ $product->id }}">
-                        <td><div class="font-medium">{{ $product->localName() }}</div><div class="text-xs text-slate-400">{{ $product->sku }}</div></td>
-                        <td class="text-slate-600">{{ $product->category?->localName() }}</td>
-                        <td class="text-right"><span @class(['badge', 'bg-red-50 text-red-700' => $qty <= 0, 'bg-amber-50 text-amber-700' => $low && $qty > 0, 'bg-emerald-50 text-emerald-700' => ! $low && $qty > 0])>{{ $product->stockBreakdown($qty) }}</span></td>
-                        <td class="text-right text-slate-500">{{ shop_digits($product->reorder_level + 0) }}</td>
-                        @can('products.view-cost')<td class="text-right tabular-nums">{{ money(max(0, $qty) * (float) $product->cost_price) }}</td>@endcan
-                        <td class="text-right"><a href="{{ route('stock.movements', ['productId' => $product->id]) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('History') }}</a></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="6" class="py-8 text-center text-slate-500">{{ __('No products found.') }}</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="card">
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
+            <div class="relative min-w-64 flex-1">
+                <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Search or scan') }}" class="form-input pl-9">
+            </div>
+            <x-category-select wire:model.live="categoryId" :options="$categoryOptions" :placeholder="__('All categories')" class="w-56" />
+            <select wire:model.live="filter" class="form-input w-40">
+                <option value="">{{ __('All products') }}</option>
+                <option value="low">{{ __('Low stock') }}</option>
+                <option value="out">{{ __('Out of stock') }}</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Category') }}</th><th class="text-right">{{ __('Stock') }}</th><th class="text-right">{{ __('Alert at') }}</th>@can('products.view-cost')<th class="text-right">{{ __('Value') }}</th>@endcan<th></th></tr></thead>
+                <tbody>
+                    @forelse ($products as $product)
+                        @php $qty = (float) $product->branch_stock; $low = $product->reorder_level > 0 && $qty <= (float) $product->reorder_level; @endphp
+                        <tr wire:key="stock-{{ $product->id }}">
+                            <td><div class="font-medium text-slate-900">{{ $product->localName() }}</div><div class="font-mono text-xs text-slate-400">{{ $product->sku }}</div></td>
+                            <td class="max-w-56 truncate text-xs text-slate-600">{{ $tree->path($product->category_id) }}</td>
+                            <td class="text-right"><x-badge :tone="$qty <= 0 ? 'red' : ($low ? 'amber' : 'green')">{{ $product->stockBreakdown($qty) }}</x-badge></td>
+                            <td class="text-right text-slate-500">{{ shop_digits($product->reorder_level + 0) }}</td>
+                            @can('products.view-cost')<td class="text-right tabular-nums">{{ money(max(0, $qty) * (float) $product->cost_price) }}</td>@endcan
+                            <td class="text-right"><a href="{{ route('stock.movements', ['productId' => $product->id]) }}" class="btn-ghost btn-sm" wire:navigate><x-icon name="history" class="size-4" /> {{ __('History') }}</a></td>
+                        </tr>
+                    @empty
+                        <x-empty :colspan="6" icon="archive" :title="__('No products found.')" />
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if ($products->hasPages())<div class="border-t border-slate-100 px-4 py-3">{{ $products->links() }}</div>@endif
     </div>
-    {{ $products->links() }}
 </div>

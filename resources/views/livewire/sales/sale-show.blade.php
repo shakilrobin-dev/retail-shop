@@ -1,5 +1,6 @@
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
+    <x-page-header class="mb-0" :title="__('Invoice').' '.$sale->invoice_no" :subtitle="shop_digits($sale->sold_at->format('d M Y h:i A'))" :back="route('sales.index')" :backLabel="__('Sales')" />
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     @if ($sale->status === \App\Enums\SaleStatus::Voided)
@@ -13,7 +14,7 @@
         <div><div class="text-slate-500">{{ __('Date') }}</div><div>{{ shop_digits($sale->sold_at->format('d M Y h:i A')) }}</div></div>
         <div><div class="text-slate-500">{{ __('Customer') }}</div><div>
             @if ($sale->customer)
-                <a href="{{ route('customers.show', $sale->customer) }}" class="text-indigo-600 hover:underline" wire:navigate>{{ $sale->customer->name }}</a> · {{ $sale->customer->phone }}
+                <a href="{{ route('customers.show', $sale->customer) }}" class="text-brand-600 hover:underline" wire:navigate>{{ $sale->customer->name }}</a> · {{ $sale->customer->phone }}
             @else
                 {{ __('Walk-in') }}
             @endif
@@ -22,7 +23,6 @@
     </div>
 
     <div class="flex flex-wrap gap-2">
-        <a href="{{ route('sales.index') }}" class="btn-secondary" wire:navigate>← {{ __('Sales') }}</a>
         <a href="{{ route('sales.receipt', $sale) }}" target="_blank" class="btn-secondary">{{ __('Print receipt') }}</a>
         <a href="{{ route('sales.receipt', ['sale' => $sale, 'paper' => 'a4']) }}" target="_blank" class="btn-secondary">{{ __('A4 invoice') }}</a>
         @if ($sale->status === \App\Enums\SaleStatus::Completed)
@@ -60,7 +60,7 @@
                     @if ($showReturn)<th class="w-32">{{ __('Return qty') }}</th><th>{{ __('Back to stock') }}</th>@endif
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @foreach ($sale->items as $item)
                     <tr wire:key="sitem-{{ $item->id }}">
                         <td>{{ $item->product_name }}@if ($item->unit_quantity > 1) <span class="text-xs text-slate-500">({{ $item->unit_name }})</span>@endif
