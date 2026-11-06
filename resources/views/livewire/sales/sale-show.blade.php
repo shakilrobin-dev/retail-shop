@@ -40,7 +40,7 @@
     </div>
 
     @if ($showVoid)
-        <form wire:submit="void" class="card flex flex-wrap items-end gap-2 p-4">
+        <form wire:submit="void" class="card flex flex-row flex-wrap items-end gap-2 p-4">
             <div class="flex-1">
                 <label class="form-label">{{ __('Why is this sale cancelled?') }}</label>
                 <input wire:model="void_reason" type="text" class="form-input">

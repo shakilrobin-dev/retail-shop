@@ -8,11 +8,12 @@
         <a href="{{ route('stock.adjust') }}" class="btn-primary" wire:navigate><x-icon name="clipboard" class="size-4" /> {{ __('Adjust / count stock') }}</a>
     </x-page-header>
 
-    @can('products.view-cost')
-        <div class="mb-5 grid gap-4 sm:grid-cols-3">
-            <x-stat :label="__('Stock value (at cost) in this branch')" :value="money($stockValue)" icon="banknotes" tone="brand" />
-        </div>
-    @endcan
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        @can('products.view-cost')<x-kpi :label="__('Stock value (at cost) in this branch')" :value="money($stockValue)" icon="banknotes" tone="indigo" />@endcan
+        <x-kpi :label="__('Units on hand')" :value="shop_digits(number_format($stockUnits))" icon="archive" tone="sky" />
+        <x-kpi :label="__('Low stock')" :value="shop_digits($lowCount)" icon="warning" tone="amber" />
+        <x-kpi :label="__('Out of stock')" :value="shop_digits($outCount)" icon="close" tone="rose" />
+    </div>
 
     <div class="card overflow-hidden">
         <div class="flex flex-wrap items-center gap-2 border-b border-card-divider p-3">

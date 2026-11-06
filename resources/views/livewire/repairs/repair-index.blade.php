@@ -13,6 +13,13 @@
         <a href="{{ route('repairs.create') }}" class="btn-primary" wire:navigate><x-icon name="plus" class="size-4" /> {{ __('New repair job') }}</a>
     </x-page-header>
 
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <x-kpi :label="__('In shop')" :value="shop_digits($openCount)" icon="wrench" tone="indigo" />
+        <x-kpi :label="__('Ready for pickup')" :value="shop_digits((int) ($counts['ready'] ?? 0))" icon="check" tone="emerald" :hint="__('Call the customer')" />
+        <x-kpi :label="__('Overdue')" :value="shop_digits($overdue)" icon="warning" tone="rose" :hint="__('Past delivery date')" />
+        <x-kpi :label="__('Repair income this month')" :value="money($monthIncome)" icon="banknotes" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($deliveredMonth)])" />
+    </div>
+
     @if ($view === 'kanban')
         <div class="mb-4 max-w-md">
             <div class="relative">

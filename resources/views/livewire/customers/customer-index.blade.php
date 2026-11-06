@@ -6,6 +6,13 @@
         <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New customer') }}</button>
     </x-page-header>
 
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <x-kpi :label="__('Customers')" :value="shop_digits($summary['total'])" icon="users" tone="indigo" />
+        <x-kpi :label="__('New this month')" :value="shop_digits($summary['new'])" icon="plus" tone="emerald" />
+        <x-kpi :label="__('Repeat buyers')" :value="shop_digits($summary['repeat'])" icon="history" tone="violet" :hint="__('Bought more than once')" />
+        <x-kpi :label="__('Revenue from known customers')" :value="money($summary['revenue'])" icon="banknotes" tone="amber" />
+    </div>
+
     <div class="card overflow-hidden">
         <x-list-toolbar :placeholder="__('Search name or phone')" />
         <x-table.bulk-bar :count="count($selected)">

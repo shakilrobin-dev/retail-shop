@@ -136,6 +136,13 @@ class RepairIndex extends Component
             'board' => $board,
             'counts' => $counts,
             'openCount' => $counts->except($closed)->sum(),
+            'overdue' => RepairJob::query()->where('branch_id', $branchId)
+                ->whereNotIn('status', [...$closed, RepairStatus::Ready->value])
+                ->where('estimated_delivery_at', '<', now())->count(),
+            'monthIncome' => (float) RepairJob::query()->where('branch_id', $branchId)->where('status', RepairStatus::Delivered)
+                ->where('delivered_at', '>=', today()->startOfMonth())->sum('total'),
+            'deliveredMonth' => RepairJob::query()->where('branch_id', $branchId)->where('status', RepairStatus::Delivered)
+                ->where('delivered_at', '>=', today()->startOfMonth())->count(),
         ])->title(__('Repairs'));
     }
 }

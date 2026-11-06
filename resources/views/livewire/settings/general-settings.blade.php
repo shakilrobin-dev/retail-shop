@@ -188,7 +188,7 @@
     @endif
 
     @if ($tab === 'sms' && $values['sms_enabled'])
-        <form wire:submit="sendTestSms" class="card flex flex-wrap items-end gap-2 p-6">
+        <form wire:submit="sendTestSms" class="card flex flex-row flex-wrap items-end gap-2 p-6">
             <div><label class="form-label">{{ __('Test phone number') }}</label><input wire:model="testPhone" type="text" class="form-input"></div>
             <button type="submit" class="btn-secondary">{{ __('Send test SMS') }}</button>
             <p class="w-full text-xs text-muted-foreground-1">{{ __('Save settings first, then send a test.') }}</p>

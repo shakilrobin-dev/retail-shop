@@ -2,7 +2,7 @@
     @include('settings.nav')
     <x-flash />
 
-    <div class="card flex flex-wrap items-center justify-between gap-3 p-5">
+    <div class="card flex flex-row flex-wrap items-center justify-between gap-3 p-5">
         <div class="text-sm text-muted-foreground-2">
             <p>{{ __('A backup is made automatically every night (last 14 are kept).') }}</p>
             <p>{{ __('Download a backup at least once a week and keep it on your computer or Google Drive.') }}</p>

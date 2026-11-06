@@ -5,6 +5,7 @@ namespace App\Livewire\Customers;
 use App\Enums\SaleStatus;
 use App\Livewire\Concerns\WithDataTable;
 use App\Models\Customer;
+use App\Models\Sale;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
@@ -101,6 +102,16 @@ class CustomerIndex extends Component
     {
         $customers = $this->applySorting($this->query(), 'name')->paginate($this->perPage);
 
-        return view('livewire.customers.customer-index', ['customers' => $customers])->title(__('Customers'));
+        $completed = Sale::query()->where('status', SaleStatus::Completed)->whereNotNull('customer_id');
+
+        return view('livewire.customers.customer-index', [
+            'customers' => $customers,
+            'summary' => [
+                'total' => Customer::query()->count(),
+                'new' => Customer::query()->where('created_at', '>=', today()->startOfMonth())->count(),
+                'repeat' => (clone $completed)->selectRaw('customer_id')->groupBy('customer_id')->havingRaw('count(*) > 1')->get()->count(),
+                'revenue' => (float) (clone $completed)->sum('total'),
+            ],
+        ])->title(__('Customers'));
     }
 }

@@ -7,6 +7,13 @@
         <a href="{{ route('products.create') }}" class="btn-primary" wire:navigate><x-icon name="plus" class="size-4" /> {{ __('New product') }}</a>
     </x-page-header>
 
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        @can('products.view-cost')<x-kpi :label="__('Stock value (cost)')" :value="money($summary['value'])" icon="banknotes" tone="indigo" :hint="__('Current branch')" />@endcan
+        <x-kpi :label="__('Units on hand')" :value="shop_digits(number_format($summary['units']))" icon="archive" tone="sky" :hint="__(':count products', ['count' => shop_digits($tabs[''][1])])" />
+        @can('products.view-cost')<x-kpi :label="__('Average margin')" :value="shop_digits($summary['margin']).'%'" icon="trending-up" tone="emerald" :hint="__('Selling price vs cost')" />@endcan
+        <x-kpi :label="__('Sold in 30 days')" :value="shop_digits($summary['sold'])" icon="cart" tone="violet" :hint="__('different products')" />
+    </div>
+
     <div class="card overflow-hidden">
         <x-filter-tabs :tabs="$tabs" :active="$stockFilter" model="stockFilter" />
         <div class="border-t border-card-line"></div>

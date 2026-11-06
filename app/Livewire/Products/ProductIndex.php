@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductUnit;
+use App\Models\SaleItem;
 use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use Illuminate\Contracts\View\View;
@@ -177,6 +178,30 @@ class ProductIndex extends Component
         ];
     }
 
+    /**
+     * @return array<string, float|int>
+     */
+    private function summary(): array
+    {
+        $branchId = app(CurrentBranch::class)->get()?->id;
+        $stock = ProductStock::query()->join('products', 'products.id', '=', 'product_stocks.product_id')
+            ->where('product_stocks.branch_id', $branchId)->where('products.is_active', true)->where('product_stocks.quantity', '>', 0)
+            ->selectRaw('SUM(product_stocks.quantity * products.cost_price) as value, SUM(product_stocks.quantity) as units')->first();
+        $margin = ProductUnit::query()->join('products', 'products.id', '=', 'product_units.product_id')
+            ->where('product_units.is_base', true)->where('products.is_active', true)->where('product_units.selling_price', '>', 0)
+            ->selectRaw('AVG((product_units.selling_price - products.cost_price) / product_units.selling_price * 100) as margin')->value('margin');
+        $soldProducts = SaleItem::query()->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.branch_id', $branchId)->where('sales.status', 'completed')->where('sales.sold_at', '>=', now()->subDays(30))
+            ->distinct()->count('sale_items.product_id');
+
+        return [
+            'value' => (float) ($stock->value ?? 0),
+            'units' => (float) ($stock->units ?? 0),
+            'margin' => round((float) $margin, 1),
+            'sold' => $soldProducts,
+        ];
+    }
+
     public function render(): View
     {
         $products = $this->applySorting($this->query()->with(['category', 'brand', 'units.barcodes']), 'name')
@@ -188,6 +213,7 @@ class ProductIndex extends Component
             'categoryOptions' => app(CategoryTree::class)->flat(),
             'brands' => Brand::query()->orderBy('name')->get(),
             'hasCategories' => Category::query()->exists(),
+            'summary' => $this->summary(),
         ])->title(__('Products'));
     }
 }

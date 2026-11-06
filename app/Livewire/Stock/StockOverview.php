@@ -87,6 +87,11 @@ class StockOverview extends Component
         return view('livewire.stock.stock-overview', [
             'products' => $this->applySorting($query, 'name')->paginate($this->perPage),
             'stockValue' => $value,
+            'stockUnits' => (float) ProductStock::query()->where('branch_id', $branchId)->where('quantity', '>', 0)->sum('quantity'),
+            'lowCount' => Product::query()->where('is_active', true)->where('reorder_level', '>', 0)
+                ->whereRaw('COALESCE((select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?), 0) between 0.001 and products.reorder_level', [$branchId])->count(),
+            'outCount' => Product::query()->where('is_active', true)
+                ->whereRaw('COALESCE((select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?), 0) <= 0', [$branchId])->count(),
             'categoryOptions' => app(CategoryTree::class)->flat(),
         ])->title(__('Stock'));
     }

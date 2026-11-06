@@ -3,7 +3,9 @@
 namespace App\Livewire\Suppliers;
 
 use App\Livewire\Concerns\WithDataTable;
+use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Services\CurrentBranch;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
@@ -121,6 +123,20 @@ class SupplierIndex extends Component
     {
         $suppliers = $this->applySorting($this->query(), 'name')->paginate($this->perPage);
 
-        return view('livewire.suppliers.supplier-index', ['suppliers' => $suppliers])->title(__('Suppliers'));
+        $branchId = app(CurrentBranch::class)->get()?->id;
+        $monthPurchases = Purchase::query()->where('branch_id', $branchId)->whereDate('purchase_date', '>=', today()->startOfMonth());
+        $top = Purchase::query()->with('supplier')->where('branch_id', $branchId)->whereNotNull('supplier_id')
+            ->selectRaw('supplier_id, SUM(total) as total')->groupBy('supplier_id')->orderByDesc('total')->first();
+
+        return view('livewire.suppliers.supplier-index', [
+            'suppliers' => $suppliers,
+            'summary' => [
+                'active' => Supplier::query()->where('is_active', true)->count(),
+                'month_total' => (float) (clone $monthPurchases)->sum('total'),
+                'month_count' => (clone $monthPurchases)->count(),
+                'top' => $top?->supplier?->name,
+                'top_total' => (float) ($top->total ?? 0),
+            ],
+        ])->title(__('Suppliers'));
     }
 }

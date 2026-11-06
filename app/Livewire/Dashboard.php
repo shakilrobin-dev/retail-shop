@@ -6,18 +6,24 @@ use App\Enums\PaymentDirection;
 use App\Enums\RepairStatus;
 use App\Enums\SaleStatus;
 use App\Models\CashShift;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\ProductUnit;
 use App\Models\RepairJob;
 use App\Models\Sale;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\CashShiftService;
 use App\Services\CurrentBranch;
+use App\Services\PaymentService;
+use App\Services\ReportService;
 use App\Services\Settings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Spatie\Activitylog\Models\Activity;
 
 class Dashboard extends Component
 {
@@ -34,7 +40,7 @@ class Dashboard extends Component
             [RepairStatus::Received, RepairStatus::Diagnosing, RepairStatus::WaitingForParts, RepairStatus::Repairing],
         );
 
-        $days = collect(range(13, 0))->push(0)->map(fn (int $daysAgo) => today()->subDays($daysAgo));
+        $days = collect(range(29, 1))->push(0)->map(fn (int $daysAgo) => today()->subDays($daysAgo));
         $salesByDay = Sale::query()
             ->where('branch_id', $branchId)
             ->where('status', SaleStatus::Completed)
@@ -59,8 +65,34 @@ class Dashboard extends Component
             [__('Choose receipt printing (ON / OFF / Ask)'), route('settings.general', ['tab' => 'receipt']), Setting::query()->where('key', 'receipt_print_mode')->exists(), 'settings.manage'],
         ];
 
+        $branch = app(CurrentBranch::class)->get();
+        $reports = app(ReportService::class);
+        $yesterday = Sale::query()->where('branch_id', $branchId)->where('status', SaleStatus::Completed)->whereDate('sold_at', today()->subDay());
+        $month = $reports->summary($branchId, today()->startOfMonth(), today());
+        $lastMonthSameDays = $reports->summary($branchId, today()->subMonthNoOverflow()->startOfMonth(), today()->subMonthNoOverflow());
+        $shift = $branch ? app(PaymentService::class)->openShift($branch) : null;
+        $repairCounts = RepairJob::query()->where('branch_id', $branchId)
+            ->whereNotIn('status', [RepairStatus::Delivered->value, RepairStatus::Cancelled->value])
+            ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+
         return view('livewire.dashboard', [
             'chart' => $chart,
+            'yesterdayTotal' => (float) (clone $yesterday)->sum('total'),
+            'month' => $month,
+            'lastMonth' => $lastMonthSameDays,
+            'paymentMix' => $reports->byPaymentMethod($branchId, today()->subDays(6), today())->filter(fn ($row) => $row->money_in > 0)->values(),
+            'topProducts' => $reports->topProducts($branchId, today()->subDays(6), today(), 6),
+            'repairCounts' => $repairCounts,
+            'stockValue' => (float) ProductStock::query()->join('products', 'products.id', '=', 'product_stocks.product_id')
+                ->where('product_stocks.branch_id', $branchId)->where('product_stocks.quantity', '>', 0)
+                ->selectRaw('SUM(product_stocks.quantity * products.cost_price) as value')->value('value'),
+            'outOfStockCount' => Product::query()->where('is_active', true)
+                ->whereRaw('COALESCE((select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?), 0) <= 0', [$branchId])->count(),
+            'shift' => $shift,
+            'shiftSummary' => $shift ? app(CashShiftService::class)->summary($shift) : null,
+            'activities' => Activity::query()->with(['causer', 'subject'])->latest('id')->limit(7)->get()
+                ->loadMorph('subject', [ProductUnit::class => ['product']]),
+            'newCustomers' => Customer::query()->where('created_at', '>=', today()->startOfMonth())->count(),
             'chartMax' => $this->niceMax((float) $chart->max('total')),
             'setupSteps' => collect($setupSteps)->filter(fn (array $step): bool => auth()->user()->can($step[3]))->values(),
             'todaySalesTotal' => (float) (clone $todaySales)->sum('total'),
@@ -87,7 +119,7 @@ class Dashboard extends Component
                 ->where('products.reorder_level', '>', 0)
                 ->where('product_stocks.quantity', '<=', DB::raw('products.reorder_level'))
                 ->count(),
-            'recentSales' => Sale::query()->with('customer')
+            'recentSales' => Sale::query()->with(['customer', 'user'])
                 ->where('branch_id', $branchId)
                 ->where('status', SaleStatus::Completed)
                 ->latest('sold_at')->limit(8)->get(),

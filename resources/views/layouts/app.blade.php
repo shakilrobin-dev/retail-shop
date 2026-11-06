@@ -127,8 +127,9 @@
         </div>
 
         <nav class="scroll-thin flex-1 overflow-y-auto px-2.5 pb-3">
-            @foreach ($menu as [$groupLabel, $items])
-                @php $visible = collect($items)->filter(fn ($item) => ! $item[3] || $user->can($item[3])); @endphp
+            @php $groupColors = ['text-indigo-500', 'text-indigo-500', 'text-amber-500', 'text-emerald-600', 'text-sky-600', 'text-rose-500', 'text-muted-foreground-1']; @endphp
+            @foreach ($menu as $groupIndex => [$groupLabel, $items])
+                @php $visible = collect($items)->filter(fn ($item) => ! $item[3] || $user->can($item[3])); $iconColor = $groupColors[$groupIndex] ?? 'text-muted-foreground-1'; @endphp
                 @continue($visible->isEmpty())
                 <div class="mt-3 first:mt-1">
                     @if ($groupLabel)
@@ -146,7 +147,7 @@
                                         'bg-layer font-medium text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-layer-line' => $active,
                                         'text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground' => ! $active,
                                     ])>
-                                    <x-icon :name="$icon" @class(['size-4 shrink-0', 'text-primary' => $active, 'text-muted-foreground-1' => ! $active]) />
+                                    <x-icon :name="$icon" @class(['size-4 shrink-0', $iconColor, 'opacity-80' => ! $active]) />
                                     <span x-show="!collapsed" class="flex-1 truncate">{{ $label }}</span>
                                     @if ($badge > 0)
                                         <span x-show="!collapsed" class="rounded bg-primary/10 px-1.5 text-[11px] font-semibold text-primary">{{ shop_digits($badge) }}</span>
@@ -212,7 +213,7 @@
                 </button>
             </header>
 
-            <main class="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-8">
+            <main class="w-full px-4 py-5 sm:px-6">
                 {{ $slot }}
             </main>
         </div>

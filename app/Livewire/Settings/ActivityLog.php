@@ -83,7 +83,8 @@ class ActivityLog extends Component
             ->when($this->sortField === '', fn (Builder $query) => $query->latest('id'));
 
         return view('livewire.settings.activity-log', [
-            'activities' => $this->sortField === '' ? $activities->paginate($this->perPage) : $this->applySorting($activities, 'created_at', 'desc')->paginate($this->perPage),
+            'activities' => tap($this->sortField === '' ? $activities->paginate($this->perPage) : $this->applySorting($activities, 'created_at', 'desc')->paginate($this->perPage),
+                fn ($page) => $page->getCollection()->loadMorph('subject', [ProductUnit::class => ['product']])),
             'users' => User::query()->orderBy('name')->get(),
             'types' => self::types(),
         ])->title(__('Audit log'));

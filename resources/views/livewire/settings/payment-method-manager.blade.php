@@ -2,7 +2,7 @@
     @include('settings.nav')
     <x-flash />
 
-    <form wire:submit="save" class="card flex flex-wrap items-end gap-2 p-5">
+    <form wire:submit="save" class="card flex flex-row flex-wrap items-end gap-2 p-5">
         <div><label class="form-label">{{ __('Name') }}</label><input wire:model="name" type="text" class="form-input" placeholder="{{ __('e.g. Upay') }}">@error('name') <p class="form-error">{{ $message }}</p> @enderror</div>
         <div><label class="form-label">{{ __('Name (Bangla)') }}</label><input wire:model="name_bn" type="text" class="form-input"></div>
         <div>

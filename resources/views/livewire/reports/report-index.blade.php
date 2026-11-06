@@ -17,7 +17,7 @@
         @endforeach
     </nav>
 
-    <div class="no-print card flex flex-wrap items-end gap-2 p-3">
+    <div class="no-print card flex flex-row flex-wrap items-end gap-2 p-3">
         @if ($activeTab === 'dead-stock')
             <div>
                 <label class="form-label">{{ __('Not sold in (days)') }}</label>
@@ -63,13 +63,11 @@
                     <div class="flex justify-between border-t border-card-line pt-1.5 font-semibold"><dt>{{ __('Repair profit') }}</dt><dd class="tabular-nums">{{ money($summary['repair_profit']) }}</dd></div>
                 </dl>
             </div>
-            <div class="space-y-4">
-                <div class="card p-5"><div class="text-sm text-muted-foreground-1">{{ __('Sales profit') }} + {{ __('Repair profit') }}</div><div class="text-xl font-semibold">{{ money($summary['sales_profit'] + $summary['repair_profit']) }}</div></div>
-                <div class="card p-5"><div class="text-sm text-muted-foreground-1">{{ __('Expenses') }}</div><div class="text-xl font-semibold text-red-700">− {{ money($summary['expenses']) }}</div></div>
-                <div @class(['card p-5 ring-2', 'ring-emerald-300' => $summary['net_profit'] >= 0, 'ring-red-300' => $summary['net_profit'] < 0])>
-                    <div class="text-sm text-muted-foreground-1">{{ __('Net profit') }}</div>
-                    <div @class(['text-3xl font-bold', 'text-emerald-700' => $summary['net_profit'] >= 0, 'text-red-700' => $summary['net_profit'] < 0])>{{ money($summary['net_profit']) }}</div>
-                </div>
+            <div class="space-y-3">
+                <x-kpi :label="__('Sales profit')" :value="money($summary['sales_profit'])" icon="cart" tone="indigo" :hint="__('Net sales').' '.money($summary['net_sales'])" />
+                <x-kpi :label="__('Repair profit')" :value="money($summary['repair_profit'])" icon="wrench" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($summary['repair_count'])])" />
+                <x-kpi :label="__('Expenses')" :value="'− '.money($summary['expenses'])" icon="banknotes" tone="rose" />
+                <x-kpi :label="__('Net profit')" :value="money($summary['net_profit'])" icon="trending-up" :tone="$summary['net_profit'] >= 0 ? 'emerald' : 'rose'" />
             </div>
         </div>
     @else

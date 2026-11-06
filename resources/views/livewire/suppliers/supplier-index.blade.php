@@ -5,6 +5,13 @@
         <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New supplier') }}</button>
     </x-page-header>
 
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <x-kpi :label="__('Active suppliers')" :value="shop_digits($summary['active'])" icon="building" tone="sky" />
+        <x-kpi :label="__('Bought this month')" :value="money($summary['month_total'])" icon="truck" tone="indigo" :hint="__(':count purchases', ['count' => shop_digits($summary['month_count'])])" />
+        <x-kpi :label="__('Top supplier')" :value="$summary['top'] ?? '—'" icon="trending-up" tone="emerald" :hint="$summary['top'] ? money($summary['top_total']) : null" />
+        <x-kpi :label="__('Average purchase')" :value="money($summary['month_count'] ? $summary['month_total'] / $summary['month_count'] : 0)" icon="receipt" tone="amber" :hint="__('This month')" />
+    </div>
+
     <div class="card overflow-hidden">
         <x-list-toolbar :placeholder="__('Search name, company or phone')" />
         <div class="overflow-x-auto">

@@ -122,7 +122,7 @@ class CategoryTreeTest extends TestCase
         $this->actingAsRole('admin');
         $this->threeLevels();
 
-        $this->get(route('dashboard'))->assertOk()->assertSee(__('Sales – last 14 days'));
+        $this->get(route('dashboard'))->assertOk()->assertSee(__('Sales – last 30 days'));
         $this->get(route('catalog.setup'))->assertOk()->assertSee('Fast chargers');
         $this->get(route('products.create'))->assertOk()->assertSee('Fast chargers');
     }
