@@ -5,7 +5,7 @@
     <input x-ref="scanInput" wire:model.live.debounce.250ms="productSearch" wire:keydown.enter.prevent="scan"
         type="search" autocomplete="off" autofocus data-scan-input
         placeholder="{{ $placeholder ?? __('Scan barcode or type product name...') }}"
-        class="form-input py-3 text-base">
+        class="form-input h-10 text-sm">
 
     @if ($message)
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

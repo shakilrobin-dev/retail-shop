@@ -6,9 +6,9 @@
         <td colspan="{{ $colspan }}" class="px-4 py-12">
 @endif
 <div class="mx-auto flex max-w-sm flex-col items-center text-center">
-    <div class="rounded-full bg-surface p-3 text-muted-foreground"><x-icon :name="$icon" class="size-6" /></div>
-    <p class="mt-3 text-sm font-medium text-foreground">{{ $title }}</p>
-    @if ($text)<p class="mt-1 text-sm text-muted-foreground-1">{{ $text }}</p>@endif
+    <div class="rounded-lg border border-layer-line bg-layer p-2.5 text-muted-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)]"><x-icon :name="$icon" class="size-5" /></div>
+    <p class="mt-3 text-[13px] font-medium text-foreground">{{ $title }}</p>
+    @if ($text)<p class="mt-1 text-[13px] text-muted-foreground-1">{{ $text }}</p>@endif
     @if (trim($slot))<div class="mt-4 flex gap-2">{{ $slot }}</div>@endif
 </div>
 @if ($colspan)

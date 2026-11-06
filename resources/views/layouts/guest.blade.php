@@ -4,7 +4,7 @@
     $logo = $settings->get('shop_logo');
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light" data-theme="theme-saas">
 <head>
     @include('layouts.partials.theme-script')
     <meta charset="utf-8">

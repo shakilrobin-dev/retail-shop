@@ -99,7 +99,7 @@
             <label class="flex items-center gap-2 text-sm text-muted-foreground-2">
                 <input wire:model="paid_from_drawer" type="checkbox" class="rounded border-layer-line"> {{ __('Cash taken from the cash drawer') }}
             </label>
-            <button type="submit" class="btn-primary w-full py-3" wire:loading.attr="disabled">{{ __('Save purchase & add stock') }}</button>
+            <button type="submit" class="btn-primary w-full h-10" wire:loading.attr="disabled">{{ __('Save purchase & add stock') }}</button>
         </div>
     </div>
 </form>

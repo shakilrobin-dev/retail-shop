@@ -64,7 +64,7 @@
     }
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light" data-theme="theme-saas">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -73,159 +73,149 @@
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-background-1 text-foreground antialiased"
+<body class="min-h-screen bg-background-1 text-foreground"
     x-data="{ mobileMenu: false, collapsed: $persist(false).as('sidebar-collapsed') }">
 
     <x-flash global />
 
-    {{-- Mobile overlay --}}
-    <div x-cloak x-show="mobileMenu" x-transition.opacity x-on:click="mobileMenu = false" class="fixed inset-0 z-50 bg-gray-900/50 dark:bg-neutral-900/80 lg:hidden"></div>
+    <div x-cloak x-show="mobileMenu" x-transition.opacity x-on:click="mobileMenu = false" class="fixed inset-0 z-50 bg-gray-900/40 lg:hidden"></div>
 
-    {{-- Sidebar (Preline) --}}
+    {{-- Sidebar --}}
     <aside
-        x-bind:class="[mobileMenu ? 'translate-x-0' : '-translate-x-full lg:translate-x-0', collapsed ? 'lg:w-[72px]' : 'lg:w-65']"
-        class="fixed inset-y-0 start-0 z-60 flex w-65 -translate-x-full flex-col border-e border-sidebar-line bg-sidebar transition-all duration-300 lg:translate-x-0"
-        role="dialog" tabindex="-1" aria-label="{{ __('Sidebar') }}">
-        <div class="flex h-16 shrink-0 items-center gap-x-3 px-4">
-            <a href="{{ route('dashboard') }}" wire:navigate class="flex min-w-0 items-center gap-x-3 rounded-lg focus:outline-hidden">
-                @if ($logo)
-                    <img src="{{ asset('storage/'.$logo) }}" alt="" class="size-9 shrink-0 rounded-lg border border-sidebar-line bg-layer object-contain p-0.5">
-                @else
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">{{ mb_strtoupper(mb_substr($shopName, 0, 2)) }}</span>
-                @endif
-                <span x-show="!collapsed" class="min-w-0">
-                    <span class="block truncate text-sm font-semibold text-foreground">{{ $shopName }}</span>
-                    <span class="block truncate text-xs text-muted-foreground-1">{{ $branch?->localName() }}</span>
-                </span>
-            </a>
-            <button type="button" class="ms-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground-1 hover:bg-sidebar-nav-hover lg:hidden" x-on:click="mobileMenu = false" aria-label="{{ __('Close menu') }}">
-                <x-icon name="close" class="size-4" />
-            </button>
+        x-bind:class="[mobileMenu ? 'translate-x-0 bg-background shadow-xl' : '-translate-x-full lg:translate-x-0', collapsed ? 'lg:w-[60px]' : 'lg:w-60']"
+        class="fixed inset-y-0 start-0 z-60 flex w-60 -translate-x-full flex-col bg-background-1 transition-[width,transform] duration-200 lg:translate-x-0"
+        aria-label="{{ __('Sidebar') }}">
+
+        {{-- Workspace switcher --}}
+        <div class="px-2.5 pt-3">
+            <div class="hs-dropdown relative [--placement:bottom-left] [--offset:4]">
+                <button id="workspace-menu" type="button" class="hs-dropdown-toggle flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-muted-hover focus:outline-hidden" aria-haspopup="menu" aria-expanded="false">
+                    @if ($logo)
+                        <img src="{{ asset('storage/'.$logo) }}" alt="" class="size-6 shrink-0 rounded-md bg-layer object-contain ring-1 ring-layer-line">
+                    @else
+                        <span class="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">{{ mb_strtoupper(mb_substr($shopName, 0, 1)) }}</span>
+                    @endif
+                    <span x-show="!collapsed" class="min-w-0 flex-1">
+                        <span class="block truncate text-[13px] font-semibold leading-tight text-foreground">{{ $shopName }}</span>
+                        <span class="block truncate text-[11px] leading-tight text-muted-foreground-1">{{ $branch?->localName() }}</span>
+                    </span>
+                    <svg x-show="!collapsed" class="size-3.5 shrink-0 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5 11 7H5l3-3.5Zm0 9L5 9h6l-3 3.5Z"/></svg>
+                </button>
+                <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 z-70 hidden w-56 rounded-lg border border-dropdown-line bg-dropdown p-1 opacity-0 shadow-lg transition-[opacity,margin] duration" role="menu" aria-labelledby="workspace-menu">
+                    <p class="px-2 py-1.5 text-[11px] font-medium text-muted-foreground-1">{{ __('Branches') }}</p>
+                    @foreach ($branches as $option)
+                        <form method="POST" action="{{ route('branch.switch') }}">
+                            @csrf
+                            <input type="hidden" name="branch_id" value="{{ $option->id }}">
+                            <button type="submit" class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[13px] text-dropdown-item-foreground hover:bg-dropdown-item-hover">
+                                {{ $option->localName() }}
+                                @if ($option->id === $branch?->id)<x-icon name="check" class="size-4 text-primary" />@endif
+                            </button>
+                        </form>
+                    @endforeach
+                    @can('settings.manage')
+                        <div class="my-1 border-t border-dropdown-divider"></div>
+                        <a href="{{ route('settings.general') }}" wire:navigate class="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-dropdown-item-foreground hover:bg-dropdown-item-hover"><x-icon name="settings" class="size-4 opacity-70" /> {{ __('Shop settings') }}</a>
+                    @endcan
+                </div>
+            </div>
         </div>
 
-        <nav class="scroll-thin flex-1 overflow-y-auto px-3 pb-4">
-            <ul class="flex flex-col space-y-0.5">
-                @foreach ($menu as [$groupLabel, $items])
-                    @php $visible = collect($items)->filter(fn ($item) => ! $item[3] || $user->can($item[3])); @endphp
-                    @continue($visible->isEmpty())
+        {{-- Search --}}
+        <div class="px-2.5 pb-1 pt-2" x-show="!collapsed">
+            <livewire:global-search />
+        </div>
+
+        <nav class="scroll-thin flex-1 overflow-y-auto px-2.5 pb-3">
+            @foreach ($menu as [$groupLabel, $items])
+                @php $visible = collect($items)->filter(fn ($item) => ! $item[3] || $user->can($item[3])); @endphp
+                @continue($visible->isEmpty())
+                <div class="mt-3 first:mt-1">
                     @if ($groupLabel)
-                        <li x-show="!collapsed" class="px-2.5 pb-1 pt-4 text-xs font-medium uppercase text-muted-foreground">{{ $groupLabel }}</li>
-                        <li x-show="collapsed" x-cloak class="mx-2 my-2 border-t border-sidebar-divider"></li>
+                        <p x-show="!collapsed" class="mb-0.5 px-2 text-[11px] font-medium text-muted-foreground-1">{{ $groupLabel }}</p>
                     @endif
-                    @foreach ($visible as [$label, $icon, $routeName, $permission, $patterns, $badge])
-                        @php $active = request()->routeIs(...explode('|', $patterns)); @endphp
-                        <li>
-                            <a href="{{ route($routeName) }}" wire:navigate
-                                @if ($active) aria-current="page" @endif
-                                :class="collapsed ? 'lg:justify-center' : ''"
-                                @class([
-                                    'relative flex w-full items-center gap-x-3.5 rounded-lg px-2.5 py-2 text-sm focus:outline-hidden focus:bg-sidebar-nav-focus',
-                                    'bg-sidebar-nav-active font-medium text-primary' => $active,
-                                    'text-sidebar-nav-foreground hover:bg-sidebar-nav-hover' => ! $active,
-                                ])
-                                x-bind:title="collapsed ? @js($label) : null">
-                                <x-icon :name="$icon" @class(['size-4 shrink-0', 'text-primary' => $active, 'text-muted-foreground-1' => ! $active]) />
-                                <span x-show="!collapsed" class="flex-1 truncate">{{ $label }}</span>
-                                @if ($badge > 0)
-                                    <span x-show="!collapsed" class="inline-flex items-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">{{ shop_digits($badge) }}</span>
-                                    <span x-show="collapsed" x-cloak class="absolute end-1.5 top-1.5 size-2 rounded-full bg-primary"></span>
-                                @endif
-                            </a>
-                        </li>
-                    @endforeach
-                @endforeach
-            </ul>
+                    <ul class="space-y-px">
+                        @foreach ($visible as [$label, $icon, $routeName, $permission, $patterns, $badge])
+                            @php $active = request()->routeIs(...explode('|', $patterns)); @endphp
+                            <li>
+                                <a href="{{ route($routeName) }}" wire:navigate @if ($active) aria-current="page" @endif
+                                    x-bind:title="collapsed ? @js($label) : null"
+                                    :class="collapsed ? 'lg:justify-center' : ''"
+                                    @class([
+                                        'relative flex h-7 items-center gap-x-2 rounded-md px-2 text-[13px] transition-colors focus:outline-hidden',
+                                        'bg-layer font-medium text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-layer-line' => $active,
+                                        'text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground' => ! $active,
+                                    ])>
+                                    <x-icon :name="$icon" @class(['size-4 shrink-0', 'text-primary' => $active, 'text-muted-foreground-1' => ! $active]) />
+                                    <span x-show="!collapsed" class="flex-1 truncate">{{ $label }}</span>
+                                    @if ($badge > 0)
+                                        <span x-show="!collapsed" class="rounded bg-primary/10 px-1.5 text-[11px] font-semibold text-primary">{{ shop_digits($badge) }}</span>
+                                        <span x-show="collapsed" x-cloak class="absolute end-1 top-1 size-1.5 rounded-full bg-primary"></span>
+                                    @endif
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endforeach
         </nav>
 
-        <div class="hidden border-t border-sidebar-divider p-3 lg:block">
-            <button type="button" x-on:click="collapsed = !collapsed" :class="collapsed ? 'justify-center' : ''" class="flex w-full items-center gap-x-3.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground-1 hover:bg-sidebar-nav-hover">
-                <span x-show="!collapsed"><x-icon name="collapse" class="size-4" /></span>
-                <span x-show="collapsed" x-cloak><x-icon name="expand" class="size-4" /></span>
-                <span x-show="!collapsed">{{ __('Collapse menu') }}</span>
-            </button>
+        {{-- Profile --}}
+        <div class="border-t border-sidebar-divider p-2.5">
+            <div class="hs-dropdown relative [--placement:top-left] [--offset:6]">
+                <button id="user-menu" type="button" class="hs-dropdown-toggle flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-muted-hover focus:outline-hidden" aria-haspopup="menu" aria-expanded="false" aria-label="{{ __('User menu') }}">
+                    <x-avatar :name="$user->name" size="size-6" class="text-[10px]" />
+                    <span x-show="!collapsed" class="min-w-0 flex-1">
+                        <span class="block truncate text-[13px] font-medium leading-tight text-foreground">{{ $user->name }}</span>
+                        <span class="block truncate text-[11px] leading-tight text-muted-foreground-1">{{ __(ucfirst($user->getRoleNames()->first() ?? '')) }}</span>
+                    </span>
+                </button>
+                <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 z-70 hidden w-56 rounded-lg border border-dropdown-line bg-dropdown p-1 opacity-0 shadow-lg transition-[opacity,margin] duration" role="menu" aria-labelledby="user-menu">
+                    <div class="px-2 py-1.5 text-[11px] text-muted-foreground-1">{{ __('Signed in as') }} <span class="font-medium text-foreground">{{ $user->username }}</span></div>
+                    <div class="px-2 py-1.5"><x-language-switch /></div>
+                    <div class="my-1 border-t border-dropdown-divider"></div>
+                    <button type="button" x-on:click="collapsed = !collapsed" class="hidden w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-dropdown-item-foreground hover:bg-dropdown-item-hover lg:flex">
+                        <x-icon name="collapse" class="size-4 opacity-70" /> <span x-text="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))"></span>
+                    </button>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-dropdown-item-foreground hover:bg-dropdown-item-hover"><x-icon name="logout" class="size-4 opacity-70" /> {{ __('Log out') }}</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </aside>
 
-    {{-- Main area --}}
-    <div x-bind:class="collapsed ? 'lg:ps-[72px]' : 'lg:ps-65'" class="transition-all duration-300 lg:ps-65">
-        {{-- Header (Preline navbar) --}}
-        <header class="no-print sticky top-0 z-48 flex h-16 w-full items-center gap-x-3 border-b border-navbar-line bg-navbar px-4 sm:px-6">
-            <button type="button" class="flex size-9 items-center justify-center rounded-lg border border-layer-line bg-layer text-layer-foreground lg:hidden" x-on:click="mobileMenu = true" aria-label="{{ __('Open menu') }}">
-                <x-icon name="menu" class="size-4" />
-            </button>
-
-            <ol class="hidden min-w-0 items-center whitespace-nowrap text-sm md:flex" aria-label="Breadcrumb">
-                <li class="flex items-center">
-                    <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center text-muted-foreground-1 hover:text-primary-hover focus:outline-hidden"><x-icon name="home" class="size-4" /></a>
-                </li>
-                @if ($crumbGroup)
-                    <li class="flex items-center"><x-icon name="chevron-right" class="mx-2 size-3.5 text-muted-foreground" /><span class="text-muted-foreground-1">{{ $crumbGroup }}</span></li>
-                @endif
-                @if ($crumbPage && $crumbPage !== __('Dashboard') && $crumbPage !== $crumbGroup)
-                    <li class="flex items-center truncate font-semibold text-foreground" aria-current="page"><x-icon name="chevron-right" class="mx-2 size-3.5 text-muted-foreground" />{{ $crumbPage }}</li>
-                @endif
-            </ol>
-
-            <div class="flex-1"></div>
-
-            <livewire:global-search />
-
-            @if ($branches->count() > 1)
-                <form method="POST" action="{{ route('branch.switch') }}" class="hidden sm:block">
-                    @csrf
-                    <label for="branch_id" class="sr-only">{{ __('Branch') }}</label>
-                    <select id="branch_id" name="branch_id" onchange="this.form.submit()" class="form-input w-auto py-1.5 pe-8">
-                        @foreach ($branches as $option)
-                            <option value="{{ $option->id }}" @selected($option->id === $branch?->id)>{{ $option->localName() }}</option>
-                        @endforeach
-                    </select>
-                </form>
-            @endif
-
-            <x-language-switch class="hidden sm:inline-flex" />
-
-            {{-- Light / dark (Preline theme switch) --}}
-            <button type="button" class="hs-dark-mode hs-dark-mode-active:hidden flex size-9 items-center justify-center rounded-full text-muted-foreground-2 hover:bg-muted-hover focus:outline-hidden" data-hs-theme-click-value="dark" aria-label="{{ __('Dark mode') }}">
-                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-            </button>
-            <button type="button" class="hs-dark-mode hs-dark-mode-active:flex hidden size-9 items-center justify-center rounded-full text-muted-foreground-2 hover:bg-muted-hover focus:outline-hidden" data-hs-theme-click-value="light" aria-label="{{ __('Light mode') }}">
-                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-            </button>
-
-            {{-- User menu (Preline dropdown) --}}
-            <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                <button id="user-menu" type="button" class="hs-dropdown-toggle flex items-center gap-x-2 rounded-full py-1 ps-1 pe-2 hover:bg-muted-hover focus:outline-hidden" aria-haspopup="menu" aria-expanded="false" aria-label="{{ __('User menu') }}">
-                    <x-avatar :name="$user->name" />
-                    <span class="hidden text-start text-[13px] leading-tight lg:block">
-                        <span class="block font-medium text-foreground">{{ $user->name }}</span>
-                        <span class="block text-xs text-muted-foreground-1">{{ __(ucfirst($user->getRoleNames()->first() ?? '')) }}</span>
-                    </span>
-                    <x-icon name="chevron-down" class="size-4 text-muted-foreground" />
+    {{-- Content panel --}}
+    <div x-bind:class="collapsed ? 'lg:ps-[60px]' : 'lg:ps-60'" class="transition-[padding] duration-200 lg:ps-60">
+        <div class="min-h-screen bg-background lg:my-2 lg:me-2 lg:min-h-[calc(100vh-1rem)] lg:rounded-xl lg:border lg:border-card-line lg:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+            <header class="no-print sticky top-0 z-40 flex h-12 items-center gap-x-3 border-b border-card-line bg-background/90 px-4 backdrop-blur lg:rounded-t-xl sm:px-6">
+                <button type="button" class="flex size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover lg:hidden" x-on:click="mobileMenu = true" aria-label="{{ __('Open menu') }}">
+                    <x-icon name="menu" class="size-4" />
                 </button>
-                <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 duration hidden min-w-60 rounded-xl bg-dropdown opacity-0 shadow-md transition-[opacity,margin]" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
-                    <div class="rounded-t-xl bg-dropdown-header px-4 py-3">
-                        <p class="text-sm text-muted-foreground-1">{{ __('Signed in as') }}</p>
-                        <p class="text-sm font-medium text-foreground">{{ $user->username }}</p>
-                    </div>
-                    <div class="space-y-0.5 p-1.5">
-                        <div class="px-2 py-1.5 sm:hidden"><x-language-switch /></div>
-                        @can('settings.manage')
-                            <a href="{{ route('settings.general') }}" wire:navigate class="flex items-center gap-x-3.5 rounded-lg px-3 py-2 text-sm text-dropdown-item-foreground hover:bg-dropdown-item-hover focus:outline-hidden focus:bg-dropdown-item-focus"><x-icon name="settings" class="size-4" /> {{ __('Settings') }}</a>
-                        @endcan
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="flex w-full items-center gap-x-3.5 rounded-lg px-3 py-2 text-sm text-dropdown-item-foreground hover:bg-dropdown-item-hover focus:outline-hidden focus:bg-dropdown-item-focus">
-                                <x-icon name="logout" class="size-4" /> {{ __('Log out') }}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </header>
 
-        <main class="mx-auto w-full max-w-[1600px] p-4 sm:p-6">
-            {{ $slot }}
-        </main>
+                <ol class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[13px]" aria-label="Breadcrumb">
+                    @if ($crumbGroup)
+                        <li class="text-muted-foreground-1">{{ $crumbGroup }}</li>
+                        <li class="text-muted-foreground">/</li>
+                    @endif
+                    <li class="truncate font-medium text-foreground" aria-current="page">{{ $crumbPage ?? ($title ?? '') }}</li>
+                </ol>
+
+                <div class="flex-1"></div>
+
+                <button type="button" class="hs-dark-mode hs-dark-mode-active:hidden flex size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover" data-hs-theme-click-value="dark" aria-label="{{ __('Dark mode') }}">
+                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                </button>
+                <button type="button" class="hs-dark-mode hs-dark-mode-active:flex hidden size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover" data-hs-theme-click-value="light" aria-label="{{ __('Light mode') }}">
+                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                </button>
+            </header>
+
+            <main class="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-8">
+                {{ $slot }}
+            </main>
+        </div>
     </div>
 </body>
 </html>

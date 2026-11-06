@@ -4,6 +4,7 @@
 @source '../../node_modules/preline/dist/*.js';
 @import '../../node_modules/preline/variants.css';
 @import '../../node_modules/preline/css/themes/theme.css';
+@import './themes/saas.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -31,104 +32,113 @@ html:lang(bn) body {
     scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
 }
 
-/* ---------- Shared UI pieces (Preline recipes, theme tokens) ---------- */
+/* ---------- Shared UI pieces (Modern SaaS style on Preline theme tokens) ---------- */
+
+body {
+    font-size: 13px;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    -webkit-font-smoothing: antialiased;
+}
 
 @utility card {
-    @apply flex flex-col rounded-xl border border-card-line bg-card shadow-2xs;
+    @apply flex flex-col rounded-lg border border-card-line bg-card;
 }
 
 @utility card-header {
-    @apply flex items-center justify-between gap-3 border-b border-card-divider px-4 py-3 md:px-5;
+    @apply flex items-center justify-between gap-3 border-b border-card-divider px-4 py-2.5;
 }
 
 @utility card-title {
-    @apply text-sm font-semibold text-foreground;
+    @apply text-[13px] font-semibold text-foreground;
 }
 
 @utility form-label {
-    @apply mb-2 block text-sm font-medium text-foreground;
+    @apply mb-1.5 block text-[13px] font-medium text-foreground;
 }
 
 @utility form-hint {
-    @apply mt-1.5 text-xs text-muted-foreground-1;
+    @apply mt-1 text-xs text-muted-foreground-1;
 }
 
 @utility form-input {
-    @apply block w-full rounded-lg border border-layer-line bg-layer px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary-focus focus:outline-hidden focus:ring-1 focus:ring-primary-focus disabled:pointer-events-none disabled:opacity-50;
+    @apply block h-8 w-full rounded-md border border-layer-line bg-layer px-2.5 text-[13px] text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-3 focus:ring-primary/15 disabled:pointer-events-none disabled:opacity-50;
+
+    &:where(textarea) {
+        @apply h-auto py-1.5;
+    }
 }
 
 @utility form-error {
-    @apply mt-1.5 text-xs text-red-600;
+    @apply mt-1 text-xs text-red-600;
 }
 
 @utility btn {
-    @apply inline-flex items-center justify-center gap-x-2 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium focus:outline-hidden disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-8 items-center justify-center gap-x-1.5 whitespace-nowrap rounded-md border px-3 text-[13px] font-medium transition-colors focus:outline-hidden focus-visible:ring-3 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50;
 }
 
 @utility btn-primary {
-    @apply btn border-transparent bg-primary text-primary-foreground hover:bg-primary-hover focus:bg-primary-focus;
+    @apply btn border-primary-700/40 bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.08)] hover:bg-primary-hover;
 }
 
 @utility btn-secondary {
-    @apply btn border-layer-line bg-layer text-layer-foreground shadow-2xs hover:bg-layer-hover focus:bg-layer-focus;
+    @apply btn border-layer-line bg-layer text-layer-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:bg-layer-hover;
 }
 
 @utility btn-danger {
-    @apply btn border-transparent bg-destructive text-destructive-foreground hover:bg-destructive-hover focus:bg-destructive-focus;
+    @apply btn border-transparent bg-destructive text-destructive-foreground hover:bg-destructive-hover;
 }
 
 @utility btn-ghost {
-    @apply btn border-transparent text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground focus:bg-muted-focus;
+    @apply btn border-transparent text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground;
 }
 
 @utility btn-sm {
-    @apply gap-x-1.5 px-2.5 py-1.5 text-xs;
+    @apply h-7 gap-x-1 rounded-md px-2 text-xs;
 }
 
 @utility data-table {
-    @apply min-w-full divide-y divide-table-line text-sm;
+    @apply min-w-full text-[13px];
 
     & thead th {
-        @apply sticky top-0 bg-muted px-4 py-3 text-start text-xs font-medium uppercase text-muted-foreground-1;
-    }
-
-    & tbody {
-        @apply divide-y divide-table-line;
+        @apply sticky top-0 border-b border-table-line bg-card px-4 py-2 text-start text-xs font-medium text-muted-foreground-1;
     }
 
     & tbody td {
-        @apply whitespace-nowrap px-4 py-3 align-middle text-foreground;
+        @apply whitespace-nowrap border-b border-table-line/70 px-4 py-2.5 align-middle text-foreground;
     }
 
     & tbody tr {
-        @apply hover:bg-layer-hover;
+        @apply hover:bg-muted;
+    }
+
+    & tbody tr:last-child td {
+        @apply border-b-0;
     }
 
     & tfoot td {
-        @apply border-t border-table-line bg-muted px-4 py-3;
+        @apply border-t border-table-line bg-muted px-4 py-2.5;
     }
 }
 
 @utility badge {
-    @apply inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-x-1 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset;
 }
 
 @utility tab-link {
-    @apply inline-flex items-center gap-x-2 whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm text-muted-foreground-1 hover:text-primary-hover focus:outline-hidden focus:text-primary-focus;
+    @apply relative inline-flex items-center gap-x-1.5 whitespace-nowrap py-2.5 text-[13px] text-muted-foreground-1 hover:text-foreground focus:outline-hidden;
 }
 
 @utility tab-link-active {
-    @apply tab-link border-primary font-semibold text-primary hover:text-primary;
+    @apply tab-link font-medium text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary;
 }
 
 @utility chip {
-    @apply btn btn-sm rounded-full border-layer-line bg-layer text-layer-foreground hover:bg-layer-hover;
+    @apply btn btn-sm border-layer-line bg-layer text-layer-foreground hover:bg-layer-hover;
 }
 
 @utility chip-active {
-    @apply btn btn-sm rounded-full border-transparent bg-primary text-primary-foreground hover:bg-primary-hover;
+    @apply btn btn-sm border-transparent bg-foreground text-background hover:opacity-90;
 }
-
 
 /* Dark mode: soften light tinted panels, borders and text used for status colours. */
 .dark :is(.bg-emerald-50, .bg-emerald-100) { background-color: color-mix(in oklab, var(--color-emerald-500) 14%, transparent); }

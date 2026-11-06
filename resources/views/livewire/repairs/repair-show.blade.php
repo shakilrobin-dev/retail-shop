@@ -57,15 +57,9 @@
 
         {{-- Status --}}
         <div class="card space-y-3 p-5">
-            <h3 class="font-semibold">{{ __('Status') }}</h3>
+            <h3 class="card-title">{{ __('Timeline') }}</h3>
             @unless ($isClosed)
-                <input wire:model="statusNote" type="text" placeholder="{{ __('Note (optional)') }}" class="form-input text-sm">
-                <div class="grid grid-cols-2 gap-2">
-                    @foreach ($nextStatuses as $next)
-                        <button type="button" wire:click="setStatus('{{ $next->value }}')" @disabled($job->status === $next)
-                            @class(['btn-sm btn', 'bg-primary-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
-                    @endforeach
-                </div>
+                <input wire:model="statusNote" type="text" placeholder="{{ __('Note for the next status change (optional)') }}" class="form-input">
 
             @endunless
             <ol class="relative ml-2 space-y-4 border-l border-card-line pl-5 pt-1 text-xs">

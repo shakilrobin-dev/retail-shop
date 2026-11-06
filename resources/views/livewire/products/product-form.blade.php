@@ -60,7 +60,7 @@
                 <div class="flex items-start gap-4">
                     <span class="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-layer-line bg-muted text-muted-foreground"><x-icon name="cube" class="size-7" /></span>
                     <div class="min-w-0 flex-1">
-                        <label for="name" class="text-xs font-medium uppercase tracking-wide text-muted-foreground-1">{{ __('Product name') }}</label>
+                        <label for="name" class="text-xs font-medium text-muted-foreground-1">{{ __('Product name') }}</label>
                         <input wire:model="name" id="name" type="text" autofocus placeholder="{{ __('e.g. 20W Fast Charger Type-C') }}"
                             class="mt-0.5 block w-full border-0 border-b-2 border-card-line bg-transparent px-0 py-1 text-2xl font-semibold text-foreground placeholder:font-normal placeholder:text-muted-foreground focus:border-primary-500 focus:outline-none focus:ring-0">
                         @error('name') <p class="form-error">{{ $message }}</p> @enderror
@@ -155,7 +155,7 @@
                                     <tr wire:key="unit-{{ $unitIndex }}" class="hover:bg-transparent">
                                         <td class="align-top">
                                             <input wire:model="units.{{ $unitIndex }}.name" type="text" class="form-input" @disabled($unit['is_base'])>
-                                            <span class="mt-1 block text-[11px] font-medium uppercase tracking-wide {{ $unit['is_base'] ? 'text-primary-600' : 'text-muted-foreground' }}">{{ $unit['is_base'] ? __('Base unit') : __('Pack / box') }}</span>
+                                            <span class="mt-1 block text-[11px] font-medium {{ $unit['is_base'] ? 'text-primary-600' : 'text-muted-foreground' }}">{{ $unit['is_base'] ? __('Base unit') : __('Pack / box') }}</span>
                                             @error("units.$unitIndex.name") <p class="form-error">{{ $message }}</p> @enderror
                                         </td>
                                         <td class="align-top"><input wire:model="units.{{ $unitIndex }}.name_bn" type="text" class="form-input" @disabled($unit['is_base'])></td>
@@ -196,7 +196,7 @@
                 {{-- Pricing & stock --}}
                 <div x-show="tab === 'pricing'" x-cloak class="grid gap-x-10 gap-y-4 lg:grid-cols-2">
                     <div class="space-y-4">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Pricing') }}</h3>
+                        <h3 class="text-xs font-medium text-muted-foreground-1">{{ __('Pricing') }}</h3>
                         @can('products.view-cost')
                             <x-form.field :label="__('Cost price')" for="cost_price" required error="cost_price" :hint="__('Per base unit. Updated automatically from purchases (average cost).')">
                                 <input wire:model="cost_price" id="cost_price" type="number" step="0.01" min="0" class="form-input w-44 text-right">
@@ -213,7 +213,7 @@
                         <p class="text-xs text-muted-foreground-1">{{ __('Selling prices are set per unit in "Units & barcodes".') }}</p>
                     </div>
                     <div class="space-y-4">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Inventory') }}</h3>
+                        <h3 class="text-xs font-medium text-muted-foreground-1">{{ __('Inventory') }}</h3>
                         <x-form.field :label="__('Low stock alert at')" for="reorder_level" :hint="__('Shown on the dashboard when stock falls to this level.')">
                             <input wire:model="reorder_level" id="reorder_level" type="number" step="1" min="0" class="form-input w-28 text-right">
                         </x-form.field>

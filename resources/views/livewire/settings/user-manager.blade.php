@@ -69,7 +69,7 @@
         </form>
         @if ($editingId)
             <div class="mt-6 border-t border-card-line pt-5">
-                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('History') }}</h3>
+                <h3 class="mb-3 text-xs font-medium text-muted-foreground-1">{{ __('History') }}</h3>
                 <x-activity-feed :subjects="\App\Models\User::find($editingId)" :limit="10" />
             </div>
         @endif

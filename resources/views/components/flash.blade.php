@@ -26,13 +26,13 @@
         @if ($error) add('error', @js($error)); @endif
     "
     @if ($global) x-on:toast.window="add($event.detail.type ?? 'success', $event.detail.message)" @endif
-    class="pointer-events-none fixed right-4 top-4 z-[60] flex w-full max-w-sm flex-col gap-2">
+    class="pointer-events-none fixed bottom-4 right-4 z-[95] flex w-full max-w-sm flex-col gap-2">
     <template x-for="toast in toasts" :key="toast.id">
         <div x-transition.opacity.duration.200ms
-            class="pointer-events-auto flex items-start gap-3 rounded-xl border bg-layer p-3.5 shadow-lg"
-            :class="toast.type === 'error' ? 'border-red-200' : 'border-emerald-200'">
+            class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-layer p-3 shadow-lg"
+            :class="toast.type === 'error' ? 'border-red-200 dark:border-red-500/30' : 'border-card-line'">
             <span class="mt-0.5 size-2 shrink-0 rounded-full" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'"></span>
-            <p class="flex-1 text-sm text-foreground" x-text="toast.message"></p>
+            <p class="flex-1 text-[13px] text-foreground" x-text="toast.message"></p>
             <button type="button" x-on:click="remove(toast.id)" class="text-muted-foreground hover:text-muted-foreground-2" aria-label="{{ __('Close') }}">✕</button>
         </div>
     </template>

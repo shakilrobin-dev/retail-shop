@@ -5,7 +5,7 @@
     $steps = [value => label]. If $action is given, clicking a step calls that Livewire method.
 --}}
 @php $keys = array_keys($steps); $currentIndex = array_search($current, $keys, true); @endphp
-<div class="inline-flex overflow-hidden rounded-lg border border-layer-line bg-layer text-xs font-medium">
+<div class="inline-flex overflow-hidden rounded-md border border-layer-line bg-layer text-xs font-medium shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
     @foreach ($steps as $value => $label)
         @php
             $index = $loop->index;
@@ -14,9 +14,9 @@
         <button type="button"
             @if ($action && ! $disabled && $state !== 'current') wire:click="{{ $action }}('{{ $value }}')" @else disabled @endif
             @class([
-                'relative flex items-center gap-1.5 px-3.5 py-1.5 transition',
+                'relative flex h-7 items-center gap-1.5 px-3 transition-colors',
                 'border-l border-layer-line' => ! $loop->first,
-                'bg-primary-600 text-white' => $state === 'current',
+                'bg-foreground text-background' => $state === 'current',
                 'bg-layer text-foreground hover:bg-layer-hover' => $state === 'done' && $action && ! $disabled,
                 'bg-layer text-foreground' => $state === 'done' && (! $action || $disabled),
                 'bg-layer text-muted-foreground hover:bg-layer-hover hover:text-muted-foreground-2' => $state === 'todo' && $action && ! $disabled,

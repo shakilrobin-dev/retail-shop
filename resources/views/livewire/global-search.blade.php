@@ -3,13 +3,13 @@
     x-on:keydown.window.prevent.meta.k="open = true; $nextTick(() => $refs.input.focus())"
     x-on:keydown.escape.window="open = false">
     <button type="button" x-on:click="open = true; $nextTick(() => $refs.input.focus())"
-        class="flex items-center gap-2 rounded-lg border border-card-line bg-muted px-3 py-1.5 text-sm text-muted-foreground hover:border-layer-line hover:text-muted-foreground-2 md:w-72">
-        <x-icon name="search" class="size-4" />
-        <span class="hidden flex-1 text-left md:inline">{{ __('Search anything...') }}</span>
-        <kbd class="hidden rounded border border-card-line bg-layer px-1.5 text-[10px] font-medium text-muted-foreground-1 md:inline">Ctrl K</kbd>
+        class="flex h-7 w-full items-center gap-2 rounded-md border border-layer-line bg-layer px-2 text-[13px] text-muted-foreground-1 shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:text-foreground">
+        <x-icon name="search" class="size-3.5" />
+        <span class="flex-1 text-start">{{ __('Search...') }}</span>
+        <kbd class="rounded border border-layer-line px-1 font-sans text-[10px] text-muted-foreground-1">Ctrl K</kbd>
     </button>
 
-    <div x-cloak x-show="open" class="fixed inset-0 z-50 flex items-start justify-center bg-gray-900/50 p-4 pt-[12vh] dark:bg-neutral-900/80" x-on:click.self="open = false">
+    <div x-cloak x-show="open" class="fixed inset-0 z-[90] flex items-start justify-center bg-gray-900/50 p-4 pt-[12vh] dark:bg-neutral-900/80" x-on:click.self="open = false">
         <div x-show="open" x-transition class="w-full max-w-xl overflow-hidden rounded-xl border border-overlay-line bg-overlay shadow-2xl">
             <div class="flex items-center gap-3 border-b border-card-divider px-4">
                 <x-icon name="search" class="size-5 text-muted-foreground" />
@@ -19,7 +19,7 @@
                     x-on:keydown.enter.prevent="$refs.list?.querySelectorAll('a')[active]?.click()"
                     x-on:input="active = 0"
                     placeholder="{{ __('Product, barcode, invoice, job no, phone, page...') }}"
-                    class="h-14 flex-1 border-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0">
+                    class="h-12 flex-1 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0">
                 <kbd class="rounded border border-card-line px-1.5 text-[10px] text-muted-foreground-1">Esc</kbd>
             </div>
 
@@ -32,7 +32,7 @@
                     <div x-ref="list" class="py-2">
                         @foreach ($results as $index => $result)
                             @if ($index === 0 || $results[$index - 1]['group'] !== $result['group'])
-                                <p class="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{{ $result['group'] }}</p>
+                                <p class="px-4 pb-1 pt-3 text-[10px] font-mediumr text-muted-foreground">{{ $result['group'] }}</p>
                             @endif
                             <a href="{{ $result['url'] }}" wire:navigate x-on:click="open = false" wire:key="gs-{{ $index }}"
                                 x-on:mouseenter="active = {{ $index }}"

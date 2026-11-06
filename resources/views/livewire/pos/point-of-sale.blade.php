@@ -120,7 +120,7 @@
 
                 @if ($quickItems->isNotEmpty())
                     <div class="card p-4">
-                        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground-1">{{ __('Quick items') }}</h3>
+                        <h3 class="mb-3 text-xs font-medium text-muted-foreground-1">{{ __('Quick items') }}</h3>
                         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
                             @foreach ($quickItems as $quick)
                                 <button type="button" wire:click="pickUnit({{ $quick->id }})" wire:key="quick-{{ $quick->id }}"
@@ -196,7 +196,7 @@
                     @if ($vatEnabled && $totals['vat_amount'] > 0)
                         <div class="flex justify-between"><span>{{ __('VAT') }}</span><span class="tabular-nums">{{ money($totals['vat_amount']) }}</span></div>
                     @endif
-                    <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium uppercase tracking-wide text-muted-foreground">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
+                    <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium text-muted-foreground">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
                 </div>
 
                 @if ($showPayment)
@@ -239,17 +239,17 @@
                         <input wire:model="note" type="text" placeholder="{{ __('Note on receipt (optional)') }}" class="form-input text-sm">
                         <div class="flex gap-2">
                             <button type="button" wire:click="$set('showPayment', false)" class="btn-secondary">{{ __('Back') }}</button>
-                            <button type="button" wire:click="complete" wire:loading.attr="disabled" @disabled($due > 0) class="btn-primary flex-1 py-3 text-base">
+                            <button type="button" wire:click="complete" wire:loading.attr="disabled" @disabled($due > 0) class="btn-primary h-11 flex-1 text-base">
                                 {{ __('Complete sale') }} (F10)
                             </button>
                         </div>
                     </div>
                 @else
                     <div class="grid grid-cols-2 gap-2">
-                        <button type="button" wire:click="hold" @disabled(! $cart) class="btn-secondary py-3">{{ __('Hold') }} (F8)</button>
-                        <button type="button" wire:click="clearCart" wire:confirm="{{ __('Clear the cart?') }}" @disabled(! $cart) class="btn-secondary py-3">{{ __('Clear') }}</button>
+                        <button type="button" wire:click="hold" @disabled(! $cart) class="btn-secondary h-9">{{ __('Hold') }} (F8)</button>
+                        <button type="button" wire:click="clearCart" wire:confirm="{{ __('Clear the cart?') }}" @disabled(! $cart) class="btn-secondary h-9">{{ __('Clear') }}</button>
                         <input wire:model="holdNote" type="text" placeholder="{{ __('Hold note (e.g. customer name)') }}" class="form-input col-span-2 text-sm">
-                        <button type="button" wire:click="openPayment" @disabled(! $cart) class="btn-primary col-span-2 py-4 text-lg">{{ __('Pay') }} (F10)</button>
+                        <button type="button" wire:click="openPayment" @disabled(! $cart) class="btn-primary col-span-2 h-12 text-base">{{ __('Pay') }} (F10)</button>
                     </div>
                     @if ($drawerEnabled)
                         @can('pos.open-drawer')
@@ -274,11 +274,11 @@
                 </div>
                 <div class="mt-5 flex flex-col gap-2">
                     @if ($printMode !== 'off')
-                        <button type="button" x-on:click="printUrl('{{ route('sales.receipt', $completedSale) }}')" class="btn-secondary py-2.5">
+                        <button type="button" x-on:click="printUrl('{{ route('sales.receipt', $completedSale) }}')" class="btn-secondary h-10">
                             {{ $printMode === 'on' ? __('Print again') : __('Print receipt') }}
                         </button>
                     @endif
-                    <button type="button" x-ref="newSale" wire:click="newSale" x-on:click="setTimeout(() => focusScan(), 50)" class="btn-primary py-3">{{ __('New sale') }} (Enter)</button>
+                    <button type="button" x-ref="newSale" wire:click="newSale" x-on:click="setTimeout(() => focusScan(), 50)" class="btn-primary h-10">{{ __('New sale') }} (Enter)</button>
                 </div>
             </div>
         </div>

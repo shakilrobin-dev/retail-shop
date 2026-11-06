@@ -26,7 +26,7 @@
             {{ __('Remember me') }}
         </label>
 
-        <button type="submit" wire:loading.attr="disabled" class="btn-primary w-full py-2.5">
+        <button type="submit" wire:loading.attr="disabled" class="btn-primary w-full h-10">
             <span wire:loading.remove wire:target="login">{{ __('Log in') }}</span>
             <span wire:loading wire:target="login">{{ __('Please wait...') }}</span>
         </button>
