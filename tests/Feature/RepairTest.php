@@ -189,11 +189,24 @@ class RepairTest extends TestCase
         $job = $this->createJob(200);
 
         Livewire::test(RepairIndex::class)->set('search', '356789012345678')->assertSee($job->job_no);
+        Livewire::test(RepairIndex::class)->set('view', 'list')->set('search', '356789012345678')->assertSee($job->job_no);
 
         $this->get(route('repairs.slip', $job))->assertOk()->assertSee($job->job_no)->assertSee('Display broken');
         $this->get(route('repairs.bill', $job))->assertOk()->assertSee('Karim');
         $this->get(route('repairs.show', $job))->assertOk();
         $this->get(route('repairs.index'))->assertOk();
         $this->get(route('customers.show', $job->customer))->assertOk()->assertSee($job->job_no);
+    }
+
+    public function test_dragging_card_on_board_changes_status(): void
+    {
+        $this->actingAsRole('cashier', $this->branch);
+        $job = $this->createJob();
+
+        Livewire::test(RepairIndex::class)
+            ->assertSee($job->job_no)
+            ->call('moveTo', $job->id, 'repairing');
+
+        $this->assertSame(RepairStatus::Repairing, $job->fresh()->status);
     }
 }

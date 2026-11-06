@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['branch_id', 'expense_category_id', 'expense_date', 'amount', 'note', 'user_id'])]
 class Expense extends Model
 {
     /** @use HasFactory<ExpenseFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     /**
      * Get the attributes that should be cast.
@@ -58,5 +60,10 @@ class Expense extends Model
     public function payments(): MorphMany
     {
         return $this->morphMany(Payment::class, 'payable');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

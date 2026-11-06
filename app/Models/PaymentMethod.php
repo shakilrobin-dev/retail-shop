@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['name', 'name_bn', 'type', 'is_active', 'sort_order'])]
 class PaymentMethod extends Model
 {
     /** @use HasFactory<PaymentMethodFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     /**
      * Get the attributes that should be cast.
@@ -43,5 +45,10 @@ class PaymentMethod extends Model
     public function localName(): string
     {
         return app()->getLocale() === 'bn' && $this->name_bn ? $this->name_bn : $this->name;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

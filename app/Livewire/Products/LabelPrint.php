@@ -30,18 +30,24 @@ class LabelPrint extends Component
     #[Url]
     public ?int $purchase = null;
 
+    /** Comma separated product ids (from bulk "Print labels"). */
+    #[Url]
+    public string $products = '';
+
     public function mount(): void
     {
         $this->authorize('products.manage');
 
-        if ($this->product) {
-            $product = Product::query()->with('units.barcodes')->find($this->product);
+        $productIds = array_filter(array_map('intval', explode(',', $this->products)));
 
-            if ($product) {
-                foreach ($product->units as $unit) {
-                    foreach ($unit->barcodes as $barcode) {
-                        $this->addRow($barcode, $unit, $product, 1);
-                    }
+        if ($this->product) {
+            $productIds[] = $this->product;
+        }
+
+        foreach (Product::query()->with('units.barcodes')->whereIn('id', $productIds)->get() as $product) {
+            foreach ($product->units as $unit) {
+                foreach ($unit->barcodes as $barcode) {
+                    $this->addRow($barcode, $unit, $product, 1);
                 }
             }
         }

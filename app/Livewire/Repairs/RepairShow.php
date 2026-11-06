@@ -74,6 +74,20 @@ class RepairShow extends Component
         $this->statusNote = '';
     }
 
+    /**
+     * Click on the status bar. "Delivered" opens the delivery panel.
+     */
+    public function pipelineTo(string $status, RepairService $repairs): void
+    {
+        if ($status === RepairStatus::Delivered->value) {
+            $this->openDelivery();
+
+            return;
+        }
+
+        $this->setStatus($status, $repairs);
+    }
+
     public function saveCharges(RepairService $repairs): void
     {
         $this->validate([
@@ -164,6 +178,9 @@ class RepairShow extends Component
             'techniciansEnabled' => app(Settings::class)->bool('technicians_enabled', $this->job->branch_id),
             'technicians' => Technician::query()->where('is_active', true)->orderBy('name')->get(),
             'nextStatuses' => [RepairStatus::Diagnosing, RepairStatus::WaitingForParts, RepairStatus::Repairing, RepairStatus::Ready],
+            'pipeline' => collect([RepairStatus::Received, RepairStatus::Diagnosing, RepairStatus::WaitingForParts, RepairStatus::Repairing, RepairStatus::Ready, RepairStatus::Delivered])
+                ->mapWithKeys(fn (RepairStatus $status): array => [$status->value => $status->label()])->all(),
+            'customerJobs' => RepairJob::query()->where('customer_id', $this->job->customer_id)->count(),
         ])->title(__('Repair').' '.$this->job->job_no);
     }
 }

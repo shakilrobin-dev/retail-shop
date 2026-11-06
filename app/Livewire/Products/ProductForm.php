@@ -2,9 +2,13 @@
 
 namespace App\Livewire\Products;
 
+use App\Enums\SaleStatus;
 use App\Models\Barcode;
 use App\Models\Brand;
 use App\Models\Product;
+use App\Models\ProductStock;
+use App\Models\PurchaseItem;
+use App\Models\SaleItem;
 use App\Models\Unit;
 use App\Services\BarcodeService;
 use App\Services\CategoryTree;
@@ -82,6 +86,32 @@ class ProductForm extends Component
                     'code' => $barcode->code,
                     'is_generated' => $barcode->is_generated,
                 ])->all() ?: [$this->emptyBarcode()],
+            ])->all();
+
+            return;
+        }
+
+        $copyFrom = request()->integer('copy') ? Product::query()->with('units')->find(request()->integer('copy')) : null;
+
+        if ($copyFrom) {
+            $this->fill($copyFrom->only(['category_id', 'brand_id', 'unit_id']));
+            $this->name = $copyFrom->name.' ('.__('copy').')';
+            $this->name_bn = (string) $copyFrom->name_bn;
+            $this->compatible_models = (string) $copyFrom->compatible_models;
+            $this->description = (string) $copyFrom->description;
+            $this->cost_price = (string) $copyFrom->cost_price;
+            $this->min_selling_price = (string) $copyFrom->min_selling_price;
+            $this->vat_rate = (string) ($copyFrom->vat_rate + 0);
+            $this->reorder_level = (string) ($copyFrom->reorder_level + 0);
+            $this->warranty_days = (string) $copyFrom->warranty_days;
+            $this->units = $copyFrom->units->sortByDesc('is_base')->values()->map(fn ($unit): array => [
+                'id' => null,
+                'name' => $unit->name,
+                'name_bn' => (string) $unit->name_bn,
+                'quantity' => (string) ($unit->quantity + 0),
+                'selling_price' => (string) $unit->selling_price,
+                'is_base' => $unit->is_base,
+                'barcodes' => [$this->emptyBarcode()],
             ])->all();
 
             return;
@@ -282,9 +312,52 @@ class ProductForm extends Component
         return ['id' => null, 'code' => '', 'is_generated' => false];
     }
 
+    /**
+     * Copy this product into a new form (without barcodes and stock).
+     */
+    public function duplicate(): void
+    {
+        $this->authorize('products.manage');
+        abort_unless($this->product !== null, 404);
+
+        $this->redirectRoute('products.create', ['copy' => $this->product->id], navigate: true);
+    }
+
+    public function toggleArchive(): void
+    {
+        $this->authorize('products.manage');
+        abort_unless($this->product !== null, 404);
+
+        $this->product->update(['is_active' => ! $this->product->is_active]);
+        $this->is_active = $this->product->is_active;
+        $this->dispatch('toast', message: $this->is_active ? __('Product restored.') : __('Product archived.'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function stats(): array
+    {
+        if (! $this->product) {
+            return [];
+        }
+
+        $branch = app(CurrentBranch::class)->get();
+
+        return [
+            'onHand' => (float) ProductStock::query()->where('product_id', $this->product->id)->where('branch_id', $branch?->id)->value('quantity'),
+            'allBranches' => (float) ProductStock::query()->where('product_id', $this->product->id)->sum('quantity'),
+            'sold30' => (float) SaleItem::query()->where('product_id', $this->product->id)
+                ->whereHas('sale', fn ($query) => $query->where('status', SaleStatus::Completed)->where('sold_at', '>=', now()->subDays(30)))
+                ->sum('base_quantity'),
+            'purchases' => PurchaseItem::query()->where('product_id', $this->product->id)->distinct()->count('purchase_id'),
+        ];
+    }
+
     public function render(): View
     {
         return view('livewire.products.product-form', [
+            'stats' => $this->stats(),
             'categoryOptions' => app(CategoryTree::class)->flat(onlyActive: true),
             'brands' => Brand::query()->where('is_active', true)->orderBy('name')->get(),
             'unitOptions' => Unit::query()->orderBy('id')->get(),

@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['code', 'name', 'name_bn', 'address', 'address_bn', 'phone', 'is_active'])]
 class Branch extends Model
 {
     /** @use HasFactory<BranchFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     /**
      * Get the attributes that should be cast.
@@ -64,5 +66,10 @@ class Branch extends Model
     public function localName(): string
     {
         return app()->getLocale() === 'bn' && $this->name_bn ? $this->name_bn : $this->name;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

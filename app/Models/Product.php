@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['sku', 'name', 'name_bn', 'category_id', 'brand_id', 'unit_id', 'compatible_models', 'description', 'cost_price', 'min_selling_price', 'vat_rate', 'reorder_level', 'warranty_days', 'is_serialized', 'image_path', 'is_active'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -126,5 +128,10 @@ class Product extends Model
     public function localName(): string
     {
         return app()->getLocale() === 'bn' && $this->name_bn ? $this->name_bn : $this->name;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logExcept(['image_path'])->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

@@ -1,58 +1,107 @@
 @php
-    $statusColors = [
-        'received' => 'bg-slate-100 text-slate-700',
-        'diagnosing' => 'bg-sky-50 text-sky-700',
-        'waiting_for_parts' => 'bg-amber-50 text-amber-700',
-        'repairing' => 'bg-brand-50 text-brand-700',
-        'ready' => 'bg-emerald-50 text-emerald-700',
-        'delivered' => 'bg-slate-100 text-slate-500',
-        'cancelled' => 'bg-red-50 text-red-700',
-    ];
+    $tones = ['received' => 'slate', 'diagnosing' => 'sky', 'waiting_for_parts' => 'amber', 'repairing' => 'brand', 'ready' => 'green', 'delivered' => 'slate', 'cancelled' => 'red'];
+    $columnAccent = ['received' => 'bg-slate-400', 'diagnosing' => 'bg-sky-500', 'waiting_for_parts' => 'bg-amber-500', 'repairing' => 'bg-brand-500', 'ready' => 'bg-emerald-500'];
 @endphp
-<div class="space-y-5">
+<div>
     <x-flash />
-    <x-page-header class="mb-0" :title="__('Repairs')" :subtitle="__('Devices in the shop, sorted by delivery date. Late jobs are shown in red.')">
+    <x-page-header :title="__('Repairs')" :subtitle="__('Drag a card to change its status. Late jobs are shown in red.')">
+        <div class="inline-flex rounded-lg border border-slate-300 bg-white p-0.5">
+            <button type="button" wire:click="$set('view', 'kanban')" @class(['rounded-md px-2.5 py-1 text-sm font-medium', 'bg-slate-900 text-white' => $view === 'kanban', 'text-slate-600 hover:text-slate-900' => $view !== 'kanban'])>{{ __('Board') }}</button>
+            <button type="button" wire:click="$set('view', 'list')" @class(['rounded-md px-2.5 py-1 text-sm font-medium', 'bg-slate-900 text-white' => $view === 'list', 'text-slate-600 hover:text-slate-900' => $view !== 'list'])>{{ __('List') }}</button>
+        </div>
+        <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
         <a href="{{ route('repairs.create') }}" class="btn-primary" wire:navigate><x-icon name="plus" class="size-4" /> {{ __('New repair job') }}</a>
     </x-page-header>
 
-    <div class="card">
-        <div class="flex gap-5 overflow-x-auto border-b border-slate-200 px-4 pt-3">
-            <button type="button" wire:click="$set('status', 'open')" class="{{ $status === 'open' ? 'tab-link-active' : 'tab-link' }}">{{ __('In shop') }} <span class="rounded-full bg-slate-100 px-1.5 text-[11px]">{{ shop_digits($openCount) }}</span></button>
-            @foreach (\App\Enums\RepairStatus::cases() as $case)
-                <button type="button" wire:click="$set('status', '{{ $case->value }}')" class="{{ $status === $case->value ? 'tab-link-active' : 'tab-link' }}">
-                    {{ $case->label() }} <span class="rounded-full bg-slate-100 px-1.5 text-[11px]">{{ shop_digits($counts[$case->value] ?? 0) }}</span>
-                </button>
-            @endforeach
-            <button type="button" wire:click="$set('status', 'all')" class="{{ $status === 'all' ? 'tab-link-active' : 'tab-link' }}">{{ __('All') }}</button>
-        </div>
-        <div class="border-b border-slate-100 p-3">
-            <div class="relative max-w-md">
+    @if ($view === 'kanban')
+        <div class="mb-4 max-w-md">
+            <div class="relative">
                 <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Job no, phone, IMEI or model') }}" class="form-input pl-9">
             </div>
         </div>
-        <div class="overflow-x-auto">
-        <table class="data-table">
-            <thead><tr><th>{{ __('Job no') }}</th><th>{{ __('Customer') }}</th><th>{{ __('Device') }}</th><th>{{ __('Problem') }}</th><th>{{ __('Status') }}</th><th>{{ __('Delivery') }}</th><th class="text-right">{{ __('Bill') }}</th><th></th></tr></thead>
-            <tbody>
-                @forelse ($jobs as $job)
-                    @php $late = $job->estimated_delivery_at?->isPast() && ! in_array($job->status, [\App\Enums\RepairStatus::Delivered, \App\Enums\RepairStatus::Cancelled, \App\Enums\RepairStatus::Ready]); @endphp
-                    <tr wire:key="job-{{ $job->id }}">
-                        <td class="font-mono text-xs">{{ $job->job_no }}@if ($job->warranty_of_job_id)<div class="badge bg-amber-50 text-amber-700">{{ __('Warranty') }}</div>@endif</td>
-                        <td>{{ $job->customer->name }}<div class="text-xs text-slate-500">{{ $job->customer->phone }}</div></td>
-                        <td>{{ $job->device_brand }} {{ $job->device_model }}@if ($job->imei_serial)<div class="font-mono text-xs text-slate-400">{{ $job->imei_serial }}</div>@endif</td>
-                        <td class="max-w-xs truncate text-slate-600">{{ $job->problem }}</td>
-                        <td><span class="badge {{ $statusColors[$job->status->value] ?? '' }}">{{ $job->status->label() }}</span>@if ($job->technician)<div class="text-xs text-slate-400">{{ $job->technician->name }}</div>@endif</td>
-                        <td @class(['whitespace-nowrap text-xs', 'font-semibold text-red-600' => $late])>{{ $job->estimated_delivery_at ? shop_digits($job->estimated_delivery_at->format('d M h:i A')) : '—' }}</td>
-                        <td class="text-right tabular-nums">{{ money($job->total) }}@if ($job->paid_amount > 0)<div class="text-xs text-slate-400">{{ __('Paid') }} {{ money($job->paid_amount) }}</div>@endif</td>
-                        <td class="text-right"><a href="{{ route('repairs.show', $job) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('Open') }}</a></td>
-                    </tr>
-                @empty
-                    <x-empty :colspan="8" icon="wrench" :title="__('No repair jobs.')" />
-                @endforelse
-            </tbody>
-        </table>
+
+        <div class="scroll-thin -mx-1 flex gap-4 overflow-x-auto px-1 pb-4" x-data="{ dragging: null, over: null }">
+            @foreach ($board as $statusValue => $column)
+                <div class="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100/80"
+                    x-on:dragover.prevent="over = '{{ $statusValue }}'"
+                    x-on:dragleave="over = null"
+                    x-on:drop.prevent="over = null; if (dragging) $wire.moveTo(dragging, '{{ $statusValue }}')"
+                    :class="over === '{{ $statusValue }}' ? 'ring-2 ring-brand-400' : ''">
+                    <div class="flex items-center justify-between px-3 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full {{ $columnAccent[$statusValue] ?? 'bg-slate-400' }}"></span>
+                            <span class="text-sm font-semibold text-slate-800">{{ $column['status']->label() }}</span>
+                        </div>
+                        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600">{{ shop_digits($column['jobs']->count()) }}</span>
+                    </div>
+                    <div class="scroll-thin flex max-h-[calc(100vh-17rem)] min-h-32 flex-col gap-2 overflow-y-auto px-2 pb-2">
+                        @forelse ($column['jobs'] as $job)
+                            @php $late = $job->estimated_delivery_at?->isPast() && $job->status !== \App\Enums\RepairStatus::Ready; @endphp
+                            <a href="{{ route('repairs.show', $job) }}" wire:navigate wire:key="card-{{ $job->id }}" draggable="true"
+                                x-on:dragstart="dragging = {{ $job->id }}" x-on:dragend="dragging = null"
+                                class="block cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing">
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="font-mono text-[11px] font-medium text-slate-500">{{ $job->job_no }}</span>
+                                    @if ($job->warranty_of_job_id)<x-badge tone="amber">{{ __('Warranty') }}</x-badge>@endif
+                                </div>
+                                <div class="mt-1 text-sm font-semibold text-slate-900">{{ trim($job->device_brand.' '.$job->device_model) ?: __('repair_devices.'.$job->device_type) }}</div>
+                                <p class="mt-0.5 line-clamp-2 text-xs text-slate-500">{{ $job->problem }}</p>
+                                <div class="mt-3 flex items-center justify-between gap-2">
+                                    <div class="flex min-w-0 items-center gap-1.5">
+                                        <x-avatar :name="$job->customer->name" size="size-5" class="text-[9px]" />
+                                        <span class="truncate text-xs text-slate-600">{{ $job->customer->name }}</span>
+                                    </div>
+                                    @if ($job->estimated_delivery_at)
+                                        <span @class(['shrink-0 text-[11px]', 'font-semibold text-red-600' => $late, 'text-slate-400' => ! $late])>{{ shop_digits($job->estimated_delivery_at->format('d M')) }}</span>
+                                    @endif
+                                </div>
+                            </a>
+                        @empty
+                            <div class="rounded-lg border-2 border-dashed border-slate-200 py-6 text-center text-xs text-slate-400">{{ __('Drop here') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+            @endforeach
         </div>
-    </div>
-    {{ $jobs->links() }}
+        <p class="text-xs text-slate-500">{{ __('Delivered and cancelled jobs are in the List view.') }}</p>
+    @else
+        <div class="card overflow-hidden">
+            <x-filter-tabs model="status" :active="$status" :tabs="['open' => [__('In shop'), $openCount]] + collect(\App\Enums\RepairStatus::cases())->mapWithKeys(fn ($case) => [$case->value => [$case->label(), $counts[$case->value] ?? 0]])->all() + ['all' => [__('All'), $counts->sum()]]" />
+            <div class="border-t border-slate-200"></div>
+            <x-list-toolbar :placeholder="__('Job no, phone, IMEI or model')" />
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <x-table.sort field="job" :sort="$sortField" :dir="$sortDirection">{{ __('Job no') }}</x-table.sort>
+                            <th>{{ __('Customer') }}</th>
+                            <th>{{ __('Device') }}</th>
+                            <th>{{ __('Problem') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <x-table.sort field="delivery" :sort="$sortField" :dir="$sortDirection">{{ __('Delivery') }}</x-table.sort>
+                            <x-table.sort field="total" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Bill') }}</x-table.sort>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($jobs as $job)
+                            @php $late = $job->estimated_delivery_at?->isPast() && ! in_array($job->status, [\App\Enums\RepairStatus::Delivered, \App\Enums\RepairStatus::Cancelled, \App\Enums\RepairStatus::Ready]); @endphp
+                            <tr wire:key="job-{{ $job->id }}" x-on:click="Livewire.navigate('{{ route('repairs.show', $job) }}')" class="cursor-pointer">
+                                <td class="font-mono text-xs font-medium text-slate-900">{{ $job->job_no }}@if ($job->warranty_of_job_id) <x-badge tone="amber">{{ __('Warranty') }}</x-badge>@endif</td>
+                                <td><div class="flex items-center gap-2"><x-avatar :name="$job->customer->name" size="size-6" /><div>{{ $job->customer->name }}<div class="text-xs text-slate-500">{{ $job->customer->phone }}</div></div></div></td>
+                                <td>{{ $job->device_brand }} {{ $job->device_model }}@if ($job->imei_serial)<div class="font-mono text-xs text-slate-400">{{ $job->imei_serial }}</div>@endif</td>
+                                <td class="max-w-xs truncate text-slate-600">{{ $job->problem }}</td>
+                                <td><x-badge :tone="$tones[$job->status->value] ?? 'slate'">{{ $job->status->label() }}</x-badge>@if ($job->technician)<div class="mt-0.5 text-xs text-slate-400">{{ $job->technician->name }}</div>@endif</td>
+                                <td @class(['whitespace-nowrap text-xs', 'font-semibold text-red-600' => $late, 'text-slate-600' => ! $late])>{{ $job->estimated_delivery_at ? shop_digits($job->estimated_delivery_at->format('d M h:i A')) : '—' }}</td>
+                                <td class="text-right tabular-nums"><span class="font-semibold text-slate-900">{{ money($job->total) }}</span>@if ($job->paid_amount > 0)<div class="text-xs text-slate-400">{{ __('Paid') }} {{ money($job->paid_amount) }}</div>@endif</td>
+                            </tr>
+                        @empty
+                            <x-empty :colspan="7" icon="wrench" :title="__('No repair jobs.')" />
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <x-table.footer :paginator="$jobs" />
+        </div>
+    @endif
 </div>

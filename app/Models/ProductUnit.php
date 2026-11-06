@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['product_id', 'name', 'name_bn', 'quantity', 'selling_price', 'is_base'])]
 class ProductUnit extends Model
 {
     /** @use HasFactory<ProductUnitFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     /**
      * Get the attributes that should be cast.
@@ -59,5 +61,10 @@ class ProductUnit extends Model
     public function localName(): string
     {
         return app()->getLocale() === 'bn' && $this->name_bn ? $this->name_bn : $this->name;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['name', 'quantity', 'selling_price'])->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Livewire\Expenses;
 
 use App\Enums\PaymentDirection;
+use App\Livewire\Concerns\WithDataTable;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
@@ -14,11 +15,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExpenseIndex extends Component
 {
-    use WithPagination;
+    use WithDataTable;
 
     #[Url]
     public string $from = '';
@@ -42,6 +43,8 @@ class ExpenseIndex extends Component
     public string $note = '';
 
     public string $newCategory = '';
+
+    public bool $showForm = false;
 
     public function mount(): void
     {
@@ -86,8 +89,8 @@ class ExpenseIndex extends Component
             $payments->record($branch, $expense, PaymentMethod::query()->findOrFail($validated['payment_method_id']), PaymentDirection::Out, (float) $validated['amount'], null, $this->from_drawer);
         });
 
-        $this->reset('amount', 'note');
-        session()->flash('success', __('Expense saved.'));
+        $this->reset('amount', 'note', 'showForm');
+        $this->dispatch('toast', message: __('Expense saved.'));
     }
 
     public function delete(int $id): void
@@ -110,19 +113,51 @@ class ExpenseIndex extends Component
         $this->newCategory = '';
     }
 
-    public function render(): View
+    public function create(): void
     {
-        $query = Expense::query()
+        $this->resetValidation();
+        $this->expense_date = today()->toDateString();
+        $this->showForm = true;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function sortableColumns(): array
+    {
+        return ['date' => 'expense_date', 'amount' => 'amount'];
+    }
+
+    public function export(): StreamedResponse
+    {
+        $rows = $this->query()->latest('expense_date')->get()->map(fn (Expense $expense): array => [
+            $expense->expense_date->toDateString(), $expense->category->name, $expense->note, $expense->payments->first()?->paymentMethod->name, (float) $expense->amount, $expense->user?->name,
+        ]);
+
+        return $this->csvDownload('expenses', ['Date', 'Category', 'Note', 'Paid by', 'Amount', 'Entered by'], $rows);
+    }
+
+    /**
+     * @return Builder<Expense>
+     */
+    private function query(): Builder
+    {
+        return Expense::query()
             ->with(['category', 'user', 'payments.paymentMethod'])
             ->where('branch_id', app(CurrentBranch::class)->get()?->id)
             ->when($this->from !== '', fn (Builder $query) => $query->whereDate('expense_date', '>=', $this->from))
             ->when($this->to !== '', fn (Builder $query) => $query->whereDate('expense_date', '<=', $this->to))
             ->when($this->categoryFilter, fn (Builder $query) => $query->where('expense_category_id', $this->categoryFilter));
+    }
+
+    public function render(): View
+    {
+        $query = $this->query();
 
         return view('livewire.expenses.expense-index', [
-            'expenses' => (clone $query)->latest('expense_date')->latest('id')->paginate(25),
+            'expenses' => $this->applySorting(clone $query, 'expense_date', 'desc')->paginate($this->perPage),
             'total' => (clone $query)->sum('amount'),
-            'byCategory' => (clone $query)->selectRaw('expense_category_id, SUM(amount) as total')->groupBy('expense_category_id')->with('category')->get(),
+            'byCategory' => Expense::query()->whereIn('id', (clone $query)->select('expenses.id'))->selectRaw('expense_category_id, SUM(amount) as total')->groupBy('expense_category_id')->with('category')->orderByDesc('total')->get(),
             'categories' => ExpenseCategory::query()->where('is_active', true)->orderBy('name')->get(),
             'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get(),
         ])->title(__('Expenses'));

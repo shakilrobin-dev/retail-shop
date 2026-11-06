@@ -3,16 +3,17 @@
 namespace App\Livewire\Customers;
 
 use App\Enums\SaleStatus;
+use App\Livewire\Concerns\WithDataTable;
 use App\Models\Customer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
-use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerIndex extends Component
 {
-    use WithPagination;
+    use WithDataTable;
 
     public string $search = '';
 
@@ -66,17 +67,39 @@ class CustomerIndex extends Component
         $this->reset('editingId', 'name', 'phone', 'address', 'notes', 'showForm');
     }
 
-    public function render(): View
+    /**
+     * @return array<string, string>
+     */
+    protected function sortableColumns(): array
     {
-        $customers = Customer::query()
+        return ['name' => 'name', 'purchases' => 'sales_count', 'spent' => 'sales_sum_total', 'repairs' => 'repair_jobs_count', 'created' => 'created_at'];
+    }
+
+    public function export(): StreamedResponse
+    {
+        $rows = $this->query()->when($this->selected !== [], fn (Builder $query) => $query->whereIn('id', $this->selected))->orderBy('name')->get()
+            ->map(fn (Customer $customer): array => [$customer->name, $customer->phone, $customer->address, $customer->sales_count, (float) $customer->sales_sum_total, $customer->repair_jobs_count]);
+
+        return $this->csvDownload('customers', ['Name', 'Phone', 'Address', 'Purchases', 'Total spent', 'Repairs'], $rows);
+    }
+
+    /**
+     * @return Builder<Customer>
+     */
+    private function query(): Builder
+    {
+        return Customer::query()
             ->withCount(['sales' => fn (Builder $query) => $query->where('status', SaleStatus::Completed)])
             ->withSum(['sales' => fn (Builder $query) => $query->where('status', SaleStatus::Completed)], 'total')
             ->withCount('repairJobs')
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$this->search}%")
-                ->orWhere('phone', 'like', "%{$this->search}%")))
-            ->orderBy('name')
-            ->paginate(25);
+                ->orWhere('phone', 'like', "%{$this->search}%")));
+    }
+
+    public function render(): View
+    {
+        $customers = $this->applySorting($this->query(), 'name')->paginate($this->perPage);
 
         return view('livewire.customers.customer-index', ['customers' => $customers])->title(__('Customers'));
     }

@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['branch_id', 'job_no', 'status', 'customer_id', 'technician_id', 'warranty_of_job_id', 'device_type', 'device_brand', 'device_model', 'device_color', 'imei_serial', 'device_password', 'accessories', 'condition_notes', 'problem', 'estimated_cost', 'estimated_delivery_at', 'service_charge', 'parts_total', 'discount', 'total', 'paid_amount', 'warranty_days', 'warranty_until', 'delivered_at', 'note', 'received_by', 'delivered_by'])]
 class RepairJob extends Model
 {
     /** @use HasFactory<RepairJobFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     /**
      * Get the attributes that should be cast.
@@ -111,5 +113,10 @@ class RepairJob extends Model
     public function payments(): MorphMany
     {
         return $this->morphMany(Payment::class, 'payable');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logOnly(['status', 'technician_id', 'service_charge', 'discount', 'estimated_cost', 'estimated_delivery_at'])->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }

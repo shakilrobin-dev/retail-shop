@@ -11,6 +11,7 @@
         ['settings.roles', [], __('Permissions'), null],
         ['settings.payment-methods', [], __('Payment methods'), null],
         ['settings.backup', [], __('Backup'), null],
+        ['settings.activity', [], __('Audit log'), null],
     ];
     $currentTab = request()->routeIs('settings.general') ? (request('tab') ?: ($tab ?? 'shop')) : null;
 @endphp

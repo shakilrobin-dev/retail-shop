@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Stock;
 
+use App\Livewire\Concerns\WithDataTable;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Services\CategoryTree;
@@ -10,11 +11,11 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockOverview extends Component
 {
-    use WithPagination;
+    use WithDataTable;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -30,7 +31,28 @@ class StockOverview extends Component
         $this->resetPage();
     }
 
-    public function render(): View
+    /**
+     * @return array<string, string>
+     */
+    protected function sortableColumns(): array
+    {
+        return ['name' => 'products.name', 'stock' => 'branch_stock', 'alert' => 'products.reorder_level', 'value' => 'branch_stock * products.cost_price'];
+    }
+
+    public function export(): StreamedResponse
+    {
+        $tree = app(CategoryTree::class);
+        $rows = $this->stockQuery()->orderBy('name')->get()->map(fn (Product $product): array => [
+            $product->sku, $product->name, $tree->path($product->category_id), (float) $product->branch_stock, (float) $product->reorder_level, (float) $product->cost_price, round(max(0, (float) $product->branch_stock) * (float) $product->cost_price, 2),
+        ]);
+
+        return $this->csvDownload('stock', ['SKU', 'Product', 'Category', 'Stock', 'Alert at', 'Cost', 'Value'], $rows);
+    }
+
+    /**
+     * @return Builder<Product>
+     */
+    private function stockQuery(): Builder
     {
         $branchId = app(CurrentBranch::class)->get()?->id;
         $stockSql = '(select quantity from product_stocks where product_stocks.product_id = products.id and product_stocks.branch_id = ?)';
@@ -47,6 +69,14 @@ class StockOverview extends Component
             ->when($this->filter === 'low', fn (Builder $query) => $query->where('reorder_level', '>', 0)->whereRaw("COALESCE({$stockSql}, 0) <= products.reorder_level", [$branchId]))
             ->when($this->filter === 'out', fn (Builder $query) => $query->whereRaw("COALESCE({$stockSql}, 0) <= 0", [$branchId]));
 
+        return $query;
+    }
+
+    public function render(): View
+    {
+        $branchId = app(CurrentBranch::class)->get()?->id;
+        $query = $this->stockQuery();
+
         $value = (float) ProductStock::query()
             ->join('products', 'products.id', '=', 'product_stocks.product_id')
             ->where('product_stocks.branch_id', $branchId)
@@ -55,7 +85,7 @@ class StockOverview extends Component
             ->value('value');
 
         return view('livewire.stock.stock-overview', [
-            'products' => $query->orderBy('name')->paginate(30),
+            'products' => $this->applySorting($query, 'name')->paginate($this->perPage),
             'stockValue' => $value,
             'categoryOptions' => app(CategoryTree::class)->flat(),
         ])->title(__('Stock'));

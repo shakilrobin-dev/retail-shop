@@ -1,89 +1,107 @@
-<div class="space-y-5">
+<div>
     <x-flash />
-    <x-page-header class="mb-0" :title="__('Expenses')" :subtitle="__('Rent, salary, bills and other shop costs. Cash from the drawer reduces the expected cash.')" />
+    <x-page-header :title="__('Expenses')" :subtitle="__('Rent, salary, bills and other shop costs. Cash from the drawer reduces the expected cash.')">
+        <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
+        <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New expense') }}</button>
+    </x-page-header>
 
-    <form wire:submit="save" class="card grid gap-3 p-5 md:grid-cols-6">
-        <h2 class="card-title md:col-span-6">{{ __('Add expense') }}</h2>
-        <div>
-            <label class="form-label">{{ __('Date') }}</label>
-            <input wire:model="expense_date" type="date" class="form-input">
-            @error('expense_date') <p class="form-error">{{ $message }}</p> @enderror
-        </div>
-        <div>
-            <label class="form-label">{{ __('Category') }}</label>
-            <select wire:model="expense_category_id" class="form-input">
-                <option value="">{{ __('Choose...') }}</option>
-                @foreach ($categories as $category)
-                    <option value="{{ $category->id }}">{{ $category->localName() }}</option>
-                @endforeach
-            </select>
-            @error('expense_category_id') <p class="form-error">{{ $message }}</p> @enderror
-        </div>
-        <div>
-            <label class="form-label">{{ __('Amount') }}</label>
-            <input wire:model="amount" type="number" step="0.01" min="0" class="form-input">
-            @error('amount') <p class="form-error">{{ $message }}</p> @enderror
-        </div>
-        <div>
-            <label class="form-label">{{ __('Paid by') }}</label>
-            <select wire:model="payment_method_id" class="form-input">
-                @foreach ($paymentMethods as $method)
-                    <option value="{{ $method->id }}">{{ $method->localName() }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="md:col-span-2">
-            <label class="form-label">{{ __('Note') }}</label>
-            <input wire:model="note" type="text" class="form-input">
-        </div>
-        <label class="flex items-center gap-2 text-sm text-slate-600 md:col-span-3"><input wire:model="from_drawer" type="checkbox" class="rounded border-slate-300"> {{ __('Cash taken from the cash drawer') }}</label>
-        <div class="flex justify-end md:col-span-3"><button type="submit" class="btn-primary">{{ __('Add expense') }}</button></div>
-    </form>
-
-    <div class="flex flex-wrap items-end gap-2">
-        <input wire:model.live="from" type="date" class="form-input w-auto">
-        <input wire:model.live="to" type="date" class="form-input w-auto">
-        <select wire:model.live="categoryFilter" class="form-input w-auto">
-            <option value="">{{ __('All categories') }}</option>
-            @foreach ($categories as $category)
-                <option value="{{ $category->id }}">{{ $category->localName() }}</option>
-            @endforeach
-        </select>
-        <div class="flex-1"></div>
-        <form wire:submit="addCategory" class="flex gap-1">
-            <input wire:model="newCategory" type="text" placeholder="{{ __('New category') }}" class="form-input w-44">
-            <button type="submit" class="btn-secondary">+</button>
-        </form>
-    </div>
-    @error('newCategory') <p class="form-error">{{ $message }}</p> @enderror
-
-    <div class="grid gap-4 lg:grid-cols-3">
-        <div class="card overflow-x-auto lg:col-span-2">
-            <table class="data-table">
-                <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Category') }}</th><th>{{ __('Note') }}</th><th>{{ __('Paid by') }}</th><th class="text-right">{{ __('Amount') }}</th><th></th></tr></thead>
-                <tbody>
-                    @forelse ($expenses as $expense)
-                        <tr wire:key="exp-{{ $expense->id }}">
-                            <td class="whitespace-nowrap">{{ shop_digits($expense->expense_date->format('d M Y')) }}</td>
-                            <td>{{ $expense->category->localName() }}</td>
-                            <td class="text-slate-600">{{ $expense->note }}<div class="text-xs text-slate-400">{{ $expense->user?->name }}</div></td>
-                            <td class="text-xs">{{ $expense->payments->first()?->paymentMethod->localName() }}</td>
-                            <td class="text-right tabular-nums">{{ money($expense->amount) }}</td>
-                            <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}" class="btn-secondary btn-sm">✕</button></td>
+    <div class="grid gap-5 xl:grid-cols-[1fr_20rem]">
+        <div class="card overflow-hidden">
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
+                <div class="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2">
+                    <x-icon name="history" class="size-4 text-slate-400" />
+                    <input wire:model.live="from" type="date" class="border-0 py-1.5 text-sm focus:ring-0">
+                    <span class="text-slate-400">–</span>
+                    <input wire:model.live="to" type="date" class="border-0 py-1.5 text-sm focus:ring-0">
+                </div>
+                <select wire:model.live="categoryFilter" class="form-input w-48">
+                    <option value="">{{ __('All categories') }}</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->localName() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <x-table.sort field="date" :sort="$sortField" :dir="$sortDirection">{{ __('Date') }}</x-table.sort>
+                            <th>{{ __('Category') }}</th>
+                            <th>{{ __('Note') }}</th>
+                            <th>{{ __('Paid by') }}</th>
+                            <x-table.sort field="amount" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Amount') }}</x-table.sort>
+                            <th class="w-12"></th>
                         </tr>
-                    @empty
-                        <x-empty :colspan="6" icon="banknotes" :title="__('No expenses in this period.')" />
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($expenses as $expense)
+                            <tr wire:key="exp-{{ $expense->id }}">
+                                <td class="whitespace-nowrap text-slate-600">{{ shop_digits($expense->expense_date->format('d M Y')) }}</td>
+                                <td><x-badge>{{ $expense->category->localName() }}</x-badge></td>
+                                <td class="text-slate-700">{{ $expense->note ?? '—' }}<div class="text-xs text-slate-400">{{ $expense->user?->name }}</div></td>
+                                <td class="text-xs text-slate-600">{{ $expense->payments->first()?->paymentMethod->localName() }}</td>
+                                <td class="text-right font-semibold tabular-nums text-slate-900">{{ money($expense->amount) }}</td>
+                                <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-4" /></button></td>
+                            </tr>
+                        @empty
+                            <x-empty :colspan="6" icon="banknotes" :title="__('No expenses in this period.')">
+                                <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New expense') }}</button>
+                            </x-empty>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <x-table.footer :paginator="$expenses" />
         </div>
-        <div class="card p-5 text-sm">
-            <h3 class="mb-2 font-semibold">{{ __('By category') }}</h3>
-            @foreach ($byCategory as $row)
-                <div class="flex justify-between py-1"><span>{{ $row->category?->localName() }}</span><span class="tabular-nums">{{ money($row->total) }}</span></div>
-            @endforeach
-            <div class="mt-2 flex justify-between border-t border-slate-200 pt-2 font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($total) }}</span></div>
-        </div>
+
+        <x-section :title="__('By category')">
+            @php $max = max(1, (float) $byCategory->max('total')); @endphp
+            <div class="space-y-3">
+                @forelse ($byCategory as $row)
+                    <div>
+                        <div class="flex justify-between text-sm"><span class="text-slate-700">{{ $row->category?->localName() }}</span><span class="font-medium tabular-nums">{{ money($row->total) }}</span></div>
+                        <div class="mt-1 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-brand-500" style="width: {{ round($row->total / $max * 100) }}%"></div></div>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">{{ __('No expenses in this period.') }}</p>
+                @endforelse
+            </div>
+            <div class="mt-4 flex justify-between border-t border-slate-200 pt-3 text-sm font-semibold"><span>{{ __('Total') }}</span><span class="tabular-nums">{{ money($total) }}</span></div>
+        </x-section>
     </div>
-    {{ $expenses->links() }}
+
+    <x-drawer wire:model="showForm" :title="__('New expense')">
+        <form id="expense-form" wire:submit="save" class="space-y-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-form.field :label="__('Date')" required error="expense_date" stacked><input wire:model="expense_date" type="date" class="form-input"></x-form.field>
+                <x-form.field :label="__('Amount')" required error="amount" stacked><input wire:model="amount" type="number" step="0.01" min="0" class="form-input text-right"></x-form.field>
+            </div>
+            <x-form.field :label="__('Category')" required error="expense_category_id" stacked>
+                <select wire:model="expense_category_id" class="form-input">
+                    <option value="">{{ __('Choose...') }}</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->localName() }}</option>
+                    @endforeach
+                </select>
+                <div class="mt-2 flex gap-1">
+                    <input wire:model="newCategory" type="text" placeholder="{{ __('New category') }}" class="form-input py-1.5 text-sm">
+                    <button type="button" wire:click="addCategory" class="btn-secondary btn-sm">{{ __('Add') }}</button>
+                </div>
+                @error('newCategory') <p class="form-error">{{ $message }}</p> @enderror
+            </x-form.field>
+            <x-form.field :label="__('Paid by')" stacked>
+                <select wire:model="payment_method_id" class="form-input">
+                    @foreach ($paymentMethods as $method)
+                        <option value="{{ $method->id }}">{{ $method->localName() }}</option>
+                    @endforeach
+                </select>
+                <label class="mt-2 flex items-center gap-2 text-sm text-slate-600"><input wire:model="from_drawer" type="checkbox" class="rounded border-slate-300"> {{ __('Cash taken from the cash drawer') }}</label>
+            </x-form.field>
+            <x-form.field :label="__('Note')" stacked><input wire:model="note" type="text" class="form-input" placeholder="{{ __('e.g. November shop rent') }}"></x-form.field>
+        </form>
+        <x-slot:footer>
+            <button type="button" wire:click="$set('showForm', false)" class="btn-secondary">{{ __('Cancel') }}</button>
+            <button type="submit" form="expense-form" class="btn-primary">{{ __('Save expense') }}</button>
+        </x-slot:footer>
+    </x-drawer>
 </div>

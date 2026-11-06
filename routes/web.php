@@ -27,6 +27,7 @@ use App\Livewire\Repairs\RepairShow;
 use App\Livewire\Reports\ReportIndex;
 use App\Livewire\Sales\SaleIndex;
 use App\Livewire\Sales\SaleShow;
+use App\Livewire\Settings\ActivityLog;
 use App\Livewire\Settings\BackupManager;
 use App\Livewire\Settings\BranchManager;
 use App\Livewire\Settings\GeneralSettings;
@@ -85,6 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/permissions', RolePermissions::class)->middleware('can:users.manage')->name('roles');
         Route::livewire('/payment-methods', PaymentMethodManager::class)->middleware('can:settings.manage')->name('payment-methods');
         Route::livewire('/backup', BackupManager::class)->middleware('can:settings.manage')->name('backup');
+        Route::livewire('/audit-log', ActivityLog::class)->middleware('can:users.manage')->name('activity');
     });
 
     Route::livewire('/cash-register', CashRegister::class)->middleware('can:cash-shifts.manage')->name('cash-register');

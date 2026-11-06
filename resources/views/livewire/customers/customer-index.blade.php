@@ -1,65 +1,77 @@
-<div class="space-y-5">
+@php $pageIds = $customers->pluck('id')->all(); @endphp
+<div>
     <x-flash />
-    <x-page-header class="mb-0" :title="__('Customers')" :subtitle="__('Purchase and repair history of every customer.')">
+    <x-page-header :title="__('Customers')" :subtitle="__('Purchase and repair history of every customer.')">
+        <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
         <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New customer') }}</button>
     </x-page-header>
 
-    @if ($showForm)
-        <form wire:submit="save" class="card grid gap-3 p-5 md:grid-cols-2">
-            <div>
-                <label class="form-label">{{ __('Name') }} *</label>
-                <input wire:model="name" type="text" class="form-input" autofocus>
-                @error('name') <p class="form-error">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label class="form-label">{{ __('Phone') }}</label>
-                <input wire:model="phone" type="text" class="form-input">
-                @error('phone') <p class="form-error">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label class="form-label">{{ __('Address') }}</label>
-                <input wire:model="address" type="text" class="form-input">
-            </div>
-            <div>
-                <label class="form-label">{{ __('Notes') }}</label>
-                <input wire:model="notes" type="text" class="form-input">
-            </div>
-            <div class="flex justify-end gap-2 md:col-span-2">
-                <button type="button" wire:click="$set('showForm', false)" class="btn-secondary">{{ __('Cancel') }}</button>
-                <button type="submit" class="btn-primary">{{ __('Save') }}</button>
-            </div>
-        </form>
-    @endif
-
-    <div class="card">
-        <div class="border-b border-slate-100 p-3">
-            <div class="relative max-w-md">
-                <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Search name or phone') }}" class="form-input pl-9">
-            </div>
-        </div>
+    <div class="card overflow-hidden">
+        <x-list-toolbar :placeholder="__('Search name or phone')" />
+        <x-table.bulk-bar :count="count($selected)">
+            <button type="button" wire:click="export" class="btn-secondary btn-sm"><x-icon name="receipt" class="size-3.5" /> {{ __('Export selected') }}</button>
+        </x-table.bulk-bar>
         <div class="overflow-x-auto">
-        <table class="data-table">
-            <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Phone') }}</th><th class="text-right">{{ __('Purchases') }}</th><th class="text-right">{{ __('Total spent') }}</th><th class="text-right">{{ __('Repairs') }}</th><th></th></tr></thead>
-            <tbody>
-                @forelse ($customers as $customer)
-                    <tr wire:key="customer-{{ $customer->id }}">
-                        <td class="font-medium">{{ $customer->name }}</td>
-                        <td>{{ $customer->phone }}</td>
-                        <td class="text-right">{{ shop_digits($customer->sales_count) }}</td>
-                        <td class="text-right tabular-nums">{{ money($customer->sales_sum_total) }}</td>
-                        <td class="text-right">{{ shop_digits($customer->repair_jobs_count) }}</td>
-                        <td class="whitespace-nowrap text-right">
-                            <a href="{{ route('customers.show', $customer) }}" class="btn-secondary btn-sm" wire:navigate>{{ __('History') }}</a>
-                            <button type="button" wire:click="edit({{ $customer->id }})" class="btn-secondary btn-sm">{{ __('Edit') }}</button>
-                        </td>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <x-table.check-all :ids="$pageIds" :selected="$selected" />
+                        <x-table.sort field="name" :sort="$sortField" :dir="$sortDirection">{{ __('Customer') }}</x-table.sort>
+                        <th>{{ __('Address') }}</th>
+                        <x-table.sort field="purchases" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Purchases') }}</x-table.sort>
+                        <x-table.sort field="spent" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Total spent') }}</x-table.sort>
+                        <x-table.sort field="repairs" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Repairs') }}</x-table.sort>
+                        <x-table.sort field="created" :sort="$sortField" :dir="$sortDirection">{{ __('Since') }}</x-table.sort>
+                        <th class="w-12"></th>
                     </tr>
-                @empty
-                    <x-empty :colspan="6" icon="users" :title="__('No customers found.')" />
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($customers as $customer)
+                        <tr wire:key="customer-{{ $customer->id }}" x-on:click="Livewire.navigate('{{ route('customers.show', $customer) }}')" class="cursor-pointer">
+                            <x-table.check :value="$customer->id" />
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <x-avatar :name="$customer->name" />
+                                    <div>
+                                        <div class="font-medium text-slate-900">{{ $customer->name }}</div>
+                                        <div class="text-xs text-slate-500">{{ $customer->phone ?? '—' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="max-w-56 truncate text-slate-500">{{ $customer->address ?? '—' }}</td>
+                            <td class="text-right tabular-nums">{{ shop_digits($customer->sales_count) }}</td>
+                            <td class="text-right font-medium tabular-nums">{{ money($customer->sales_sum_total) }}</td>
+                            <td class="text-right tabular-nums">{{ shop_digits($customer->repair_jobs_count) }}</td>
+                            <td class="whitespace-nowrap text-xs text-slate-500">{{ shop_digits($customer->created_at->format('d M Y')) }}</td>
+                            <td class="text-right" x-on:click.stop>
+                                <button type="button" wire:click="edit({{ $customer->id }})" class="btn-ghost btn-sm" title="{{ __('Edit') }}"><x-icon name="pencil" class="size-4" /></button>
+                            </td>
+                        </tr>
+                    @empty
+                        <x-empty :colspan="8" icon="users" :title="__('No customers found.')" :text="__('Customers are added from the POS or repair desk, or here.')" />
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+        <x-table.footer :paginator="$customers" />
     </div>
-    {{ $customers->links() }}
+
+    <x-drawer wire:model="showForm" :title="$editingId ? __('Edit customer') : __('New customer')">
+        <form id="customer-form" wire:submit="save" class="space-y-4">
+            <x-form.field :label="__('Name')" required error="name" stacked><input wire:model="name" type="text" class="form-input"></x-form.field>
+            <x-form.field :label="__('Phone')" error="phone" stacked><input wire:model="phone" type="text" class="form-input" placeholder="01XXXXXXXXX"></x-form.field>
+            <x-form.field :label="__('Address')" stacked><input wire:model="address" type="text" class="form-input"></x-form.field>
+            <x-form.field :label="__('Notes')" stacked><textarea wire:model="notes" rows="3" class="form-input"></textarea></x-form.field>
+        </form>
+        @if ($editingId)
+            <div class="mt-6 border-t border-slate-200 pt-5">
+                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('History') }}</h3>
+                <x-activity-feed :subjects="\App\Models\Customer::find($editingId)" :limit="10" />
+            </div>
+        @endif
+        <x-slot:footer>
+            <button type="button" wire:click="$set('showForm', false)" class="btn-secondary">{{ __('Cancel') }}</button>
+            <button type="submit" form="customer-form" class="btn-primary">{{ __('Save') }}</button>
+        </x-slot:footer>
+    </x-drawer>
 </div>

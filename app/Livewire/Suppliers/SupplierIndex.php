@@ -2,15 +2,16 @@
 
 namespace App\Livewire\Suppliers;
 
+use App\Livewire\Concerns\WithDataTable;
 use App\Models\Supplier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
-use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SupplierIndex extends Component
 {
-    use WithPagination;
+    use WithDataTable;
 
     public string $search = '';
 
@@ -86,17 +87,39 @@ class SupplierIndex extends Component
         $this->resetValidation();
     }
 
-    public function render(): View
+    /**
+     * @return array<string, string>
+     */
+    protected function sortableColumns(): array
     {
-        $suppliers = Supplier::query()
+        return ['name' => 'name', 'purchases' => 'purchases_count', 'total' => 'purchases_sum_total'];
+    }
+
+    public function export(): StreamedResponse
+    {
+        $rows = $this->query()->orderBy('name')->get()
+            ->map(fn (Supplier $supplier): array => [$supplier->name, $supplier->company, $supplier->phone, $supplier->email, $supplier->address, $supplier->purchases_count, (float) $supplier->purchases_sum_total]);
+
+        return $this->csvDownload('suppliers', ['Name', 'Company', 'Phone', 'Email', 'Address', 'Purchases', 'Total bought'], $rows);
+    }
+
+    /**
+     * @return Builder<Supplier>
+     */
+    private function query(): Builder
+    {
+        return Supplier::query()
             ->withCount('purchases')
             ->withSum('purchases', 'total')
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$this->search}%")
                 ->orWhere('company', 'like', "%{$this->search}%")
-                ->orWhere('phone', 'like', "%{$this->search}%")))
-            ->orderBy('name')
-            ->paginate(25);
+                ->orWhere('phone', 'like', "%{$this->search}%")));
+    }
+
+    public function render(): View
+    {
+        $suppliers = $this->applySorting($this->query(), 'name')->paginate($this->perPage);
 
         return view('livewire.suppliers.supplier-index', ['suppliers' => $suppliers])->title(__('Suppliers'));
     }

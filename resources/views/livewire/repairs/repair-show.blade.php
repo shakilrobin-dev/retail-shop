@@ -9,11 +9,30 @@
     @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
     @error('status') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
-    <div class="flex flex-wrap items-center gap-2">
-        <a href="{{ route('repairs.slip', $job) }}" target="_blank" class="btn-secondary">{{ __('Print job slip') }}</a>
-        <a href="{{ route('repairs.bill', $job) }}" target="_blank" class="btn-secondary">{{ __('Print bill') }}</a>
-        <div class="flex-1"></div>
-        <span class="badge bg-brand-50 px-3 py-1 text-sm text-brand-700">{{ $job->status->label() }}</span>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('repairs.slip', $job) }}" target="_blank" class="btn-secondary"><x-icon name="printer" class="size-4" /> {{ __('Job slip') }}</a>
+            <a href="{{ route('repairs.bill', $job) }}" target="_blank" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Bill') }}</a>
+            @unless ($isClosed)
+                <button type="button" wire:click="openDelivery" class="btn-primary"><x-icon name="check" class="size-4" /> {{ __('Deliver') }}</button>
+                <button type="button" wire:click="$set('panel', 'cancel')" class="btn-secondary text-red-600">{{ __('Cancel job') }}</button>
+            @endunless
+            @if ($job->status === \App\Enums\RepairStatus::Delivered && ! $job->warranty_of_job_id)
+                <button type="button" wire:click="$set('panel', 'warranty')" class="btn-secondary">{{ __('Warranty claim (came back)') }}</button>
+            @endif
+        </div>
+        @if ($job->status === \App\Enums\RepairStatus::Cancelled)
+            <x-badge tone="red" class="px-3 py-1 text-sm">{{ $job->status->label() }}</x-badge>
+        @else
+            <x-status-pipeline :steps="$pipeline" :current="$job->status->value" action="pipelineTo" :disabled="$isClosed" />
+        @endif
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <x-smart-button icon="banknotes" :label="__('Bill')" :value="money($job->total)" />
+        <x-smart-button icon="check" :label="__('Paid')" :value="money($job->paid_amount)" />
+        <x-smart-button icon="cube" :label="__('Parts used')" :value="shop_digits($job->parts->count())" />
+        <x-smart-button icon="history" :label="__('Customer repairs')" :value="shop_digits($customerJobs)" :href="route('customers.show', $job->customer)" />
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -47,17 +66,16 @@
                             @class(['btn-sm btn', 'bg-brand-600 text-white' => $job->status === $next, 'btn-secondary' => $job->status !== $next])>{{ $next->label() }}</button>
                     @endforeach
                 </div>
-                <div class="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
-                    <button type="button" wire:click="openDelivery" class="btn-primary">{{ __('Deliver') }}</button>
-                    <button type="button" wire:click="$set('panel', 'cancel')" class="btn-secondary text-red-600">{{ __('Cancel job') }}</button>
-                </div>
+
             @endunless
-            @if ($job->status === \App\Enums\RepairStatus::Delivered && ! $job->warranty_of_job_id)
-                <button type="button" wire:click="$set('panel', 'warranty')" class="btn-secondary w-full">{{ __('Warranty claim (came back)') }}</button>
-            @endif
-            <ol class="space-y-2 border-t border-slate-200 pt-3 text-xs">
+            <ol class="relative ml-2 space-y-4 border-l border-slate-200 pl-5 pt-1 text-xs">
                 @foreach ($job->statusHistories->sortByDesc('id') as $history)
-                    <li><span class="font-medium">{{ $history->status->label() }}</span> · {{ shop_digits($history->created_at->format('d M h:i A')) }} · {{ $history->user?->name }}@if ($history->note)<div class="text-slate-500">{{ $history->note }}</div>@endif</li>
+                    <li class="relative">
+                        <span class="absolute -left-[26px] top-0.5 size-2.5 rounded-full border-2 border-white {{ $loop->first ? 'bg-brand-500' : 'bg-slate-300' }}"></span>
+                        <div class="font-medium text-slate-800">{{ $history->status->label() }}</div>
+                        <div class="text-slate-500">{{ shop_digits($history->created_at->format('d M, h:i A')) }} · {{ $history->user?->name }}</div>
+                        @if ($history->note)<div class="mt-0.5 text-slate-600">{{ $history->note }}</div>@endif
+                    </li>
                 @endforeach
             </ol>
         </div>
