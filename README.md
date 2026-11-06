@@ -23,6 +23,27 @@ Full requirements: [REQUIREMENTS.md](REQUIREMENTS.md)
 Laravel 13, PHP 8.3+, MySQL, Livewire 4, Alpine.js, Tailwind CSS 4, Preline UI 4 (light & dark theme).
 No Node.js, Redis, queue worker or WebSockets are needed on the server.
 
+## Test accounts and demo data
+
+```bash
+php artisan db:seed --class=DemoDataSeeder     # sample products
+php artisan db:seed --class=DemoHistorySeeder  # 30 days of sales, purchases, repairs, expenses
+php artisan db:seed --class=DemoUsersSeeder    # second branch + one user per role
+```
+
+| Username | Role | Branch | Can do |
+|---|---|---|---|
+| `admin` | Admin | All | Everything |
+| `manager` | Manager | Main | Sales, stock, purchases, repairs, reports |
+| `cashier` | Cashier | Main | POS, repairs desk, cash register |
+| `cashier2` | Cashier | Mirpur | Same, in the second branch (try transfers) |
+| `technician` | Technician | Main | Repair jobs only |
+| `storekeeper` | Store keeper | Main | Products, purchases, stock, transfers |
+| `accountant` | Accountant | Main | Reports, expenses, cash register, purchases |
+
+The test password is in `database/seeders/DemoUsersSeeder.php`. Delete or change these users before going live.
+Roles and permissions can be changed (and new roles created) in Settings → Permissions.
+
 ## Run on your computer
 
 ```bash

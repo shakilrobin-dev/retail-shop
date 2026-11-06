@@ -1,6 +1,5 @@
 <div class="mx-auto max-w-5xl space-y-5">
     <x-page-header class="mb-0" :title="__('Send stock to branch')" :back="route('stock.transfers.index')" :backLabel="__('Transfers')" />
-    @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     @if ($branches->isEmpty())
         <div class="card p-6 text-center text-muted-foreground-2">{{ __('There is only one branch. Add another branch in Settings to transfer stock.') }}</div>
@@ -33,7 +32,7 @@
                             <td>{{ $line['name'] }}</td>
                             <td class="text-right">{{ shop_digits($line['available'] + 0) }}</td>
                             <td><input wire:model="lines.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input">@error("lines.$index.quantity") <p class="form-error">{{ $message }}</p> @enderror</td>
-                            <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
+                            <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this product from the transfer?') }}" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty
                         <tr><td colspan="4" class="py-8 text-center text-muted-foreground">{{ __('Scan products to send.') }}</td></tr>

@@ -12,6 +12,10 @@
     $chartTotal = $chart->sum('total');
     $chartInvoices = $chart->sum('invoices');
     $canSell = auth()->user()->can('pos.sell');
+    $seesSales = $canSell || auth()->user()->can('reports.view');
+    $seesStock = auth()->user()->can('products.manage') || auth()->user()->can('stock.adjust');
+    $seesRepairs = auth()->user()->can('repairs.manage');
+    $seesActivity = auth()->user()->can('users.manage');
 @endphp
 <div>
     <x-page-header :title="__('Welcome, :name', ['name' => auth()->user()->name])" :subtitle="shop_digits(now()->format('l, d M Y')).' · '.app(\App\Services\CurrentBranch::class)->get()?->localName()">
@@ -43,18 +47,25 @@
 
     {{-- KPIs --}}
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        @if ($seesSales)
         <x-kpi :label="__('Today\'s sales')" :value="money($todaySalesTotal)" icon="cart" tone="indigo" :change="$todayChange" :changeLabel="__('vs yesterday')" :hint="__(':count invoices', ['count' => shop_digits($todayInvoiceCount)])" :href="auth()->user()->can('pos.sell') ? route('sales.index') : null" />
         <x-kpi :label="__('This month')" :value="money($month['net_sales'])" icon="trending-up" tone="emerald" :change="$monthChange" :changeLabel="__('vs last month')" :hint="__(':count invoices', ['count' => shop_digits($month['invoice_count'])])" />
+        @endif
         @can('products.view-cost')
             <x-kpi :label="__('Profit this month')" :value="money($month['net_profit'])" icon="banknotes" tone="violet" :hint="__('After expenses of :amount', ['amount' => money($month['expenses'])])" :href="auth()->user()->can('reports.view') ? route('reports.index') : null" />
         @endcan
+        @if ($seesRepairs)
         <x-kpi :label="__('Repairs in shop')" :value="shop_digits($pendingRepairCount + $readyRepairCount)" icon="wrench" tone="amber" :hint="__(':count ready for pickup', ['count' => shop_digits($readyRepairCount)])" :href="auth()->user()->can('repairs.manage') ? route('repairs.index') : null" />
+        @endif
         @can('products.view-cost')
             <x-kpi :label="__('Stock value')" :value="money($stockValue)" icon="archive" tone="sky" :hint="__(':count products', ['count' => shop_digits($productCount)])" :href="auth()->user()->can('stock.adjust') ? route('stock.index') : null" />
         @endcan
+        @if ($seesStock)
         <x-kpi :label="__('Stock alerts')" :value="shop_digits($lowStockCount)" icon="warning" tone="rose" :hint="__(':count out of stock', ['count' => shop_digits($outOfStockCount)])" :href="auth()->user()->can('products.manage') ? route('products.index', ['stockFilter' => 'low']) : null" />
+        @endif
     </div>
 
+    @if ($seesSales)
     <div class="mt-4 grid gap-4 xl:grid-cols-3">
         <x-section class="xl:col-span-2">
             <x-slot:title>{{ __('Sales – last 30 days') }}</x-slot:title>
@@ -121,8 +132,10 @@
             @endif
         </x-section>
     </div>
+    @endif
 
     <div class="mt-4 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        @if ($seesSales)
         <x-section :title="__('Top products – 7 days')" :padding="false">
             <ul class="divide-y divide-card-divider">
                 @forelse ($topProducts as $row)
@@ -138,7 +151,9 @@
                 @endforelse
             </ul>
         </x-section>
+        @endif
 
+        @if ($seesRepairs)
         <x-section :title="__('Repairs by status')">
             <x-slot:actions>@can('repairs.manage')<a href="{{ route('repairs.index') }}" wire:navigate class="text-xs font-medium text-primary hover:underline">{{ __('Board') }} →</a>@endcan</x-slot:actions>
             <div class="space-y-3">
@@ -155,7 +170,9 @@
                 <span>{{ __('Repair income this month') }}</span><span class="font-semibold text-foreground">{{ money($month['repair_income']) }}</span>
             </div>
         </x-section>
+        @endif
 
+        @if ($seesStock)
         <x-section :title="__('Low stock')" :padding="false" class="lg:col-span-2 xl:col-span-1">
             <x-slot:actions>@can('products.manage')<a href="{{ route('products.index', ['stockFilter' => 'low']) }}" wire:navigate class="text-xs font-medium text-primary hover:underline">{{ __('View all') }} →</a>@endcan</x-slot:actions>
             <ul class="divide-y divide-card-divider">
@@ -169,9 +186,11 @@
                 @endforelse
             </ul>
         </x-section>
+        @endif
     </div>
 
     <div class="mt-4 grid gap-4 xl:grid-cols-3">
+        @if ($seesSales)
         <x-section :title="__('Recent sales')" :padding="false" class="xl:col-span-2">
             <x-slot:actions>@can('pos.sell')<a href="{{ route('sales.index') }}" wire:navigate class="text-xs font-medium text-primary hover:underline">{{ __('View all') }} →</a>@endcan</x-slot:actions>
             <table class="data-table">
@@ -191,7 +210,9 @@
                 </tbody>
             </table>
         </x-section>
+        @endif
 
+        @if ($seesActivity)
         <x-section :title="__('Recent activity')">
             <ul class="space-y-3">
                 @forelse ($activities as $activity)
@@ -217,5 +238,6 @@
                 <span>{{ __('New customers this month') }}</span><span class="font-semibold text-foreground">{{ shop_digits($newCustomers) }}</span>
             </div>
         </x-section>
+        @endif
     </div>
 </div>

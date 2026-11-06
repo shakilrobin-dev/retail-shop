@@ -37,7 +37,7 @@
             @if ($stockFilter === 'inactive')
                 <button type="button" wire:click="bulkSetActive(true)" class="btn-secondary btn-sm"><x-icon name="eye" class="size-3.5" /> {{ __('Restore') }}</button>
             @else
-                <button type="button" wire:click="bulkSetActive(false)" wire:confirm="{{ __('Archive the selected products? They will be hidden from POS.') }}" class="btn-secondary btn-sm"><x-icon name="eye-off" class="size-3.5" /> {{ __('Archive') }}</button>
+                <button type="button" wire:click="bulkSetActive(false)" data-confirm="{{ __('Archive the selected products? They will be hidden from POS.') }}" class="btn-secondary btn-sm"><x-icon name="eye-off" class="size-3.5" /> {{ __('Archive') }}</button>
             @endif
             <div class="flex items-center gap-1">
                 <x-category-select wire:model="bulkCategoryId" :options="$categoryOptions" :placeholder="__('Move to category...')" class="w-52 py-1 text-xs" />
@@ -108,7 +108,7 @@
                                     <x-dropdown-item icon="pencil" :href="route('products.edit', $product)" wire:navigate>{{ __('Edit') }}</x-dropdown-item>
                                     <x-dropdown-item icon="tag" :href="route('labels.index', ['product' => $product->id])" wire:navigate>{{ __('Print labels') }}</x-dropdown-item>
                                     <x-dropdown-item icon="history" :href="route('stock.movements', ['productId' => $product->id])" wire:navigate>{{ __('Stock history') }}</x-dropdown-item>
-                                    <x-dropdown-item :icon="$product->is_active ? 'eye-off' : 'eye'" wire:click="toggleActive({{ $product->id }})">{{ $product->is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
+                                    <x-dropdown-item :icon="$product->is_active ? 'eye-off' : 'eye'" wire:click="toggleActive({{ $product->id }})" :data-confirm="$product->is_active ? __('Archive this product? It will be hidden from POS.') : null" :data-confirm-button="$product->is_active ? __('Archive') : null">{{ $product->is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
                                 </x-dropdown>
                             </td>
                         </tr>

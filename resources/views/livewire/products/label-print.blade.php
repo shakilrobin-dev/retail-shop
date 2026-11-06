@@ -38,7 +38,7 @@
                         <td class="font-mono text-xs">{{ $row['code'] }}</td>
                         <td>{{ $row['price'] }}</td>
                         <td><input wire:model.live="rows.{{ $index }}.quantity" type="number" min="1" max="500" class="form-input"></td>
-                        <td class="text-right"><button type="button" wire:click="removeRow({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
+                        <td class="text-right"><button type="button" wire:click="removeRow({{ $index }})" data-confirm="{{ __('Remove this label line?') }}" class="btn-secondary btn-sm">✕</button></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="py-8 text-center text-muted-foreground-1">{{ __('Scan or search products to add them here.') }}</td></tr>

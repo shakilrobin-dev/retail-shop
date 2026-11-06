@@ -61,11 +61,11 @@
                                     <button type="button" wire:click="newCategory({{ $category->id }})" class="btn-ghost btn-sm" title="{{ __('Add sub-category') }}"><x-icon name="plus" class="size-3.5" /> {{ __('Sub') }}</button>
                                 @endif
                                 <button type="button" wire:click="editCategory({{ $category->id }})" class="btn-ghost btn-sm" title="{{ __('Edit') }}"><x-icon name="pencil" class="size-3.5" /></button>
-                                <button type="button" wire:click="toggleCategory({{ $category->id }})" class="btn-ghost btn-sm" title="{{ $category->is_active ? __('Hide') : __('Show') }}">
+                                <button type="button" wire:click="toggleCategory({{ $category->id }})" @if ($category->is_active) data-confirm="{{ __('Hide this category? It cannot be chosen for new products.') }}" data-confirm-button="{{ __('Hide') }}" @endif class="btn-ghost btn-sm" title="{{ $category->is_active ? __('Hide') : __('Show') }}">
                                     <x-icon :name="$category->is_active ? 'eye-off' : 'eye'" class="size-3.5" />
                                 </button>
                                 @if (! $row['has_children'] && ! ($directCounts[$category->id] ?? 0))
-                                    <button type="button" wire:click="deleteCategory({{ $category->id }})" wire:confirm="{{ __('Delete this category?') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-3.5" /></button>
+                                    <button type="button" wire:click="deleteCategory({{ $category->id }})" data-confirm="{{ __('Delete this category?') }}" data-confirm-button="{{ __('Delete') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-3.5" /></button>
                                 @endif
                             </div>
                         </div>
@@ -135,7 +135,7 @@
                                 <td class="text-right">{{ shop_digits($brand->products_count) }}</td>
                                 <td class="whitespace-nowrap text-right">
                                     <button type="button" wire:click="editBrand({{ $brand->id }})" class="btn-ghost btn-sm"><x-icon name="pencil" class="size-3.5" /></button>
-                                    <button type="button" wire:click="toggleBrand({{ $brand->id }})" class="btn-ghost btn-sm"><x-icon :name="$brand->is_active ? 'eye-off' : 'eye'" class="size-3.5" /></button>
+                                    <button type="button" wire:click="toggleBrand({{ $brand->id }})" @if ($brand->is_active) data-confirm="{{ __('Hide this brand?') }}" data-confirm-button="{{ __('Hide') }}" @endif class="btn-ghost btn-sm"><x-icon :name="$brand->is_active ? 'eye-off' : 'eye'" class="size-3.5" /></button>
                                 </td>
                             </tr>
                         @empty

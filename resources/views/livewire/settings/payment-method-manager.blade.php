@@ -31,7 +31,7 @@
                         <td>{{ $method->type->label() }}</td>
                         <td class="whitespace-nowrap text-right">
                             <button type="button" wire:click="edit({{ $method->id }})" class="btn-secondary btn-sm">{{ __('Edit') }}</button>
-                            <button type="button" wire:click="toggle({{ $method->id }})" class="btn-secondary btn-sm">{{ $method->is_active ? __('Deactivate') : __('Activate') }}</button>
+                            <button type="button" wire:click="toggle({{ $method->id }})" @if ($method->is_active) data-confirm="{{ __('Deactivate this payment method? Staff will not see it in POS.') }}" data-confirm-button="{{ __('Deactivate') }}" @endif class="btn-secondary btn-sm">{{ $method->is_active ? __('Deactivate') : __('Activate') }}</button>
                         </td>
                     </tr>
                 @endforeach

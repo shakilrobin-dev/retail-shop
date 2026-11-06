@@ -1,7 +1,6 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
     <x-page-header class="mb-0" :title="__('Purchase').' '.$purchase->reference_no" :subtitle="$purchase->supplier?->name" :back="route('purchases.index')" :backLabel="__('Purchases')" />
-    @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
         <div><div class="text-muted-foreground-1">{{ __('Purchase no') }}</div><div class="font-mono font-medium">{{ $purchase->reference_no }}</div></div>

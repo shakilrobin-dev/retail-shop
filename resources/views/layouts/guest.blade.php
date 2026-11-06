@@ -37,7 +37,7 @@
             </div>
         </div>
         <div class="flex flex-col px-6 py-8 sm:px-12">
-            <div class="flex justify-end"><x-language-switch /></div>
+            <div class="flex justify-end gap-2"><x-theme-switch /><x-language-switch /></div>
             <div class="flex flex-1 items-center justify-center">
                 {{ $slot }}
             </div>

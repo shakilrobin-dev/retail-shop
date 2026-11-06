@@ -45,7 +45,6 @@
             <div class="space-y-3 xl:col-span-2">
                 <x-product-search :results="$results" :message="$scanMessage" />
                 @error('cart') <p class="form-error text-sm">{{ $message }}</p> @enderror
-                @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
                 <div class="card min-h-64 overflow-x-auto">
                     <table class="data-table">
@@ -103,7 +102,7 @@
                                         <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input py-1"></td>
                                     @endcan
                                     <td class="text-right font-medium tabular-nums">{{ money(max(0, (float) $line['quantity'] * (float) $line['unit_price'] - (float) $line['discount_amount'])) }}</td>
-                                    <td><button type="button" wire:click="removeLine({{ $index }})" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
+                                    <td><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this item from the cart?') }}" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                                 </tr>
                             @empty
                                 <x-empty :colspan="7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
@@ -215,7 +214,7 @@
                                         wire:keydown.enter.prevent="complete" class="form-input min-w-0 flex-1 text-right text-lg" placeholder="0.00">
                                     <button type="button" wire:click="payExact({{ $index }})" class="btn-secondary btn-sm shrink-0" title="{{ __('Exact amount') }}">=</button>
                                     @if (count($payments) > 1)
-                                        <button type="button" wire:click="removePayment({{ $index }})" class="btn-secondary btn-sm">✕</button>
+                                        <button type="button" wire:click="removePayment({{ $index }})" data-confirm="{{ __('Remove this payment line?') }}" class="btn-secondary btn-sm">✕</button>
                                     @endif
                                 </div>
                                 @if ($paymentMethods->firstWhere('id', (int) $payment['payment_method_id'])?->type !== \App\Enums\PaymentMethodType::Cash)
@@ -247,7 +246,7 @@
                 @else
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" wire:click="hold" @disabled(! $cart) class="btn-secondary h-9">{{ __('Hold') }} (F8)</button>
-                        <button type="button" wire:click="clearCart" wire:confirm="{{ __('Clear the cart?') }}" @disabled(! $cart) class="btn-secondary h-9">{{ __('Clear') }}</button>
+                        <button type="button" wire:click="clearCart" data-confirm="{{ __('Clear the cart?') }}" data-confirm-button="{{ __('Clear') }}" @disabled(! $cart) class="btn-secondary h-9">{{ __('Clear') }}</button>
                         <input wire:model="holdNote" type="text" placeholder="{{ __('Hold note (e.g. customer name)') }}" class="form-input col-span-2 text-sm">
                         <button type="button" wire:click="openPayment" @disabled(! $cart) class="btn-primary col-span-2 h-12 text-base">{{ __('Pay') }} (F10)</button>
                     </div>

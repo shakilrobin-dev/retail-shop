@@ -24,7 +24,7 @@
                         <td class="text-right">{{ number_format($backup['size'] / 1024, 1) }} KB</td>
                         <td class="whitespace-nowrap text-right">
                             <button type="button" wire:click="download('{{ $backup['name'] }}')" class="btn-secondary btn-sm">{{ __('Download') }}</button>
-                            <button type="button" wire:click="delete('{{ $backup['name'] }}')" wire:confirm="{{ __('Delete this backup?') }}" class="btn-secondary btn-sm">✕</button>
+                            <button type="button" wire:click="delete('{{ $backup['name'] }}')" data-confirm="{{ __('Delete this backup?') }}" data-confirm-button="{{ __('Delete') }}" class="btn-secondary btn-sm">✕</button>
                         </td>
                     </tr>
                 @empty

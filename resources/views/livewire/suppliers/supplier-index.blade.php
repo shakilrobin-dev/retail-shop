@@ -44,7 +44,7 @@
                             <td><x-badge :tone="$supplier->is_active ? 'green' : 'slate'">{{ $supplier->is_active ? __('Active') : __('Archived') }}</x-badge></td>
                             <td class="whitespace-nowrap text-right" x-on:click.stop>
                                 <button type="button" wire:click="edit({{ $supplier->id }})" class="btn-ghost btn-sm" title="{{ __('Edit') }}"><x-icon name="pencil" class="size-4" /></button>
-                                <button type="button" wire:click="toggleActive({{ $supplier->id }})" class="btn-ghost btn-sm" title="{{ $supplier->is_active ? __('Archive') : __('Restore') }}"><x-icon :name="$supplier->is_active ? 'eye-off' : 'eye'" class="size-4" /></button>
+                                <button type="button" wire:click="toggleActive({{ $supplier->id }})" @if ($supplier->is_active) data-confirm="{{ __('Archive this supplier?') }}" data-confirm-button="{{ __('Archive') }}" @endif class="btn-ghost btn-sm" title="{{ $supplier->is_active ? __('Archive') : __('Restore') }}"><x-icon :name="$supplier->is_active ? 'eye-off' : 'eye'" class="size-4" /></button>
                             </td>
                         </tr>
                     @empty

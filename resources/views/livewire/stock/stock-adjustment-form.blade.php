@@ -1,7 +1,6 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
     <x-page-header class="mb-0" :title="__('Adjust / count stock')" :subtitle="__('Fix stock for damaged, lost or found items, or count the shelf.')" :back="route('stock.index')" :backLabel="__('Stock')" />
-    @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="flex flex-wrap items-center gap-2">
         <div class="inline-flex rounded-lg bg-surface-1 p-0.5 text-sm">
@@ -29,7 +28,7 @@
                         <td class="text-right">{{ shop_digits($line['current'] + 0) }}</td>
                         <td><input wire:model.live.debounce.400ms="lines.{{ $index }}.value" type="number" step="any" class="form-input">@error("lines.$index.value") <p class="form-error">{{ $message }}</p> @enderror</td>
                         <td @class(['text-right font-medium', 'text-red-600' => $after < $line['current'], 'text-emerald-700' => $after > $line['current']])>{{ shop_digits($after + 0) }}</td>
-                        <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
+                        <td class="text-right"><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this product from the list?') }}" class="btn-secondary btn-sm">✕</button></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="py-8 text-center text-muted-foreground">{{ __('Scan products to add them.') }}</td></tr>
@@ -44,7 +43,7 @@
                 @endforeach
             </select>
             <input wire:model="note" type="text" placeholder="{{ __('Note') }}" class="form-input">
-            <button type="button" wire:click="save" wire:confirm="{{ __('Save this stock change?') }}" class="btn-primary">{{ __('Save adjustment') }}</button>
+            <button type="button" wire:click="save" data-confirm="{{ __('Save this stock change?') }}" data-confirm-tone="primary" data-confirm-button="{{ __('Save') }}" class="btn-primary">{{ __('Save adjustment') }}</button>
         </div>
     </div>
 

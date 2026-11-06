@@ -77,6 +77,7 @@
     x-data="{ mobileMenu: false, collapsed: $persist(false).as('sidebar-collapsed') }">
 
     <x-flash global />
+    <x-confirm-dialog />
 
     <div x-cloak x-show="mobileMenu" x-transition.opacity x-on:click="mobileMenu = false" class="fixed inset-0 z-50 bg-gray-900/40 lg:hidden"></div>
 
@@ -173,7 +174,10 @@
                 </button>
                 <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 z-70 hidden w-56 rounded-lg border border-dropdown-line bg-dropdown p-1 opacity-0 shadow-lg transition-[opacity,margin] duration" role="menu" aria-labelledby="user-menu">
                     <div class="px-2 py-1.5 text-[11px] text-muted-foreground-1">{{ __('Signed in as') }} <span class="font-medium text-foreground">{{ $user->username }}</span></div>
-                    <div class="px-2 py-1.5"><x-language-switch /></div>
+                    <div class="space-y-2 px-2 py-1.5">
+                        <div><p class="mb-1 text-[11px] text-muted-foreground-1">{{ __('Language') }}</p><x-language-switch /></div>
+                        <div><p class="mb-1 text-[11px] text-muted-foreground-1">{{ __('Theme') }}</p><x-theme-switch class="w-full" /></div>
+                    </div>
                     <div class="my-1 border-t border-dropdown-divider"></div>
                     <button type="button" x-on:click="collapsed = !collapsed" class="hidden w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-dropdown-item-foreground hover:bg-dropdown-item-hover lg:flex">
                         <x-icon name="collapse" class="size-4 opacity-70" /> <span x-text="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))"></span>

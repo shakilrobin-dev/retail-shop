@@ -64,7 +64,7 @@
                                 <input wire:model="items.{{ $index }}.new_selling_price" type="number" step="0.01" min="0" placeholder="{{ $item['selling_price'] }}" class="form-input">
                             </td>
                             <td class="text-right tabular-nums">{{ money((float) $item['quantity'] * (float) $item['unit_cost']) }}</td>
-                            <td class="text-right"><button type="button" wire:click="removeItem({{ $index }})" class="btn-secondary btn-sm">✕</button></td>
+                            <td class="text-right"><button type="button" wire:click="removeItem({{ $index }})" data-confirm="{{ __('Remove this product from the purchase?') }}" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty
                         <tr><td colspan="7" class="py-8 text-center text-muted-foreground-1">{{ __('Scan products from the supplier invoice.') }}</td></tr>

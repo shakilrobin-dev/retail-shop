@@ -41,7 +41,7 @@
                                 <td class="text-foreground">{{ $expense->note ?? '—' }}<div class="text-xs text-muted-foreground">{{ $expense->user?->name }}</div></td>
                                 <td class="text-xs text-muted-foreground-2">{{ $expense->payments->first()?->paymentMethod->localName() }}</td>
                                 <td class="text-right font-semibold tabular-nums text-foreground">{{ money($expense->amount) }}</td>
-                                <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-4" /></button></td>
+                                <td class="text-right"><button type="button" wire:click="delete({{ $expense->id }})" data-confirm="{{ __('Delete this expense?') }}" data-confirm-button="{{ __('Delete') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Delete') }}"><x-icon name="close" class="size-4" /></button></td>
                             </tr>
                         @empty
                             <x-empty :colspan="6" icon="banknotes" :title="__('No expenses in this period.')">

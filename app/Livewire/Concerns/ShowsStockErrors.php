@@ -7,8 +7,7 @@ use Closure;
 use Throwable;
 
 /**
- * Shows "not enough stock" as a normal form error instead of an error page.
- * The error is added under the "stock" key.
+ * Shows "not enough stock" as an error toast (and a "stock" form error) instead of an error page.
  */
 trait ShowsStockErrors
 {

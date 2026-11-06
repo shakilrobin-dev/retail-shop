@@ -10,5 +10,6 @@
         };
         apply();
         document.addEventListener('livewire:navigated', apply);
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply);
     })();
 </script>

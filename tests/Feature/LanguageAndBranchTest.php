@@ -31,6 +31,7 @@ class LanguageAndBranchTest extends TestCase
     public function test_language_choice_is_saved_on_the_user(): void
     {
         $user = User::factory()->create(['locale' => 'en', 'branch_id' => Branch::factory()->create()->id]);
+        $user->assignRole('cashier');
 
         $this->actingAs($user)->post(route('locale.switch'), ['locale' => 'bn']);
 

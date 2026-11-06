@@ -6,8 +6,6 @@
     ">
     <x-flash />
     <x-page-header class="mb-0" :title="__('Repair').' '.$job->job_no" :subtitle="trim($job->device_brand.' '.$job->device_model).' · '.$job->customer->name" :back="route('repairs.index')" :backLabel="__('Repairs')" />
-    @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
-    @error('status') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap gap-2">
@@ -122,7 +120,7 @@
             <p class="text-xs text-muted-foreground-1 md:col-span-4">{{ __('Used parts go back to stock. Paid amount above the fee is refunded.') }}</p>
             <div class="flex gap-2 md:col-span-4">
                 <button type="button" wire:click="$set('panel', '')" class="btn-secondary">{{ __('Back') }}</button>
-                <button type="submit" wire:confirm="{{ __('Cancel this repair job?') }}" class="btn-danger">{{ __('Cancel job') }}</button>
+                <button type="submit" data-confirm="{{ __('Cancel this repair job?') }}" data-confirm-button="{{ __('Cancel job') }}" class="btn-danger">{{ __('Cancel job') }}</button>
             </div>
         </form>
     @endif
@@ -156,7 +154,7 @@
                             <td class="text-right">{{ shop_digits($part->quantity + 0) }}</td>
                             <td class="text-right tabular-nums">{{ money($part->unit_price) }}</td>
                             <td class="text-right tabular-nums">{{ money($part->line_total) }}</td>
-                            <td class="text-right">@unless ($isClosed)<button type="button" wire:click="removePart({{ $part->id }})" wire:confirm="{{ __('Remove part and put back in stock?') }}" class="btn-secondary btn-sm">✕</button>@endunless</td>
+                            <td class="text-right">@unless ($isClosed)<button type="button" wire:click="removePart({{ $part->id }})" data-confirm="{{ __('Remove part and put back in stock?') }}" class="btn-secondary btn-sm">✕</button>@endunless</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="py-4 text-center text-muted-foreground">{{ __('No parts used yet.') }}</td></tr>

@@ -20,7 +20,7 @@
                     <input wire:model="countedCash" type="number" step="0.01" min="0" class="form-input text-right text-lg">
                     @error('countedCash') <p class="form-error">{{ $message }}</p> @enderror
                     <input wire:model="closeNote" type="text" placeholder="{{ __('Note (optional)') }}" class="form-input">
-                    <button type="submit" wire:confirm="{{ __('Close the cash register now?') }}" class="btn-danger w-full">{{ __('Close register') }}</button>
+                    <button type="submit" data-confirm="{{ __('Close the cash register now?') }}" data-confirm-tone="primary" data-confirm-button="{{ __('Close register') }}" class="btn-danger w-full">{{ __('Close register') }}</button>
                 </form>
             @else
                 <h2 class="font-semibold">{{ __('Register is closed') }}</h2>

@@ -1,7 +1,6 @@
 <div class="mx-auto max-w-5xl space-y-5">
     <x-flash />
     <x-page-header class="mb-0" :title="__('Transfer').' '.$transfer->reference_no" :back="route('stock.transfers.index')" :backLabel="__('Transfers')" />
-    @error('stock') <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</p> @enderror
 
     <div class="card grid gap-4 p-5 text-sm md:grid-cols-4">
         <div><div class="text-muted-foreground-1">{{ __('No') }}</div><div class="font-mono font-medium">{{ $transfer->reference_no }}</div></div>
@@ -35,7 +34,7 @@
 
     <div class="flex justify-end gap-2">
         @if ($canCancel)
-            <button type="button" wire:click="cancel" wire:confirm="{{ __('Cancel this transfer and return stock?') }}" class="btn-secondary text-red-600">{{ __('Cancel transfer') }}</button>
+            <button type="button" wire:click="cancel" data-confirm="{{ __('Cancel this transfer and return stock?') }}" data-confirm-button="{{ __('Cancel transfer') }}" class="btn-secondary text-red-600">{{ __('Cancel transfer') }}</button>
         @endif
         @if ($canReceive)
             <button type="button" wire:click="receive" class="btn-primary">{{ __('Confirm received') }}</button>

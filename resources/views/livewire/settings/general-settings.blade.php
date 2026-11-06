@@ -27,7 +27,7 @@
                             <img src="{{ $logo->temporaryUrl() }}" alt="" class="h-16 rounded ring-1 ring-card-line">
                         @elseif ($logoPath)
                             <img src="{{ asset('storage/'.$logoPath) }}" alt="" class="h-16 rounded ring-1 ring-card-line">
-                            <button type="button" wire:click="removeLogo" class="text-xs text-red-600 hover:underline">{{ __('Remove') }}</button>
+                            <button type="button" wire:click="removeLogo" data-confirm="{{ __('Remove the shop logo?') }}" class="text-xs text-red-600 hover:underline">{{ __('Remove') }}</button>
                         @endif
                         <input wire:model="logo" type="file" accept="image/*" class="text-sm text-muted-foreground-2 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100">
                     </div>
@@ -180,7 +180,7 @@
                 @foreach ($technicians as $technician)
                     <li wire:key="tech-{{ $technician->id }}" @class(['flex justify-between py-2', 'opacity-50' => ! $technician->is_active])>
                         <span>{{ $technician->name }} <span class="text-muted-foreground">{{ $technician->phone }}</span></span>
-                        <button type="button" wire:click="toggleTechnician({{ $technician->id }})" class="text-xs text-muted-foreground-1 hover:underline">{{ $technician->is_active ? __('Deactivate') : __('Activate') }}</button>
+                        <button type="button" wire:click="toggleTechnician({{ $technician->id }})" @if ($technician->is_active) data-confirm="{{ __('Deactivate this technician?') }}" data-confirm-button="{{ __('Deactivate') }}" @endif class="text-xs text-muted-foreground-1 hover:underline">{{ $technician->is_active ? __('Deactivate') : __('Activate') }}</button>
                     </li>
                 @endforeach
             </ul>

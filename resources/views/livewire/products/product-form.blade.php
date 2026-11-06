@@ -25,7 +25,7 @@
                     <x-dropdown-item icon="tag" :href="route('labels.index', ['product' => $product->id])" wire:navigate>{{ __('Print labels') }}</x-dropdown-item>
                     <x-dropdown-item icon="history" :href="route('stock.movements', ['productId' => $product->id])" wire:navigate>{{ __('Stock history') }}</x-dropdown-item>
                     <div class="my-1 border-t border-card-divider"></div>
-                    <x-dropdown-item :icon="$is_active ? 'eye-off' : 'eye'" wire:click="toggleArchive" :danger="$is_active">{{ $is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
+                    <x-dropdown-item :icon="$is_active ? 'eye-off' : 'eye'" wire:click="toggleArchive" :data-confirm="$is_active ? __('Archive this product? It will be hidden from POS.') : null" :data-confirm-button="$is_active ? __('Archive') : null" :danger="$is_active">{{ $is_active ? __('Archive') : __('Restore') }}</x-dropdown-item>
                 </x-dropdown>
             @endif
             <a href="{{ route('products.index') }}" class="btn-secondary" wire:navigate>{{ __('Discard') }}</a>
@@ -174,7 +174,7 @@
                                                         <input wire:model="units.{{ $unitIndex }}.barcodes.{{ $barcodeIndex }}.code" type="text" wire:keydown.enter.prevent=""
                                                             placeholder="{{ __('Scan or type barcode') }}" class="form-input min-w-40 font-mono">
                                                         <button type="button" wire:click="generateBarcode({{ $unitIndex }}, {{ $barcodeIndex }})" class="btn-secondary btn-sm" title="{{ __('Generate') }}">{{ __('Generate') }}</button>
-                                                        <button type="button" wire:click="removeBarcode({{ $unitIndex }}, {{ $barcodeIndex }})" class="btn-ghost btn-sm" title="{{ __('Clear') }}">✕</button>
+                                                        <button type="button" wire:click="removeBarcode({{ $unitIndex }}, {{ $barcodeIndex }})" data-confirm="{{ __('Remove this barcode? Save the product to apply.') }}" class="btn-ghost btn-sm" title="{{ __('Clear') }}">✕</button>
                                                     </div>
                                                     @error("units.$unitIndex.barcodes.$barcodeIndex.code") <p class="form-error">{{ $message }}</p> @enderror
                                                 </div>
@@ -183,7 +183,7 @@
                                         </td>
                                         <td class="align-top">
                                             @unless ($unit['is_base'])
-                                                <button type="button" wire:click="removeUnit({{ $unitIndex }})" class="btn-ghost btn-sm text-red-600" title="{{ __('Remove') }}">✕</button>
+                                                <button type="button" wire:click="removeUnit({{ $unitIndex }})" data-confirm="{{ __('Remove this pack / box unit? Save the product to apply.') }}" class="btn-ghost btn-sm text-red-600" title="{{ __('Remove') }}">✕</button>
                                             @endunless
                                         </td>
                                     </tr>

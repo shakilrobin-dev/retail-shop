@@ -26,7 +26,7 @@
         @if ($error) add('error', @js($error)); @endif
     "
     @if ($global) x-on:toast.window="add($event.detail.type ?? 'success', $event.detail.message)" @endif
-    class="pointer-events-none fixed bottom-4 right-4 z-[95] flex w-full max-w-sm flex-col gap-2">
+    class="pointer-events-none fixed right-4 top-4 z-[99] flex w-full max-w-sm flex-col gap-2">
     <template x-for="toast in toasts" :key="toast.id">
         <div x-transition.opacity.duration.200ms
             class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-layer p-3 shadow-lg"
