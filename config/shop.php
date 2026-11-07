@@ -53,6 +53,11 @@ return [
         'repair_terms' => 'Device must be collected within 30 days. Shop is not responsible for data loss.',
         'repair_terms_bn' => null,
 
+        // Official report documents (PDF / Excel)
+        'report_tagline' => null,
+        'report_footer_note' => 'This is a computer generated report.',
+        'report_show_signatures' => true,
+
         // Optional features (off by default)
         'cash_drawer_enabled' => false,
         'technicians_enabled' => false,

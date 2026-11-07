@@ -10,6 +10,7 @@ use App\Livewire\Reports\ReportIndex;
 use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
 use App\Services\CashShiftService;
+use App\Services\ReportDocument;
 use App\Services\ReportService;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,7 +72,7 @@ class ReportAndExpenseTest extends TestCase
     {
         $this->actingAsRole('admin');
 
-        foreach (ReportIndex::TABS as $tab) {
+        foreach (array_keys(ReportDocument::REPORTS) as $tab) {
             Livewire::test(ReportIndex::class)->set('tab', $tab)->assertOk();
 
             $this->get(route('reports.export', ['tab' => $tab, 'from' => today()->toDateString(), 'to' => today()->toDateString()]))

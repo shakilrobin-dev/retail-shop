@@ -5,6 +5,7 @@
         ['settings.general', ['tab' => 'labels'], __('Barcode labels'), 'labels'],
         ['settings.general', ['tab' => 'pos'], __('POS & VAT'), 'pos'],
         ['settings.general', ['tab' => 'repair'], __('Repair'), 'repair'],
+        ['settings.general', ['tab' => 'reports'], __('Reports'), 'reports'],
         ['settings.general', ['tab' => 'sms'], __('SMS'), 'sms'],
         ['settings.branches', [], __('Branches'), null],
         ['settings.users', [], __('Users'), null],

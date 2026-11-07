@@ -19,7 +19,7 @@ class GeneralSettings extends Component
 {
     use WithFileUploads;
 
-    public const TABS = ['shop', 'receipt', 'labels', 'pos', 'repair', 'sms'];
+    public const TABS = ['shop', 'receipt', 'labels', 'pos', 'repair', 'reports', 'sms'];
 
     /** Which keys belong to which tab, and their type. */
     public const FIELDS = [
@@ -44,6 +44,9 @@ class GeneralSettings extends Component
         'repair' => [
             'repair_default_warranty_days' => 'int', 'repair_terms' => 'string', 'repair_terms_bn' => 'string',
             'technicians_enabled' => 'bool',
+        ],
+        'reports' => [
+            'report_tagline' => 'string', 'report_footer_note' => 'string', 'report_show_signatures' => 'bool',
         ],
         'sms' => [
             'sms_enabled' => 'bool', 'sms_api_url' => 'string', 'sms_api_key' => 'string', 'sms_sender_id' => 'string',
@@ -206,6 +209,10 @@ class GeneralSettings extends Component
                 'values.repair_default_warranty_days' => ['required', 'integer', 'min:0', 'max:3650'],
                 'values.repair_terms' => ['nullable', 'string', 'max:2000'],
                 'values.repair_terms_bn' => ['nullable', 'string', 'max:2000'],
+            ],
+            'reports' => [
+                'values.report_tagline' => ['nullable', 'string', 'max:255'],
+                'values.report_footer_note' => ['nullable', 'string', 'max:500'],
             ],
             'sms' => [
                 'values.sms_api_url' => ['nullable', 'required_if:values.sms_enabled,true', 'string', 'max:500'],

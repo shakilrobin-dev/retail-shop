@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Reports\ReportIndex;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\RepairJob;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\ReportDocument;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\DemoHistorySeeder;
@@ -43,7 +43,7 @@ class FullDataPagesTest extends TestCase
             route('products.edit', Product::query()->first()),
         ];
 
-        foreach (ReportIndex::TABS as $tab) {
+        foreach (array_keys(ReportDocument::REPORTS) as $tab) {
             $pages[] = route('reports.index', ['tab' => $tab, 'from' => today()->subDays(30)->toDateString()]);
         }
 

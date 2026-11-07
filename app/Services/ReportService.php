@@ -217,4 +217,59 @@ class ReportService
             ->where('status', SaleStatus::Completed)
             ->whereBetween('sold_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
     }
+
+    /**
+     * Every invoice in the period (sales register).
+     *
+     * @return Collection<int, Sale>
+     */
+    public function salesRegister(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        return Sale::query()
+            ->with(['customer', 'user', 'payments.paymentMethod'])
+            ->withCount('items')
+            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+            ->whereIn('status', [SaleStatus::Completed, SaleStatus::Voided])
+            ->whereBetween('sold_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->orderBy('sold_at')
+            ->get();
+    }
+
+    /**
+     * Stock on hand with cost and selling value.
+     *
+     * @return Collection<int, object>
+     */
+    public function stockValuation(?int $branchId): Collection
+    {
+        return Product::query()
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('product_units', fn ($join) => $join->on('product_units.product_id', '=', 'products.id')->where('product_units.is_base', true))
+            ->when($branchId, fn ($query) => $query->where('product_stocks.branch_id', $branchId))
+            ->where('products.is_active', true)
+            ->selectRaw('products.id, products.sku, products.name, products.category_id, products.cost_price, MAX(product_units.selling_price) as selling_price,
+                SUM(product_stocks.quantity) as quantity,
+                SUM(product_stocks.quantity) * products.cost_price as cost_value,
+                SUM(product_stocks.quantity) * MAX(product_units.selling_price) as retail_value')
+            ->groupBy('products.id', 'products.sku', 'products.name', 'products.category_id', 'products.cost_price')
+            ->havingRaw('SUM(product_stocks.quantity) > 0')
+            ->orderBy('products.name')
+            ->get();
+    }
+
+    /**
+     * Expenses in the period, oldest first.
+     *
+     * @return Collection<int, Expense>
+     */
+    public function expenseList(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        return Expense::query()
+            ->with(['category', 'user', 'payments.paymentMethod'])
+            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+            ->whereDate('expense_date', '>=', $from->toDateString())
+            ->whereDate('expense_date', '<=', $to->toDateString())
+            ->orderBy('expense_date')
+            ->get();
+    }
 }

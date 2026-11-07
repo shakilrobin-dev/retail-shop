@@ -5,7 +5,7 @@ namespace App\Livewire\Reports;
 use App\Models\Branch;
 use App\Models\User;
 use App\Services\CurrentBranch;
-use App\Services\ReportService;
+use App\Services\ReportDocument;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -14,8 +14,6 @@ use Livewire\Component;
 
 class ReportIndex extends Component
 {
-    public const TABS = ['summary', 'daily', 'products', 'categories', 'payments', 'staff', 'dead-stock'];
-
     #[Url]
     public string $tab = 'summary';
 
@@ -69,7 +67,6 @@ class ReportIndex extends Component
 
     public function render(): View
     {
-        $reports = app(ReportService::class);
         $from = Carbon::parse($this->from ?: today());
         $to = Carbon::parse($this->to ?: today());
 
@@ -78,25 +75,22 @@ class ReportIndex extends Component
         }
 
         $branchId = $this->branchId();
-        $tab = in_array($this->tab, self::TABS, true) ? $this->tab : 'summary';
-
-        $data = match ($tab) {
-            'summary' => ['summary' => $reports->summary($branchId, $from, $to)],
-            'daily' => ['rows' => $reports->daily($branchId, $from, $to)],
-            'products' => ['rows' => $reports->topProducts($branchId, $from, $to)],
-            'categories' => ['rows' => $reports->byCategory($branchId, $from, $to, $this->mainCategories)],
-            'payments' => ['rows' => $reports->byPaymentMethod($branchId, $from, $to)],
-            'staff' => ['rows' => $reports->byStaff($branchId, $from, $to)],
-            'dead-stock' => ['rows' => $reports->deadStock($branchId, max(1, $this->deadDays))],
-        };
+        $tab = array_key_exists($this->tab, ReportDocument::REPORTS) ? $this->tab : 'summary';
+        $document = app(ReportDocument::class)->build($tab, $branchId, $from, $to, [
+            'main_categories' => $this->mainCategories,
+            'dead_days' => $this->deadDays,
+        ]);
 
         /** @var User $user */
         $user = Auth::user();
 
-        return view('livewire.reports.report-index', $data + [
+        $exportParams = ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0];
+
+        return view('livewire.reports.report-index', [
+            'document' => $document,
             'activeTab' => $tab,
             'canSeeAll' => $user->canAccessAllBranches() && Branch::query()->count() > 1,
-            'exportUrl' => route('reports.export', ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0]),
+            'exportUrls' => collect(['pdf', 'xlsx', 'csv'])->mapWithKeys(fn (string $format) => [$format => route('reports.export', $exportParams + ['format' => $format])])->all(),
         ])->title(__('Reports'));
     }
 }

@@ -1,150 +1,92 @@
 @php
-    $tabLabels = [
-        'summary' => __('Profit & loss'),
-        'daily' => __('Daily sales'),
-        'products' => __('Top products'),
-        'categories' => __('By category'),
-        'payments' => __('Payment methods'),
-        'staff' => __('By staff'),
-        'dead-stock' => __('Dead stock'),
+    $groups = [
+        __('Financial') => ['summary' => __('Profit & loss'), 'payments' => __('Collections by payment'), 'expenses' => __('Expense report')],
+        __('Sales') => ['daily' => __('Daily sales'), 'sales-register' => __('Sales register'), 'products' => __('Product sales'), 'categories' => __('Sales by category'), 'staff' => __('Sales by staff')],
+        __('Inventory') => ['stock-valuation' => __('Stock valuation'), 'dead-stock' => __('Dead stock')],
     ];
+    $dated = \App\Services\ReportDocument::REPORTS[$activeTab][1];
 @endphp
 <div class="space-y-4">
-    <x-page-header class="mb-0" :title="__('Reports')" :subtitle="__('Profit, sales and stock reports. Export any report to Excel.')" />
-    <nav class="no-print flex gap-5 overflow-x-auto border-b border-card-line">
-        @foreach ($tabLabels as $key => $label)
-            <button type="button" wire:click="$set('tab', '{{ $key }}')" class="{{ $activeTab === $key ? 'tab-link-active' : 'tab-link' }}">{{ $label }}</button>
-        @endforeach
-    </nav>
+    <x-page-header class="no-print mb-0" :title="__('Reports')" :subtitle="__('Official reports with letterhead and signatures. Print, or download as PDF or Excel.')" />
 
-    <div class="no-print card flex flex-row flex-wrap items-end gap-2 p-3">
-        @if ($activeTab === 'dead-stock')
-            <div>
-                <label class="form-label">{{ __('Not sold in (days)') }}</label>
-                <input wire:model.live.debounce.500ms="deadDays" type="number" min="1" class="form-input w-28">
-            </div>
-        @else
-            <input wire:model.live="from" type="date" class="form-input w-auto">
-            <input wire:model.live="to" type="date" class="form-input w-auto">
-            @foreach (['today' => __('Today'), 'yesterday' => __('Yesterday'), 'week' => __('This week'), 'month' => __('This month'), 'last-month' => __('Last month'), 'year' => __('This year')] as $key => $label)
-                <button type="button" wire:click="setPeriod('{{ $key }}')" class="chip">{{ $label }}</button>
+    <div class="grid gap-4 lg:grid-cols-[13rem_1fr]">
+        <nav class="no-print card h-fit p-2 text-[13px]">
+            @foreach ($groups as $group => $items)
+                <p class="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{{ $group }}</p>
+                @foreach ($items as $key => $label)
+                    <button type="button" wire:click="$set('tab', '{{ $key }}')" @class([
+                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left',
+                        'bg-primary-50 font-medium text-primary-700' => $activeTab === $key,
+                        'text-foreground hover:bg-muted-hover' => $activeTab !== $key,
+                    ])>
+                        <x-icon name="document" class="size-3.5 shrink-0 opacity-60" />
+                        {{ $label }}
+                    </button>
+                @endforeach
             @endforeach
-        @endif
-        @if ($canSeeAll)
-            <select wire:model.live="scope" class="form-input w-auto">
-                <option value="current">{{ __('This branch') }}</option>
-                <option value="all">{{ __('All branches') }}</option>
-            </select>
-        @endif
-        <div class="flex-1"></div>
-        <a href="{{ $exportUrl }}" class="btn-secondary btn-sm">{{ __('Export to Excel (CSV)') }}</a>
-        <button type="button" onclick="window.print()" class="btn-secondary btn-sm">{{ __('Print') }}</button>
+        </nav>
+
+        <div class="min-w-0 space-y-4">
+            <div class="no-print card flex flex-row flex-wrap items-end gap-2 p-3">
+                @if ($activeTab === 'dead-stock')
+                    <div>
+                        <label class="form-label">{{ __('Not sold in (days)') }}</label>
+                        <input wire:model.live.debounce.500ms="deadDays" type="number" min="1" class="form-input w-28">
+                    </div>
+                @elseif ($dated)
+                    <input wire:model.live="from" type="date" class="form-input w-auto" aria-label="{{ __('From') }}">
+                    <input wire:model.live="to" type="date" class="form-input w-auto" aria-label="{{ __('To') }}">
+                    @foreach (['today' => __('Today'), 'yesterday' => __('Yesterday'), 'week' => __('This week'), 'month' => __('This month'), 'last-month' => __('Last month'), 'year' => __('This year')] as $key => $label)
+                        <button type="button" wire:click="setPeriod('{{ $key }}')" class="chip">{{ $label }}</button>
+                    @endforeach
+                @else
+                    <span class="self-center text-[13px] text-muted-foreground-1">{{ __('Shows stock as of now.') }}</span>
+                @endif
+                @if ($activeTab === 'categories')
+                    <label class="inline-flex items-center gap-1.5 self-center text-[13px]"><input wire:model.live="mainCategories" type="checkbox" class="rounded border-layer-line"> {{ __('Main categories only') }}</label>
+                @endif
+                @if ($canSeeAll)
+                    <select wire:model.live="scope" class="form-input w-auto">
+                        <option value="current">{{ __('This branch') }}</option>
+                        <option value="all">{{ __('All branches') }}</option>
+                    </select>
+                @endif
+                <div class="flex-1"></div>
+                <div class="flex gap-1.5">
+                    <button type="button" onclick="window.print()" class="btn-secondary btn-sm"><x-icon name="printer" class="size-3.5" /> {{ __('Print') }}</button>
+                    <a href="{{ $exportUrls['pdf'] }}" target="_blank" class="btn-secondary btn-sm"><x-icon name="document" class="size-3.5 text-rose-600" /> PDF</a>
+                    <a href="{{ $exportUrls['xlsx'] }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-3.5 text-emerald-600" /> Excel</a>
+                    <a href="{{ $exportUrls['csv'] }}" class="btn-ghost btn-sm">CSV</a>
+                </div>
+            </div>
+
+            @if ($activeTab === 'summary')
+                @php $figures = $document['figures']; @endphp
+                <div class="no-print grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <x-kpi :label="__('Sales profit')" :value="money($figures['sales_profit'])" icon="cart" tone="indigo" :hint="__('Net sales').' '.money($figures['net_sales'])" />
+                    <x-kpi :label="__('Repair profit')" :value="money($figures['repair_profit'])" icon="wrench" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($figures['repair_count'])])" />
+                    <x-kpi :label="__('Expenses')" :value="'− '.money($figures['expenses'])" icon="banknotes" tone="rose" />
+                    <x-kpi :label="__('Net profit')" :value="money($figures['net_profit'])" icon="trending-up" :tone="$figures['net_profit'] >= 0 ? 'emerald' : 'rose'" />
+                </div>
+            @endif
+
+            <div class="report-desk overflow-x-auto rounded-lg bg-muted p-3 sm:p-6" wire:loading.class="opacity-60">
+                <div @class(['report-paper mx-auto bg-white shadow-sm ring-1 ring-black/5', 'max-w-[1120px]' => $document['landscape'], 'max-w-[820px]' => ! $document['landscape']])>
+                    @include('reports.document', ['document' => $document, 'pdf' => false])
+                </div>
+            </div>
+        </div>
     </div>
 
-    @if ($activeTab === 'summary')
-        <div class="grid gap-4 md:grid-cols-3">
-            <div class="card p-5 text-sm md:col-span-2">
-                <h3 class="mb-3 font-semibold">{{ __('Sales') }}</h3>
-                <dl class="space-y-1.5">
-                    <div class="flex justify-between"><dt>{{ __('Invoices') }}</dt><dd>{{ shop_digits($summary['invoice_count']) }} · {{ __('average') }} {{ money($summary['average_sale']) }}</dd></div>
-                    <div class="flex justify-between"><dt>{{ __('Total sales (with VAT)') }}</dt><dd class="tabular-nums">{{ money($summary['gross_sales']) }}</dd></div>
-                    <div class="flex justify-between text-muted-foreground-1"><dt>{{ __('Discounts given') }}</dt><dd class="tabular-nums">{{ money($summary['discounts']) }}</dd></div>
-                    @if ($summary['vat'] > 0)<div class="flex justify-between"><dt>{{ __('VAT collected') }}</dt><dd class="tabular-nums">− {{ money($summary['vat']) }}</dd></div>@endif
-                    <div class="flex justify-between"><dt>{{ __('Returns / refunds') }}</dt><dd class="tabular-nums">− {{ money($summary['returns']) }}</dd></div>
-                    <div class="flex justify-between font-medium"><dt>{{ __('Net sales') }}</dt><dd class="tabular-nums">{{ money($summary['net_sales']) }}</dd></div>
-                    <div class="flex justify-between"><dt>{{ __('Cost of goods sold') }}</dt><dd class="tabular-nums">− {{ money($summary['cost_of_goods']) }}</dd></div>
-                    <div class="flex justify-between border-t border-card-line pt-1.5 font-semibold"><dt>{{ __('Sales profit') }}</dt><dd class="tabular-nums">{{ money($summary['sales_profit']) }}</dd></div>
-                </dl>
-                <h3 class="mb-3 mt-5 font-semibold">{{ __('Repairs') }}</h3>
-                <dl class="space-y-1.5">
-                    <div class="flex justify-between"><dt>{{ __('Delivered jobs') }}</dt><dd>{{ shop_digits($summary['repair_count']) }}</dd></div>
-                    <div class="flex justify-between"><dt>{{ __('Repair income') }}</dt><dd class="tabular-nums">{{ money($summary['repair_income']) }}</dd></div>
-                    <div class="flex justify-between"><dt>{{ __('Parts cost') }}</dt><dd class="tabular-nums">− {{ money($summary['repair_parts_cost']) }}</dd></div>
-                    <div class="flex justify-between border-t border-card-line pt-1.5 font-semibold"><dt>{{ __('Repair profit') }}</dt><dd class="tabular-nums">{{ money($summary['repair_profit']) }}</dd></div>
-                </dl>
-            </div>
-            <div class="space-y-3">
-                <x-kpi :label="__('Sales profit')" :value="money($summary['sales_profit'])" icon="cart" tone="indigo" :hint="__('Net sales').' '.money($summary['net_sales'])" />
-                <x-kpi :label="__('Repair profit')" :value="money($summary['repair_profit'])" icon="wrench" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($summary['repair_count'])])" />
-                <x-kpi :label="__('Expenses')" :value="'− '.money($summary['expenses'])" icon="banknotes" tone="rose" />
-                <x-kpi :label="__('Net profit')" :value="money($summary['net_profit'])" icon="trending-up" :tone="$summary['net_profit'] >= 0 ? 'emerald' : 'rose'" />
-            </div>
-        </div>
-    @else
-        <div class="card overflow-x-auto">
-            <table class="data-table">
-                @switch($activeTab)
-                    @case('daily')
-                        <thead><tr><th>{{ __('Date') }}</th><th class="text-right">{{ __('Invoices') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td>{{ shop_digits(\Illuminate\Support\Carbon::parse($row->day)->format('D, d M Y')) }}</td><td class="text-right">{{ shop_digits($row->invoices) }}</td><td class="text-right tabular-nums">{{ money($row->sales) }}</td><td class="text-right tabular-nums">{{ money($row->profit) }}</td></tr>
-                            @empty
-                                <tr><td colspan="4" class="py-8 text-center text-muted-foreground-1">{{ __('No sales in this period.') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                        @if ($rows->isNotEmpty())
-                            <tfoot><tr class="font-semibold"><td>{{ __('Total') }}</td><td class="text-right">{{ shop_digits($rows->sum('invoices')) }}</td><td class="text-right tabular-nums">{{ money($rows->sum('sales')) }}</td><td class="text-right tabular-nums">{{ money($rows->sum('profit')) }}</td></tr></tfoot>
-                        @endif
-                        @break
-                    @case('products')
-                        <thead><tr><th>#</th><th>{{ __('Product') }}</th><th class="text-right">{{ __('Qty sold (pcs)') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td class="text-muted-foreground">{{ shop_digits($loop->iteration) }}</td><td>{{ $row->name }}</td><td class="text-right">{{ shop_digits($row->quantity + 0) }}</td><td class="text-right tabular-nums">{{ money($row->revenue) }}</td><td class="text-right tabular-nums">{{ money($row->profit) }}</td></tr>
-                            @empty
-                                <tr><td colspan="5" class="py-8 text-center text-muted-foreground-1">{{ __('No sales in this period.') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                        @break
-                    @case('categories')
-                        <thead><tr><th>
-                            <span>{{ __('Category') }}</span>
-                            <label class="ml-3 inline-flex items-center gap-1.5 normal-case tracking-normal"><input wire:model.live="mainCategories" type="checkbox" class="rounded border-layer-line"> {{ __('Main categories only') }}</label>
-                        </th><th class="text-right">{{ __('Qty sold (pcs)') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Profit') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td>{{ $row['name'] }}</td><td class="text-right">{{ shop_digits($row['quantity'] + 0) }}</td><td class="text-right tabular-nums">{{ money($row['revenue']) }}</td><td class="text-right tabular-nums">{{ money($row['profit']) }}</td></tr>
-                            @empty
-                                <x-empty :colspan="4" icon="chart" :title="__('No sales in this period.')" />
-                            @endforelse
-                        </tbody>
-                        @break
-                    @case('payments')
-                        <thead><tr><th>{{ __('Payment method') }}</th><th class="text-right">{{ __('Money in') }}</th><th class="text-right">{{ __('Money out') }}</th><th class="text-right">{{ __('Net') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td>{{ app()->getLocale() === 'bn' && $row->name_bn ? $row->name_bn : $row->name }}</td><td class="text-right tabular-nums">{{ money($row->money_in) }}</td><td class="text-right tabular-nums">{{ money($row->money_out) }}</td><td class="text-right font-medium tabular-nums">{{ money($row->money_in - $row->money_out) }}</td></tr>
-                            @empty
-                                <tr><td colspan="4" class="py-8 text-center text-muted-foreground-1">{{ __('No payments in this period.') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                        @break
-                    @case('staff')
-                        <thead><tr><th>{{ __('Staff') }}</th><th class="text-right">{{ __('Invoices') }}</th><th class="text-right">{{ __('Sales') }}</th><th class="text-right">{{ __('Discounts given') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td>{{ $row->name ?? '—' }}</td><td class="text-right">{{ shop_digits($row->invoices) }}</td><td class="text-right tabular-nums">{{ money($row->sales) }}</td><td class="text-right tabular-nums">{{ money($row->discounts) }}</td></tr>
-                            @empty
-                                <tr><td colspan="4" class="py-8 text-center text-muted-foreground-1">{{ __('No sales in this period.') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                        @break
-                    @case('dead-stock')
-                        <thead><tr><th>{{ __('Product') }}</th><th class="text-right">{{ __('In stock') }}</th><th class="text-right">{{ __('Money stuck (cost)') }}</th></tr></thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr><td>{{ $row->name }} <span class="text-xs text-muted-foreground">{{ $row->sku }}</span></td><td class="text-right">{{ shop_digits($row->quantity + 0) }}</td><td class="text-right tabular-nums">{{ money($row->value) }}</td></tr>
-                            @empty
-                                <tr><td colspan="3" class="py-8 text-center text-muted-foreground-1">{{ __('No dead stock. Good!') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                        @if ($rows->isNotEmpty())
-                            <tfoot><tr class="font-semibold"><td colspan="2">{{ __('Total') }}</td><td class="text-right tabular-nums">{{ money($rows->sum('value')) }}</td></tr></tfoot>
-                        @endif
-                        @break
-                @endswitch
-            </table>
-        </div>
-    @endif
+    @include('reports.styles')
+    <style>
+        .report-paper { padding: 40px 44px; min-height: 600px; }
+        @media print {
+            @page { size: A4 {{ $document['landscape'] ? 'landscape' : 'portrait' }}; margin: 12mm; }
+            .report-desk { background: none !important; padding: 0 !important; }
+            .report-paper { box-shadow: none !important; padding: 0 !important; max-width: none !important; min-height: 0; --tw-ring-shadow: 0 0 #0000 !important; }
+            .lg\:grid-cols-\[13rem_1fr\] { grid-template-columns: 1fr !important; }
+            .rpt-table thead { display: table-header-group; }
+        }
+    </style>
 </div>

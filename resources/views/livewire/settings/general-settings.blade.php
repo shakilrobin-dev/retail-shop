@@ -138,6 +138,15 @@
             </div>
         @endif
 
+        @if ($tab === 'reports')
+            <div class="grid gap-4 md:grid-cols-2">
+                <div><label class="form-label">{{ __('Letterhead tagline') }}</label><input wire:model="values.report_tagline" type="text" class="form-input" placeholder="{{ __('e.g. Mobile accessories, parts and electronics') }}"><p class="form-hint">{{ __('Printed under the shop name on every report.') }}</p></div>
+                <div><label class="form-label">{{ __('Footer note') }}</label><input wire:model="values.report_footer_note" type="text" class="form-input"><p class="form-hint">{{ __('Printed at the bottom of every page.') }}</p></div>
+                <label class="flex items-center gap-2 text-sm md:col-span-2"><input wire:model="values.report_show_signatures" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Show signature lines (Prepared by / Checked by / Approved by)') }}</span></label>
+            </div>
+            <p class="text-xs text-muted-foreground-1">{{ __('The letterhead uses the shop logo, name, VAT BIN and the branch address and phone.') }}</p>
+        @endif
+
         @if ($tab === 'sms')
             <label class="flex items-center gap-2 text-sm"><input wire:model.live="values.sms_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Send SMS to customers') }}</span></label>
             @if ($values['sms_enabled'])
