@@ -103,6 +103,14 @@ body {
         @apply sticky top-0 border-b border-table-line bg-card px-4 py-2 text-start text-xs font-medium text-muted-foreground-1;
     }
 
+    & thead th.text-right {
+        @apply text-end;
+    }
+
+    & thead th.text-center {
+        @apply text-center;
+    }
+
     & tbody td {
         @apply whitespace-nowrap border-b border-table-line/70 px-4 py-2.5 align-middle text-foreground;
     }

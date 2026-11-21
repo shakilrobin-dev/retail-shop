@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Reports;
 
+use App\Enums\SaleStatus;
 use App\Models\Branch;
+use App\Models\Customer;
 use App\Models\User;
 use App\Services\CurrentBranch;
 use App\Services\ReportDocument;
@@ -33,6 +35,14 @@ class ReportIndex extends Component
     /** Category report: add sub-categories into their main category. */
     #[Url]
     public bool $mainCategories = false;
+
+    /** Customer due report: 'summary', 'invoices' or 'items'. */
+    #[Url]
+    public string $dueDetail = 'summary';
+
+    /** Customer due report for one customer (a due statement). */
+    #[Url]
+    public ?int $customer = null;
 
     public function mount(): void
     {
@@ -79,16 +89,21 @@ class ReportIndex extends Component
         $document = app(ReportDocument::class)->build($tab, $branchId, $from, $to, [
             'main_categories' => $this->mainCategories,
             'dead_days' => $this->deadDays,
+            'due_detail' => $this->dueDetail,
+            'customer_id' => $this->customer,
         ]);
 
         /** @var User $user */
         $user = Auth::user();
 
-        $exportParams = ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0];
+        $exportParams = ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0, 'detail' => $this->dueDetail, 'customer' => $this->customer];
 
         return view('livewire.reports.report-index', [
             'document' => $document,
             'activeTab' => $tab,
+            'dueCustomers' => $tab === 'customer-dues'
+                ? Customer::query()->whereHas('sales', fn ($query) => $query->where('status', SaleStatus::Completed)->where('due_amount', '>', 0))->orderBy('name')->get(['id', 'name', 'phone'])
+                : collect(),
             'canSeeAll' => $user->canAccessAllBranches() && Branch::query()->count() > 1,
             'exportUrls' => collect(['pdf', 'xlsx', 'csv'])->mapWithKeys(fn (string $format) => [$format => route('reports.export', $exportParams + ['format' => $format])])->all(),
         ])->title(__('Reports'));

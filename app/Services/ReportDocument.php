@@ -27,6 +27,8 @@ class ReportDocument
         'payments' => ['Collections by payment method', true, false],
         'staff' => ['Sales by staff', true, false],
         'expenses' => ['Expense report', true, false],
+        'customer-dues' => ['Customer due report', false, true],
+        'due-collections' => ['Due collection report', true, false],
         'stock-valuation' => ['Stock valuation report', false, true],
         'dead-stock' => ['Dead stock report', false, false],
     ];
@@ -38,7 +40,7 @@ class ReportDocument
     ) {}
 
     /**
-     * @param  array{main_categories?: bool, dead_days?: int}  $options
+     * @param  array{main_categories?: bool, dead_days?: int, due_detail?: string, customer_id?: int|null}  $options
      * @return array<string, mixed>
      */
     public function build(string $key, ?int $branchId, CarbonInterface $from, CarbonInterface $to, array $options = []): array
@@ -60,6 +62,7 @@ class ReportDocument
             'generated_by' => $user?->name ?? __('System'),
             'generated_at' => now()->format('d M Y, h:i A'),
             'landscape' => $landscape,
+            'subject' => null,
             'columns' => [],
             'rows' => [],
             'totals' => null,
@@ -77,6 +80,8 @@ class ReportDocument
             'payments' => $this->payments($document, $branchId, $from, $to),
             'staff' => $this->staff($document, $branchId, $from, $to),
             'expenses' => $this->expenses($document, $branchId, $from, $to),
+            'customer-dues' => $this->customerDues($document, $branchId, $options['customer_id'] ?? null, $options['due_detail'] ?? 'summary'),
+            'due-collections' => $this->dueCollections($document, $branchId, $from, $to),
             'stock-valuation' => $this->stockValuation($document, $branchId),
             'dead-stock' => $this->deadStock($document, $branchId, max(1, (int) ($options['dead_days'] ?? 60))),
         };
@@ -194,21 +199,21 @@ class ReportDocument
         $document['columns'] = $this->columns([
             ['invoice', __('Invoice')], ['date', __('Date & time')], ['customer', __('Customer')], ['items', __('Items'), 'int'],
             ['subtotal', __('Subtotal'), 'money'], ['discount', __('Discount'), 'money'], ['vat', __('VAT'), 'money'],
-            ['total', __('Total'), 'money'], ['paid_by', __('Paid by')], ['cashier', __('Cashier')], ['status', __('Status')],
+            ['total', __('Total'), 'money'], ['due', __('Due'), 'money'], ['paid_by', __('Paid by')], ['cashier', __('Cashier')], ['status', __('Status')],
         ]);
         $document['rows'] = $sales->map(fn ($sale): array => [
             'invoice' => $sale->invoice_no, 'date' => $sale->sold_at->format('d/m/Y h:i A'),
             'customer' => $sale->customer?->name ?? __('Walk-in'), 'items' => $sale->items_count,
             'subtotal' => (float) $sale->subtotal, 'discount' => (float) $sale->discount_amount, 'vat' => (float) $sale->vat_amount,
-            'total' => (float) $sale->total,
+            'total' => (float) $sale->total, 'due' => (float) $sale->due_amount,
             'paid_by' => $sale->payments->where('direction', PaymentDirection::In)->map(fn ($p) => $p->paymentMethod->localName())->unique()->implode(', '),
-            'cashier' => $sale->user?->name, 'status' => $sale->status->label(),
+            'cashier' => $sale->user?->name, 'status' => $sale->status === SaleStatus::Voided ? $sale->status->label() : $sale->payment_status->label(),
         ])->all();
         $completed = $sales->where('status', SaleStatus::Completed);
         $document['totals'] = [
             'invoice' => __('Total (completed only)'), 'items' => (int) $completed->sum('items_count'),
             'subtotal' => (float) $completed->sum('subtotal'), 'discount' => (float) $completed->sum('discount_amount'),
-            'vat' => (float) $completed->sum('vat_amount'), 'total' => (float) $completed->sum('total'),
+            'vat' => (float) $completed->sum('vat_amount'), 'total' => (float) $completed->sum('total'), 'due' => (float) $completed->sum('due_amount'),
         ];
         $voided = $sales->count() - $completed->count();
 
@@ -284,6 +289,131 @@ class ReportDocument
 
         $byCategory = $expenses->groupBy(fn ($expense) => $expense->category->localName())->map->sum('amount')->sortDesc();
         $document['sections'] = [['title' => __('Summary by category'), 'lines' => $byCategory->map(fn ($amount, $name) => [$name, (float) $amount, 'money', ''])->values()->all()]];
+
+        return $document;
+    }
+
+    /**
+     * Who owes how much. 'summary' = one line per customer with ageing,
+     * 'invoices' = every unpaid invoice, 'items' = invoices with their items.
+     */
+    private function customerDues(array $document, ?int $branchId, ?int $customerId, string $detail): array
+    {
+        $detail = in_array($detail, ['summary', 'invoices', 'items'], true) ? $detail : 'summary';
+        $sales = $this->reports->customerDues($branchId, $customerId, $detail === 'items');
+        $byCustomer = $sales->groupBy('customer_id');
+        $bucket = fn (int $days): string => match (true) {
+            $days <= 30 => 'age_30',
+            $days <= 60 => 'age_60',
+            $days <= 90 => 'age_90',
+            default => 'age_older',
+        };
+        $ageing = ['age_30' => 0.0, 'age_60' => 0.0, 'age_90' => 0.0, 'age_older' => 0.0];
+
+        foreach ($sales as $sale) {
+            $ageing[$bucket($sale->ageInDays())] += (float) $sale->due_amount;
+        }
+
+        if ($customerId && $sales->isNotEmpty()) {
+            $customer = $sales->first()->customer;
+            $document['title'] = __('Customer due statement');
+            $document['subject'] = trim($customer->name.($customer->phone ? ' · '.$customer->phone : ''));
+        }
+
+        if ($detail === 'summary') {
+            $document['columns'] = $this->columns([
+                ['name', __('Customer')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'], ['oldest', __('Oldest (days)'), 'int'],
+                ['age_30', __('0–30 days'), 'money'], ['age_60', __('31–60 days'), 'money'], ['age_90', __('61–90 days'), 'money'], ['age_older', __('Over 90 days'), 'money'],
+                ['due', __('Total due'), 'money'], ['limit', __('Credit limit'), 'money'],
+            ]);
+            $document['rows'] = $byCustomer->map(function ($group) use ($bucket): array {
+                $customer = $group->first()->customer;
+                $row = ['name' => $customer->name, 'phone' => $customer->phone, 'invoices' => $group->count(), 'oldest' => $group->max(fn ($sale) => $sale->ageInDays()),
+                    'age_30' => 0.0, 'age_60' => 0.0, 'age_90' => 0.0, 'age_older' => 0.0, 'due' => (float) $group->sum('due_amount'),
+                    'limit' => $customer->credit_limit === null ? null : (float) $customer->credit_limit];
+
+                foreach ($group as $sale) {
+                    $row[$bucket($sale->ageInDays())] += (float) $sale->due_amount;
+                }
+
+                return $row;
+            })->sortByDesc('due')->values()->all();
+            $document['totals'] = ['name' => __('Total'), 'invoices' => $sales->count(), 'due' => (float) $sales->sum('due_amount')] + $ageing;
+        } else {
+            $document['columns'] = $this->columns([
+                ['invoice', __('Invoice')], ['date', __('Date')], ['due_date', __('Pay by')], ['days', __('Days'), 'int'],
+                ['total', __('Invoice total'), 'money'], ['paid', __('Paid'), 'money'], ['due', __('Due'), 'money'],
+            ]);
+            $rows = [];
+
+            foreach ($byCustomer as $group) {
+                $customer = $group->first()->customer;
+                $rows[] = ['_style' => 'group', '_label' => trim($customer->name.($customer->phone ? '  ·  '.$customer->phone : '').($customer->credit_limit !== null ? '  ·  '.__('Credit limit').' '.money($customer->credit_limit) : ''))];
+
+                foreach ($group as $sale) {
+                    $rows[] = [
+                        'invoice' => $sale->invoice_no, 'date' => $sale->sold_at->format('d/m/Y'),
+                        'due_date' => $sale->due_date?->format('d/m/Y').($sale->isOverdue() ? ' ('.__('overdue').')' : ''),
+                        'days' => $sale->ageInDays(), 'total' => (float) $sale->total,
+                        'paid' => round((float) $sale->total - (float) $sale->due_amount, 2), 'due' => (float) $sale->due_amount,
+                    ];
+
+                    if ($detail === 'items') {
+                        foreach ($sale->items as $item) {
+                            $rows[] = ['_style' => 'item', '_label' => sprintf('%s%s  ×  %s  @  %s  =  %s',
+                                $item->product_name, $item->unit_quantity > 1 ? ' ('.$item->unit_name.')' : '',
+                                self::display($item->quantity, 'qty'), money($item->unit_price), money($item->line_total))];
+                        }
+                    }
+                }
+
+                $rows[] = ['_style' => 'subtotal', 'invoice' => __('Total for :name', ['name' => $customer->name]),
+                    'total' => (float) $group->sum('total'), 'paid' => round((float) $group->sum('total') - (float) $group->sum('due_amount'), 2), 'due' => (float) $group->sum('due_amount')];
+            }
+
+            $document['rows'] = $rows;
+            $document['totals'] = ['invoice' => __('Grand total'), 'total' => (float) $sales->sum('total'),
+                'paid' => round((float) $sales->sum('total') - (float) $sales->sum('due_amount'), 2), 'due' => (float) $sales->sum('due_amount')];
+            $document['sections'] = [['title' => __('Ageing of due'), 'lines' => [
+                [__('0–30 days'), $ageing['age_30'], 'money', ''],
+                [__('31–60 days'), $ageing['age_60'], 'money', ''],
+                [__('61–90 days'), $ageing['age_90'], 'money', ''],
+                [__('Over 90 days'), $ageing['age_older'], 'money', ''],
+                [__('Total due'), (float) $sales->sum('due_amount'), 'money', 'total'],
+            ]]];
+        }
+
+        $overdue = (float) $sales->filter->isOverdue()->sum('due_amount');
+        $document['notes'][] = __(':customers customers owe :amount on :invoices invoices.', [
+            'customers' => $byCustomer->count(), 'amount' => money((float) $sales->sum('due_amount')), 'invoices' => $sales->count(),
+        ]);
+
+        if ($overdue > 0) {
+            $document['notes'][] = __('Overdue (past the pay-by date): :amount.', ['amount' => money($overdue)]);
+        }
+
+        $document['notes'][] = __('Days are counted from the invoice date.');
+
+        return $document;
+    }
+
+    private function dueCollections(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $collections = $this->reports->dueCollections($branchId, $from, $to);
+        $document['columns'] = $this->columns([
+            ['receipt', __('Receipt no')], ['date', __('Date')], ['customer', __('Customer')], ['invoices', __('Against invoices')],
+            ['method', __('Received by')], ['user', __('Staff')], ['amount', __('Amount'), 'money'],
+        ]);
+        $document['rows'] = $collections->map(fn ($collection): array => [
+            'receipt' => $collection->receipt_no, 'date' => $collection->paid_at->format('d/m/Y h:i A'),
+            'customer' => $collection->customer->name, 'invoices' => $collection->allocations->map(fn ($payment) => $payment->payable?->invoice_no)->filter()->implode(', '),
+            'method' => $collection->paymentMethod->localName().($collection->transaction_ref ? ' ('.$collection->transaction_ref.')' : ''),
+            'user' => $collection->user?->name, 'amount' => (float) $collection->amount,
+        ])->all();
+        $document['totals'] = ['receipt' => __('Total'), 'amount' => (float) $collections->sum('amount')];
+
+        $byMethod = $collections->groupBy(fn ($collection) => $collection->paymentMethod->localName())->map->sum('amount')->sortDesc();
+        $document['sections'] = [['title' => __('Summary by payment method'), 'lines' => $byMethod->map(fn ($amount, $name) => [$name, (float) $amount, 'money', ''])->values()->all()]];
 
         return $document;
     }

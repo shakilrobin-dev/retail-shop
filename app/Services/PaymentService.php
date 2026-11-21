@@ -26,6 +26,7 @@ class PaymentService
         float $amount,
         ?string $transactionRef = null,
         bool $throughDrawer = true,
+        ?int $customerPaymentId = null,
     ): Payment {
         $shift = $throughDrawer && $method->type === PaymentMethodType::Cash
             ? $this->openShift($branch)
@@ -35,6 +36,7 @@ class PaymentService
             'branch_id' => $branch->id,
             'payable_type' => $payable->getMorphClass(),
             'payable_id' => $payable->getKey(),
+            'customer_payment_id' => $customerPaymentId,
             'payment_method_id' => $method->id,
             'direction' => $direction,
             'amount' => round($amount, 2),

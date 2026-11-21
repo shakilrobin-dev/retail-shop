@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Enums\DiscountType;
 use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethodType;
+use App\Enums\PaymentStatus;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementType;
 use App\Models\Branch;
+use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\ProductUnit;
 use App\Models\Sale;
@@ -21,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Sales at the POS: calculate totals, complete, hold, void and return.
- * No credit: a sale is completed only when fully paid.
+ * A sale can be fully paid, partly paid or fully on due (credit) when credit sales are on.
  */
 class SaleService
 {
@@ -37,7 +39,7 @@ class SaleService
      * Work out all line and bill totals for a cart.
      *
      * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string}>  $cart
-     * @return array{lines: list<array<string, mixed>>, subtotal: float, discount_amount: float, vat_amount: float, total: float}
+     * @return array{lines: list<array<string, mixed>>, subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function calculate(Branch $branch, array $cart, ?DiscountType $discountType = null, float $discountValue = 0): array
     {
@@ -91,15 +93,50 @@ class SaleService
         }
 
         $vatTotal = round($vatTotal, 2);
-        $total = round($subtotal - $billDiscount + ($vatInclusive ? 0 : $vatTotal), 2);
+        $exact = round($subtotal - $billDiscount + ($vatInclusive ? 0 : $vatTotal), 2);
+        $total = $this->roundBill($exact, $branch);
 
         return [
             'lines' => $lines,
             'subtotal' => $subtotal,
             'discount_amount' => $billDiscount,
             'vat_amount' => $vatTotal,
+            'rounding_amount' => round($total - $exact, 2),
             'total' => $total,
         ];
+    }
+
+    /**
+     * Round the bill as set in Settings → POS (e.g. to the nearest 1 or 5 taka).
+     */
+    public function roundBill(float $amount, Branch $branch): float
+    {
+        $mode = (string) $this->settings->get('rounding_mode', $branch->id);
+        $step = (float) $this->settings->get('rounding_step', $branch->id);
+
+        if ($mode === 'none' || $step <= 0 || $amount <= 0) {
+            return round($amount, 2);
+        }
+
+        $units = $amount / $step;
+        $units = match ($mode) {
+            'up' => ceil(round($units, 6)),
+            'down' => floor(round($units, 6)),
+            default => round($units),
+        };
+
+        return round(max(0, $units * $step), 2);
+    }
+
+    /**
+     * Can the logged-in user sell on due at this branch?
+     */
+    public function creditAllowed(Branch $branch): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $this->settings->bool('credit_sales_enabled', $branch->id) && (bool) $user?->can('pos.credit-sale');
     }
 
     /**
@@ -116,6 +153,7 @@ class SaleService
         float $discountValue = 0,
         ?int $customerId = null,
         ?string $note = null,
+        ?string $dueDate = null,
     ): Sale {
         if ($cart === []) {
             throw ValidationException::withMessages(['cart' => __('The cart is empty.')]);
@@ -127,11 +165,15 @@ class SaleService
             throw ValidationException::withMessages(['cart' => __('Open the cash register before selling.')]);
         }
 
-        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift): Sale {
+        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift, $dueDate): Sale {
             $totals = $this->calculate($branch, $cart, $discountType, $discountValue);
             $this->checkPrices($branch, $totals);
 
-            [$paymentRows, $paid, $change] = $this->preparePayments($payments, $totals['total']);
+            [$paymentRows, $paid, $change, $due] = $this->preparePayments($payments, $totals['total'], $this->creditAllowed($branch));
+
+            if ($due > 0) {
+                $this->checkCredit($customerId, $due);
+            }
 
             $sale = Sale::query()->create([
                 'branch_id' => $branch->id,
@@ -146,9 +188,13 @@ class SaleService
                 'discount_value' => $totals['discount_amount'] > 0 ? $discountValue : 0,
                 'discount_amount' => $totals['discount_amount'],
                 'vat_amount' => $totals['vat_amount'],
+                'rounding_amount' => $totals['rounding_amount'],
                 'total' => $totals['total'],
                 'paid_amount' => $paid,
                 'change_amount' => $change,
+                'due_amount' => $due,
+                'payment_status' => PaymentStatus::for($totals['total'], $due),
+                'due_date' => $due > 0 ? ($dueDate ?: today()->addDays((int) $this->settings->get('credit_due_days', $branch->id))->toDateString()) : null,
                 'note' => $note ?: null,
             ]);
 
@@ -288,6 +334,7 @@ class SaleService
 
             $sale->update([
                 'status' => SaleStatus::Voided,
+                'due_amount' => 0,
                 'voided_at' => now(),
                 'voided_by' => Auth::id(),
                 'void_reason' => $reason,
@@ -370,8 +417,19 @@ class SaleService
                 throw ValidationException::withMessages(['returns' => __('Enter a quantity to return.')]);
             }
 
-            $saleReturn->update(['total' => round($total, 2)]);
-            $this->payments->record($branch, $saleReturn, $refundMethod, PaymentDirection::Out, $total);
+            /** The returned value first clears what the customer still owes; only the rest is paid back. */
+            $total = round($total, 2);
+            $due = (float) $sale->due_amount;
+            $offset = min($due, $total);
+            $refund = round($total - $offset, 2);
+
+            $saleReturn->update(['total' => $total, 'refund_amount' => $refund]);
+
+            if ($refund > 0) {
+                $this->payments->record($branch, $saleReturn, $refundMethod, PaymentDirection::Out, $refund);
+            }
+
+            $sale->setDue($due - $offset);
 
             return $saleReturn;
         });
@@ -402,12 +460,35 @@ class SaleService
     }
 
     /**
-     * Check payments cover the total. Only cash can be more than the total (change is given back).
+     * A due sale needs a customer, and must stay inside the customer's credit limit.
+     */
+    private function checkCredit(?int $customerId, float $due): void
+    {
+        $customer = $customerId ? Customer::query()->find($customerId) : null;
+
+        if (! $customer) {
+            throw ValidationException::withMessages(['payments' => __('Select a customer to sell on due. :amount will be added to their due.', ['amount' => money($due)])]);
+        }
+
+        $available = $customer->availableCredit();
+
+        if ($available !== null && $due - $available > 0.009) {
+            throw ValidationException::withMessages(['payments' => __(':name can take only :amount more on due (credit limit :limit).', [
+                'name' => $customer->name,
+                'amount' => money($available),
+                'limit' => money($customer->credit_limit),
+            ])]);
+        }
+    }
+
+    /**
+     * Check the payments. Only cash can be more than the total (change is given back).
+     * When credit is allowed, a short payment leaves the rest as due.
      *
      * @param  list<array{payment_method_id: int, amount: float|string, transaction_ref?: string|null}>  $payments
-     * @return array{0: list<array{method: PaymentMethod, amount: float, transaction_ref: string|null}>, 1: float, 2: float}
+     * @return array{0: list<array{method: PaymentMethod, amount: float, transaction_ref: string|null}>, 1: float, 2: float, 3: float}
      */
-    private function preparePayments(array $payments, float $total): array
+    private function preparePayments(array $payments, float $total, bool $allowDue = false): array
     {
         $methods = PaymentMethod::query()->whereIn('id', array_column($payments, 'payment_method_id'))->get()->keyBy('id');
         $rows = [];
@@ -437,9 +518,11 @@ class SaleService
 
         $paid = round($cashGiven + $otherPaid, 2);
 
-        if ($total - $paid > 0.009) {
+        if ($total - $paid > 0.009 && ! $allowDue) {
             throw ValidationException::withMessages(['payments' => __('Payment is short by :amount. Full payment is required.', ['amount' => money($total - $paid)])]);
         }
+
+        $due = round(max(0, $total - $paid), 2);
 
         $change = round($paid - $total, 2);
 
@@ -457,6 +540,6 @@ class SaleService
             $change = round($paid - $total, 2);
         }
 
-        return [$rows, $paid, $change];
+        return [$rows, $paid, max(0, $change), $due];
     }
 }

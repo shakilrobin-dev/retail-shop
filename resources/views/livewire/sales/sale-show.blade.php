@@ -1,6 +1,9 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-flash />
     <x-page-header class="mb-0" :title="__('Invoice').' '.$sale->invoice_no" :subtitle="shop_digits($sale->sold_at->format('d M Y h:i A'))" :back="route('sales.index')" :backLabel="__('Sales')">
+        @if ($sale->status === \App\Enums\SaleStatus::Completed)
+            <x-badge :tone="$sale->payment_status->tone()" class="px-3 py-1 text-sm">{{ $sale->payment_status->label() }}</x-badge>
+        @endif
         <x-badge :tone="$sale->status === \App\Enums\SaleStatus::Voided ? 'red' : 'green'" class="px-3 py-1 text-sm">{{ $sale->status->label() }}</x-badge>
     </x-page-header>
 
@@ -23,10 +26,24 @@
         <div><div class="text-muted-foreground-1">{{ __('Cashier') }}</div><div>{{ $sale->user?->name }}</div></div>
     </div>
 
+    @if ($sale->status === \App\Enums\SaleStatus::Completed && ($sale->due_amount > 0 || $sale->payment_status !== \App\Enums\PaymentStatus::Paid || $sale->payments->whereNotNull('customer_payment_id')->isNotEmpty()))
+        <div class="grid gap-3 sm:grid-cols-3">
+            <x-kpi :label="__('Invoice total')" :value="money($sale->total)" icon="receipt" tone="slate" />
+            <x-kpi :label="__('Paid')" :value="money($sale->receivedAmount())" icon="check" tone="emerald" />
+            <x-kpi :label="__('Due')" :value="money($sale->due_amount)" icon="banknotes" :tone="$sale->due_amount > 0 ? 'rose' : 'emerald'"
+                :hint="$sale->due_date ? ($sale->isOverdue() ? __('Overdue since :date', ['date' => shop_digits($sale->due_date->format('d M Y'))]) : __('Pay by :date', ['date' => shop_digits($sale->due_date->format('d M Y'))])) : null" />
+        </div>
+    @endif
+
     <div class="flex flex-wrap gap-2">
         <a href="{{ route('sales.receipt', $sale) }}" target="_blank" class="btn-secondary">{{ __('Print receipt') }}</a>
         <a href="{{ route('sales.receipt', ['sale' => $sale, 'paper' => 'a4']) }}" target="_blank" class="btn-secondary">{{ __('A4 invoice') }}</a>
         @if ($sale->status === \App\Enums\SaleStatus::Completed)
+            @if ($sale->due_amount > 0 && $sale->customer)
+                @can('customers.collect-due')
+                    <button type="button" wire:click="$toggle('showCollect')" class="btn-primary">{{ __('Collect due') }}</button>
+                @endcan
+            @endif
             @can('sales.return')
                 <button type="button" wire:click="$toggle('showReturn')" class="btn-secondary">{{ __('Return / exchange') }}</button>
             @endcan
@@ -37,6 +54,29 @@
             @endcan
         @endif
     </div>
+
+    @if ($showCollect)
+        <form wire:submit="collect" class="card flex flex-row flex-wrap items-end gap-2 p-4">
+            <div>
+                <label class="form-label">{{ __('Amount received') }}</label>
+                <input wire:model="collect_amount" type="number" step="0.01" min="0" max="{{ $sale->due_amount }}" class="form-input w-36 text-right">
+            </div>
+            <div>
+                <label class="form-label">{{ __('Received by') }}</label>
+                <select wire:model="collect_method_id" class="form-input w-36">
+                    @foreach ($paymentMethods as $method)
+                        <option value="{{ $method->id }}">{{ $method->localName() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="form-label">{{ __('Transaction ID (optional)') }}</label>
+                <input wire:model="collect_ref" type="text" class="form-input">
+            </div>
+            <button type="submit" class="btn-primary">{{ __('Save payment') }}</button>
+            @error('collect_amount') <p class="form-error w-full">{{ $message }}</p> @enderror
+        </form>
+    @endif
 
     @if ($showVoid)
         <form wire:submit="void" class="card flex flex-row flex-wrap items-end gap-2 p-4">
@@ -85,6 +125,7 @@
                 <tr><td colspan="3" class="text-right">{{ __('Subtotal') }}</td><td class="text-right tabular-nums">{{ money($sale->subtotal) }}</td><td colspan="3"></td></tr>
                 @if ($sale->discount_amount > 0)<tr><td colspan="3" class="text-right">{{ __('Discount') }}</td><td class="text-right tabular-nums">− {{ money($sale->discount_amount) }}</td><td colspan="3"></td></tr>@endif
                 @if ($sale->vat_amount > 0)<tr><td colspan="3" class="text-right">{{ __('VAT') }}</td><td class="text-right tabular-nums">{{ money($sale->vat_amount) }}</td><td colspan="3"></td></tr>@endif
+                @if ($sale->rounding_amount != 0)<tr><td colspan="3" class="text-right">{{ __('Rounding') }}</td><td class="text-right tabular-nums">{{ $sale->rounding_amount > 0 ? '+' : '−' }} {{ money(abs($sale->rounding_amount)) }}</td><td colspan="3"></td></tr>@endif
                 <tr class="font-semibold"><td colspan="3" class="text-right">{{ __('Total') }}</td><td class="text-right tabular-nums">{{ money($sale->total) }}</td><td colspan="3"></td></tr>
             </tfoot>
         </table>
@@ -115,7 +156,9 @@
             <h3 class="mb-2 font-semibold">{{ __('Payments') }}</h3>
             @foreach ($sale->payments as $payment)
                 <div class="flex justify-between py-1">
-                    <span>{{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-muted-foreground">({{ $payment->transaction_ref }})</span>@endif</span>
+                    <span>{{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }} @if ($payment->transaction_ref)<span class="text-muted-foreground">({{ $payment->transaction_ref }})</span>@endif
+                        <span class="text-xs text-muted-foreground">· {{ shop_digits($payment->paid_at->format('d M Y')) }}@if ($payment->customerPayment) · <a href="{{ route('due-receipts.show', $payment->customerPayment) }}" target="_blank" class="text-primary-600 hover:underline">{{ $payment->customerPayment->receipt_no }}</a>@endif</span>
+                    </span>
                     <span @class(['tabular-nums', 'text-red-700' => $payment->direction === \App\Enums\PaymentDirection::Out])>{{ money($payment->amount) }}</span>
                 </div>
             @endforeach

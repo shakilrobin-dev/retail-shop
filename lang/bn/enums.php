@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'payment_status' => [
+        'paid' => 'পরিশোধিত',
+        'partial' => 'আংশিক পরিশোধ',
+        'due' => 'বাকি',
+    ],
     'sale_status' => [
         'held' => 'হোল্ডে',
         'completed' => 'সম্পন্ন',

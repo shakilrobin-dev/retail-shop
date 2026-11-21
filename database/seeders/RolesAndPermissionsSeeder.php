@@ -25,11 +25,13 @@ class RolesAndPermissionsSeeder extends Seeder
         'stock.adjust',
         'stock.transfer',
         'pos.sell',
+        'pos.credit-sale',
         'pos.discount',
         'pos.edit-price',
         'pos.open-drawer',
         'sales.return',
         'sales.void',
+        'customers.collect-due',
         'repairs.manage',
         'expenses.manage',
         'cash-shifts.manage',
@@ -43,6 +45,9 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        $existing = Permission::query()->pluck('name')->all();
+        $added = array_values(array_diff(self::PERMISSIONS, $existing));
+
         foreach (self::PERMISSIONS as $permission) {
             Permission::findOrCreate($permission);
         }
@@ -54,7 +59,23 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach (self::defaultRoles() as $name => $permissions) {
             $this->createWithPermissions($name, $permissions);
+            $this->giveNewPermissions($name, array_intersect($permissions, $added));
         }
+    }
+
+    /**
+     * A permission added in a newer version goes to the existing default roles
+     * that should have it. Nothing the admin set before is changed.
+     *
+     * @param  array<int, string>  $permissions
+     */
+    private function giveNewPermissions(string $role, array $permissions): void
+    {
+        if ($permissions === []) {
+            return;
+        }
+
+        Role::findByName($role)->givePermissionTo($permissions);
     }
 
     /**
@@ -67,10 +88,10 @@ class RolesAndPermissionsSeeder extends Seeder
         return [
             'manager' => [
                 'products.manage', 'products.view-cost', 'purchases.manage', 'stock.adjust', 'stock.transfer',
-                'pos.sell', 'pos.discount', 'pos.open-drawer', 'sales.return', 'repairs.manage',
+                'pos.sell', 'pos.credit-sale', 'pos.discount', 'pos.open-drawer', 'sales.return', 'customers.collect-due', 'repairs.manage',
                 'expenses.manage', 'cash-shifts.manage', 'reports.view',
             ],
-            'cashier' => ['pos.sell', 'pos.discount', 'repairs.manage', 'cash-shifts.manage'],
+            'cashier' => ['pos.sell', 'pos.credit-sale', 'pos.discount', 'customers.collect-due', 'repairs.manage', 'cash-shifts.manage'],
             'technician' => ['repairs.manage'],
             'storekeeper' => ['products.manage', 'products.view-cost', 'purchases.manage', 'stock.adjust', 'stock.transfer'],
             'accountant' => ['reports.view', 'expenses.manage', 'products.view-cost', 'cash-shifts.manage', 'purchases.manage'],

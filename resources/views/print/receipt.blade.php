@@ -76,6 +76,9 @@
             @if ($sale->vat_amount > 0)
                 <tr><td>{{ __('VAT') }}</td><td class="right">{{ money($sale->vat_amount) }}</td></tr>
             @endif
+            @if ($sale->rounding_amount != 0)
+                <tr><td>{{ __('Rounding') }}</td><td class="right">{{ $sale->rounding_amount > 0 ? '+' : '−' }} {{ money(abs($sale->rounding_amount)) }}</td></tr>
+            @endif
             <tr class="grand"><td>{{ __('Total') }}</td><td class="right">{{ money($sale->total) }}</td></tr>
             @foreach ($sale->payments->where('direction', \App\Enums\PaymentDirection::In) as $payment)
                 <tr><td>{{ __('Paid by') }} {{ $payment->paymentMethod->localName() }}@if ($payment->transaction_ref) ({{ $payment->transaction_ref }})@endif</td><td class="right">{{ money($payment->amount) }}</td></tr>
@@ -83,6 +86,16 @@
             @if ($sale->change_amount > 0)
                 <tr><td>{{ __('Received') }}</td><td class="right">{{ money($sale->paid_amount) }}</td></tr>
                 <tr class="bold"><td>{{ __('Change amount') }}</td><td class="right">{{ money($sale->change_amount) }}</td></tr>
+            @endif
+            @if ($sale->due_amount > 0)
+                <tr class="bold"><td>{{ __('Due on this invoice') }}</td><td class="right">{{ money($sale->due_amount) }}</td></tr>
+                @if ($sale->due_date)<tr><td>{{ __('Pay by') }}</td><td class="right">{{ shop_digits($sale->due_date->format('d/m/Y')) }}</td></tr>@endif
+            @endif
+            @if ($sale->customer && $customerDue > 0)
+                @if ($customerDue - (float) $sale->due_amount > 0.009)
+                    <tr><td>{{ __('Previous due') }}</td><td class="right">{{ money($customerDue - (float) $sale->due_amount) }}</td></tr>
+                @endif
+                <tr class="bold"><td>{{ __('Total due') }}</td><td class="right">{{ money($customerDue) }}</td></tr>
             @endif
         </table>
         @if ($sale->status === \App\Enums\SaleStatus::Voided)

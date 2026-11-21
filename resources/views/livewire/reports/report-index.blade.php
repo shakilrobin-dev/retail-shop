@@ -1,6 +1,7 @@
 @php
     $groups = [
         __('Financial') => ['summary' => __('Profit & loss'), 'payments' => __('Collections by payment'), 'expenses' => __('Expense report')],
+        __('Customer due') => ['customer-dues' => __('Customer due'), 'due-collections' => __('Due collections')],
         __('Sales') => ['daily' => __('Daily sales'), 'sales-register' => __('Sales register'), 'products' => __('Product sales'), 'categories' => __('Sales by category'), 'staff' => __('Sales by staff')],
         __('Inventory') => ['stock-valuation' => __('Stock valuation'), 'dead-stock' => __('Dead stock')],
     ];
@@ -33,6 +34,18 @@
                         <label class="form-label">{{ __('Not sold in (days)') }}</label>
                         <input wire:model.live.debounce.500ms="deadDays" type="number" min="1" class="form-input w-28">
                     </div>
+                @elseif ($activeTab === 'customer-dues')
+                    <div class="inline-flex rounded-md border border-layer-line p-0.5 text-[13px]">
+                        @foreach (['summary' => __('Summary'), 'invoices' => __('Invoices'), 'items' => __('Invoices + items')] as $key => $label)
+                            <button type="button" wire:click="$set('dueDetail', '{{ $key }}')" @class(['rounded px-2.5 py-1', 'bg-primary-600 text-white' => $dueDetail === $key, 'text-muted-foreground-2 hover:bg-muted-hover' => $dueDetail !== $key])>{{ $label }}</button>
+                        @endforeach
+                    </div>
+                    <select wire:model.live="customer" class="form-input w-56">
+                        <option value="">{{ __('All customers') }}</option>
+                        @foreach ($dueCustomers as $dueCustomer)
+                            <option value="{{ $dueCustomer->id }}">{{ $dueCustomer->name }}@if ($dueCustomer->phone) · {{ $dueCustomer->phone }}@endif</option>
+                        @endforeach
+                    </select>
                 @elseif ($dated)
                     <input wire:model.live="from" type="date" class="form-input w-auto" aria-label="{{ __('From') }}">
                     <input wire:model.live="to" type="date" class="form-input w-auto" aria-label="{{ __('To') }}">

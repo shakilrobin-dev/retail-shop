@@ -128,7 +128,7 @@ class ReportExporter
         return response()->streamDownload(function () use ($document): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, [$document['title']]);
+            fputcsv($output, array_values(array_filter([$document['title'], $document['subject'] ?? null])));
             fputcsv($output, [$document['period'], $document['branch'], $document['reference']]);
             fputcsv($output, []);
 
@@ -136,6 +136,12 @@ class ReportExporter
                 fputcsv($output, array_column($document['columns'], 'label'));
 
                 foreach ($document['rows'] as $row) {
+                    if (in_array($row['_style'] ?? null, ['group', 'item'], true)) {
+                        fputcsv($output, [$row['_label']]);
+
+                        continue;
+                    }
+
                     fputcsv($output, array_map(fn (array $column) => $row[$column['key']] ?? '', $document['columns']));
                 }
 
@@ -211,6 +217,10 @@ class ReportExporter
         $row++;
 
         $line($row++, mb_strtoupper($document['title']), ['bold' => true, 'size' => 13], Alignment::HORIZONTAL_CENTER);
+        if ($document['subject'] ?? null) {
+            $line($row++, (string) $document['subject'], ['bold' => true, 'size' => 11, 'color' => ['rgb' => self::INK]], Alignment::HORIZONTAL_CENTER);
+        }
+
         $line($row++, $document['period'], ['size' => 9, 'color' => ['rgb' => '4B5563']], Alignment::HORIZONTAL_CENTER);
         $row++;
 
@@ -299,16 +309,44 @@ class ReportExporter
         $row++;
         $firstData = $row;
 
-        foreach ($document['rows'] as $index => $data) {
-            $sheet->setCellValue("A{$row}", $index + 1);
+        $serial = 0;
+
+        foreach ($document['rows'] as $data) {
+            $style = $data['_style'] ?? null;
+            $range = "A{$row}:{$tableLast}{$row}";
+
+            if ($style === 'group' || $style === 'item') {
+                $sheet->setCellValue("B{$row}", ($style === 'item' ? '    ' : '').$data['_label']);
+                $sheet->mergeCells("B{$row}:{$tableLast}{$row}");
+
+                if ($style === 'group') {
+                    $sheet->getStyle($range)->getFont()->setBold(true)->getColor()->setRgb(self::INK);
+                    $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRgb('E0E7FF');
+                } else {
+                    $sheet->getStyle($range)->getFont()->setSize(8)->getColor()->setRgb('6B7280');
+                }
+
+                $row++;
+
+                continue;
+            }
+
+            if ($style === null) {
+                $serial++;
+                $sheet->setCellValue("A{$row}", $serial);
+            }
 
             foreach ($columns as $columnIndex => $column) {
                 $value = $data[$column['key']] ?? null;
                 $sheet->setCellValue(Coordinate::stringFromColumnIndex($columnIndex + 2).$row, $value);
             }
 
-            if ($index % 2 === 1) {
-                $sheet->getStyle("A{$row}:{$tableLast}{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRgb('F9FAFB');
+            if ($style === 'subtotal') {
+                $sheet->getStyle($range)->getFont()->setBold(true);
+                $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRgb('F3F4F6');
+                $sheet->getStyle($range)->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN);
+            } elseif ($serial % 2 === 0) {
+                $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRgb('F9FAFB');
             }
 
             $row++;
@@ -351,7 +389,7 @@ class ReportExporter
                 $sheet->getStyle("{$letter}{$headerRow}:{$letter}".($row - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             }
 
-            $longest = collect($document['rows'])->map(fn (array $data) => mb_strlen((string) ($data[$column['key']] ?? '')))->max() ?? 0;
+            $longest = collect($document['rows'])->whereNull('_style')->map(fn (array $data) => mb_strlen((string) ($data[$column['key']] ?? '')))->max() ?? 0;
             $sheet->getColumnDimension($letter)->setWidth(min(48, max(10, mb_strlen($column['label']) + 2, $longest + 3)));
         }
 

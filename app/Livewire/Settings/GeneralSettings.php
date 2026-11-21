@@ -40,6 +40,7 @@ class GeneralSettings extends Component
         'pos' => [
             'vat_enabled' => 'bool', 'vat_default_rate' => 'float', 'vat_inclusive' => 'bool', 'vat_bin' => 'string',
             'pos_allow_price_edit' => 'bool', 'pos_max_discount_percent' => 'float', 'pos_allow_negative_stock' => 'bool',
+            'credit_sales_enabled' => 'bool', 'credit_due_days' => 'int', 'rounding_mode' => 'string', 'rounding_step' => 'string',
         ],
         'repair' => [
             'repair_default_warranty_days' => 'int', 'repair_terms' => 'string', 'repair_terms_bn' => 'string',
@@ -204,6 +205,9 @@ class GeneralSettings extends Component
                 'values.vat_default_rate' => ['required', 'numeric', 'min:0', 'max:100'],
                 'values.vat_bin' => ['nullable', 'string', 'max:50'],
                 'values.pos_max_discount_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+                'values.credit_due_days' => ['required', 'integer', 'min:0', 'max:365'],
+                'values.rounding_mode' => ['required', 'in:none,nearest,down,up'],
+                'values.rounding_step' => ['required', 'in:0.5,1,2,5,10'],
             ],
             'repair' => [
                 'values.repair_default_warranty_days' => ['required', 'integer', 'min:0', 'max:3650'],

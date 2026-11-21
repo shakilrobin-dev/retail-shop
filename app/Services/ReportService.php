@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\RepairStatus;
 use App\Enums\SaleStatus;
+use App\Models\CustomerPayment;
 use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\Product;
@@ -270,6 +271,42 @@ class ReportService
             ->whereDate('expense_date', '>=', $from->toDateString())
             ->whereDate('expense_date', '<=', $to->toDateString())
             ->orderBy('expense_date')
+            ->get();
+    }
+
+    /**
+     * Unpaid and partly paid invoices, grouped by customer name.
+     *
+     * @return Collection<int, Sale>
+     */
+    public function customerDues(?int $branchId, ?int $customerId = null, bool $withItems = false): Collection
+    {
+        return Sale::query()
+            ->with(array_merge(['customer'], $withItems ? ['items'] : []))
+            ->join('customers', 'customers.id', '=', 'sales.customer_id')
+            ->select('sales.*')
+            ->when($branchId, fn (Builder $query) => $query->where('sales.branch_id', $branchId))
+            ->when($customerId, fn (Builder $query) => $query->where('sales.customer_id', $customerId))
+            ->where('sales.status', SaleStatus::Completed)
+            ->where('sales.due_amount', '>', 0)
+            ->orderBy('customers.name')
+            ->orderBy('sales.customer_id')
+            ->orderBy('sales.sold_at')
+            ->get();
+    }
+
+    /**
+     * Money received against customer dues in the period.
+     *
+     * @return Collection<int, CustomerPayment>
+     */
+    public function dueCollections(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        return CustomerPayment::query()
+            ->with(['customer', 'paymentMethod', 'user', 'allocations.payable'])
+            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+            ->whereBetween('paid_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->orderBy('paid_at')
             ->get();
     }
 }

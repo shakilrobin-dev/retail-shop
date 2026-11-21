@@ -15,6 +15,8 @@ return [
     'pos.edit-price' => 'Change selling price in POS',
     'pos.open-drawer' => 'Open cash drawer without sale',
     'sales.return' => 'Accept returns / refunds',
+    'pos.credit-sale' => 'Sell on due (credit)',
+    'customers.collect-due' => 'Collect customer due',
     'sales.void' => 'Void (cancel) sales',
     'repairs.manage' => 'Repair jobs',
     'expenses.manage' => 'Expenses',

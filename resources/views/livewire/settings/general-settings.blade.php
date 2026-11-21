@@ -126,6 +126,33 @@
                 <div><label class="form-label">{{ __('Max discount for staff (%)') }}</label><input wire:model="values.pos_max_discount_percent" type="number" step="0.5" min="0" max="100" class="form-input"></div>
                 <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_price_edit" type="checkbox" class="rounded border-layer-line"> {{ __('Staff can change price in POS') }}</label>
                 <label class="flex items-center gap-2 self-end pb-2 text-sm"><input wire:model="values.pos_allow_negative_stock" type="checkbox" class="rounded border-layer-line"> {{ __('Allow selling with zero stock') }}</label>
+                <div class="border-t border-card-line pt-4 md:col-span-3"><h3 class="text-sm font-semibold">{{ __('Due (credit) sales') }}</h3></div>
+                <label class="flex items-center gap-2 text-sm md:col-span-2"><input wire:model.live="values.credit_sales_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Allow selling on due (partly paid or unpaid invoices)') }}</span></label>
+                @if ($values['credit_sales_enabled'])
+                    <div><label class="form-label">{{ __('Days to pay (default)') }}</label><input wire:model="values.credit_due_days" type="number" min="0" max="365" class="form-input"></div>
+                    <p class="text-xs text-muted-foreground-1 md:col-span-3">{{ __('A customer must be selected for a due sale. Set a credit limit on each customer if needed. Staff need the "Sell on due" permission.') }}</p>
+                @endif
+                <div class="border-t border-card-line pt-4 md:col-span-3"><h3 class="text-sm font-semibold">{{ __('Bill rounding') }}</h3></div>
+                <div>
+                    <label class="form-label">{{ __('Round the bill total') }}</label>
+                    <select wire:model.live="values.rounding_mode" class="form-input">
+                        <option value="none">{{ __('No rounding') }}</option>
+                        <option value="nearest">{{ __('To the nearest') }}</option>
+                        <option value="down">{{ __('Always down (customer pays less)') }}</option>
+                        <option value="up">{{ __('Always up') }}</option>
+                    </select>
+                </div>
+                @if ($values['rounding_mode'] !== 'none')
+                    <div>
+                        <label class="form-label">{{ __('Round to') }}</label>
+                        <select wire:model="values.rounding_step" class="form-input">
+                            @foreach (['0.5', '1', '2', '5', '10'] as $step)
+                                <option value="{{ $step }}">{{ money($step) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <p class="self-end pb-2 text-xs text-muted-foreground-1">{{ __('Example: 1,247.60 becomes :example.', ['example' => money(app(\App\Services\SaleService::class)->roundBill(1247.60, app(\App\Services\CurrentBranch::class)->get()))]) }}</p>
+                @endif
             </div>
         @endif
 

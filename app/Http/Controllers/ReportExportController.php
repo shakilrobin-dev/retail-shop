@@ -24,6 +24,8 @@ class ReportExportController extends Controller
             'to' => ['required', 'date'],
             'scope' => ['nullable', 'in:current,all'],
             'deadDays' => ['nullable', 'integer', 'min:1'],
+            'detail' => ['nullable', 'in:summary,invoices,items'],
+            'customer' => ['nullable', 'integer'],
         ]);
 
         /** @var User $user */
@@ -39,6 +41,8 @@ class ReportExportController extends Controller
         $document = $documents->build($validated['tab'], $branchId, $from, $to, [
             'main_categories' => $request->boolean('main'),
             'dead_days' => (int) ($validated['deadDays'] ?? 60),
+            'due_detail' => $validated['detail'] ?? 'summary',
+            'customer_id' => isset($validated['customer']) ? (int) $validated['customer'] : null,
         ]);
 
         return match ($validated['format'] ?? 'csv') {

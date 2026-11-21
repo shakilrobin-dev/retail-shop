@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[Fillable(['branch_id', 'payable_type', 'payable_id', 'payment_method_id', 'direction', 'amount', 'transaction_ref', 'cash_shift_id', 'user_id', 'paid_at'])]
+#[Fillable(['branch_id', 'payable_type', 'payable_id', 'customer_payment_id', 'payment_method_id', 'direction', 'amount', 'transaction_ref', 'cash_shift_id', 'user_id', 'paid_at'])]
 class Payment extends Model
 {
     /**
@@ -55,6 +55,16 @@ class Payment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The due collection (money receipt) this payment belongs to, if any.
+     *
+     * @return BelongsTo<CustomerPayment, $this>
+     */
+    public function customerPayment(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPayment::class);
     }
 
     /**

@@ -48,6 +48,12 @@ return [
         'pos_allow_negative_stock' => false,
         'return_policy_days' => 7,
 
+        // Credit (due) sales and bill rounding
+        'credit_sales_enabled' => true,
+        'credit_due_days' => 30,
+        'rounding_mode' => 'none',
+        'rounding_step' => 1,
+
         // Repair
         'repair_default_warranty_days' => 7,
         'repair_terms' => 'Device must be collected within 30 days. Shop is not responsible for data loss.',
@@ -79,6 +85,7 @@ return [
         'repair' => 'JOB',
         'adjustment' => 'ADJ',
         'transfer' => 'TRF',
+        'due_receipt' => 'MR',
     ],
 
 ];

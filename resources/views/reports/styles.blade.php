@@ -20,6 +20,10 @@
     .rpt-table td { padding: 4px 6px; border-bottom: 0.5px solid #e5e7eb; vertical-align: top; }
     .rpt-table tr.rpt-even td { background: #f9fafb; }
     .rpt-table tfoot td { font-weight: bold; border-top: 1.5px solid #1e1b4b; border-bottom: 3px double #1e1b4b; background: #eef0f6; padding: 6px; }
+    .rpt-subject { text-align: center; font-size: 11pt; font-weight: bold; color: #1e1b4b; margin-top: 2px; }
+    .rpt-table tr.rpt-row-group td { background: #e0e7ff; color: #1e1b4b; font-weight: bold; padding: 6px; border-top: 1px solid #a5b4fc; }
+    .rpt-table tr.rpt-row-item td { color: #6b7280; font-size: 7.5pt; padding: 1px 6px 1px 22px; border-bottom: 0; }
+    .rpt-table tr.rpt-row-subtotal td { font-weight: bold; border-top: 1px solid #9ca3af; background: #f3f4f6; }
     .rpt-sl { width: 28px; color: #6b7280; text-align: center !important; }
     .rpt-r { text-align: right !important; }
     .rpt-num { white-space: nowrap; font-variant-numeric: tabular-nums; }

@@ -63,7 +63,8 @@ class SaleIndex extends Component
             ->withCount('items')
             ->where('branch_id', app(CurrentBranch::class)->get()?->id)
             ->where('status', '!=', SaleStatus::Held)
-            ->when($status !== '', fn (Builder $query) => $query->where('status', $status))
+            ->when($status === 'due', fn (Builder $query) => $query->where('status', SaleStatus::Completed)->where('due_amount', '>', 0))
+            ->when($status !== '' && $status !== 'due', fn (Builder $query) => $query->where('status', $status))
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('invoice_no', 'like', "%{$this->search}%")
                 ->orWhereHas('customer', fn (Builder $query) => $query->where('phone', 'like', "%{$this->search}%")->orWhere('name', 'like', "%{$this->search}%"))))
@@ -75,9 +76,9 @@ class SaleIndex extends Component
     public function export(): StreamedResponse
     {
         $rows = $this->query()->when($this->selected !== [], fn (Builder $query) => $query->whereIn('id', $this->selected))->latest('sold_at')->get()
-            ->map(fn (Sale $sale): array => [$sale->invoice_no, $sale->sold_at?->format('Y-m-d H:i'), $sale->customer?->name, $sale->customer?->phone, $sale->items_count, (float) $sale->subtotal, (float) $sale->discount_amount, (float) $sale->vat_amount, (float) $sale->total, $sale->status->value, $sale->user?->name]);
+            ->map(fn (Sale $sale): array => [$sale->invoice_no, $sale->sold_at?->format('Y-m-d H:i'), $sale->customer?->name, $sale->customer?->phone, $sale->items_count, (float) $sale->subtotal, (float) $sale->discount_amount, (float) $sale->vat_amount, (float) $sale->total, (float) $sale->due_amount, $sale->payment_status->value, $sale->status->value, $sale->user?->name]);
 
-        return $this->csvDownload('sales', ['Invoice', 'Date', 'Customer', 'Phone', 'Items', 'Subtotal', 'Discount', 'VAT', 'Total', 'Status', 'Cashier'], $rows);
+        return $this->csvDownload('sales', ['Invoice', 'Date', 'Customer', 'Phone', 'Items', 'Subtotal', 'Discount', 'VAT', 'Total', 'Due', 'Payment', 'Status', 'Cashier'], $rows);
     }
 
     public function render(): View
@@ -87,9 +88,11 @@ class SaleIndex extends Component
         return view('livewire.sales.sale-index', [
             'sales' => $this->applySorting(clone $query, 'sold_at', 'desc')->paginate($this->perPage),
             'sum' => (clone $query)->sum('total'),
+            'dueSum' => (clone $query)->where('status', SaleStatus::Completed)->sum('due_amount'),
             'count' => (clone $query)->count(),
             'tabs' => [
                 'completed' => [SaleStatus::Completed->label(), $this->query('completed')->count()],
+                'due' => [__('With due'), $this->query('due')->count()],
                 'voided' => [SaleStatus::Voided->label(), $this->query('voided')->count()],
                 '' => [__('All'), $this->query('')->count()],
             ],

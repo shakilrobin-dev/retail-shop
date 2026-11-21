@@ -6,10 +6,11 @@
         <a href="{{ route('pos') }}" class="btn-primary" wire:navigate><x-icon name="cart" class="size-4" /> {{ __('New sale') }}</a>
     </x-page-header>
 
-    <div class="mb-5 grid gap-4 sm:grid-cols-3">
+    <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat :label="__('Invoices')" :value="shop_digits($count)" icon="receipt" tone="brand" />
         <x-stat :label="__('Total')" :value="money($sum)" icon="banknotes" tone="green" />
         <x-stat :label="__('Average sale')" :value="money($count ? $sum / $count : 0)" icon="trending-up" tone="slate" />
+        <x-kpi :label="__('Due in this list')" :value="money($dueSum)" icon="warning" :tone="$dueSum > 0 ? 'rose' : 'emerald'" />
     </div>
 
     <div class="card overflow-hidden">
@@ -42,6 +43,7 @@
                         <th>{{ __('Customer') }}</th>
                         <x-table.sort field="items" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Items') }}</x-table.sort>
                         <x-table.sort field="total" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Total') }}</x-table.sort>
+                        <th class="text-right">{{ __('Due') }}</th>
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Cashier') }}</th>
                         <th class="w-12"></th>
@@ -62,14 +64,21 @@
                             </td>
                             <td class="text-right tabular-nums">{{ shop_digits($sale->items_count) }}</td>
                             <td class="text-right font-semibold tabular-nums text-foreground">{{ money($sale->total) }}</td>
-                            <td><x-badge :tone="$sale->status === \App\Enums\SaleStatus::Voided ? 'red' : 'green'">{{ $sale->status->label() }}</x-badge></td>
+                            <td class="text-right tabular-nums">@if ($sale->due_amount > 0)<span class="font-medium text-red-600">{{ money($sale->due_amount) }}</span>@else<span class="text-muted-foreground">—</span>@endif</td>
+                            <td>
+                                @if ($sale->status === \App\Enums\SaleStatus::Voided)
+                                    <x-badge tone="red">{{ $sale->status->label() }}</x-badge>
+                                @else
+                                    <x-badge :tone="$sale->payment_status->tone()">{{ $sale->payment_status->label() }}</x-badge>
+                                @endif
+                            </td>
                             <td class="text-muted-foreground-1">{{ $sale->user?->name }}</td>
                             <td class="text-right" x-on:click.stop>
                                 <a href="{{ route('sales.receipt', $sale) }}" target="_blank" class="btn-ghost btn-sm" title="{{ __('Print') }}"><x-icon name="printer" class="size-4" /></a>
                             </td>
                         </tr>
                     @empty
-                        <x-empty :colspan="9" icon="receipt" :title="__('No sales found.')" :text="__('Change the dates or search by invoice number.')" />
+                        <x-empty :colspan="10" icon="receipt" :title="__('No sales found.')" :text="__('Change the dates or search by invoice number.')" />
                     @endforelse
                 </tbody>
             </table>

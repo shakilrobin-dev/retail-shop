@@ -32,6 +32,7 @@
     <div class="rpt-rule"></div>
 
     <div class="rpt-title">{{ $document['title'] }}</div>
+    @if ($document['subject'] ?? null)<div class="rpt-subject">{{ $document['subject'] }}</div>@endif
     <div class="rpt-period">{{ $document['period'] }}</div>
 
     <table class="rpt-meta">
@@ -54,13 +55,28 @@
                 </tr>
             </thead>
             <tbody>
+                @php $serial = 0; @endphp
                 @forelse ($document['rows'] as $row)
-                    <tr class="{{ $loop->even ? 'rpt-even' : '' }}">
-                        <td class="rpt-sl">{{ shop_digits($loop->iteration) }}</td>
-                        @foreach ($columns as $column)
-                            <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ ReportDocument::display($row[$column['key']] ?? null, $column['format']) }}</td>
-                        @endforeach
-                    </tr>
+                    @php $style = $row['_style'] ?? null; @endphp
+                    @if ($style === 'group' || $style === 'item')
+                        <tr class="rpt-row-{{ $style }}"><td class="rpt-sl"></td><td colspan="{{ count($columns) }}">{{ $row['_label'] }}</td></tr>
+                    @elseif ($style === 'subtotal')
+                        <tr class="rpt-row-subtotal">
+                            <td class="rpt-sl"></td>
+                            @foreach ($columns as $column)
+                                @php $value = $row[$column['key']] ?? null; @endphp
+                                <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ $value === null ? '' : (is_string($value) ? $value : ReportDocument::display($value, $column['format'])) }}</td>
+                            @endforeach
+                        </tr>
+                    @else
+                        @php $serial++; @endphp
+                        <tr class="{{ $serial % 2 === 0 ? 'rpt-even' : '' }}">
+                            <td class="rpt-sl">{{ shop_digits($serial) }}</td>
+                            @foreach ($columns as $column)
+                                <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ ReportDocument::display($row[$column['key']] ?? null, $column['format']) }}</td>
+                            @endforeach
+                        </tr>
+                    @endif
                 @empty
                     <tr><td colspan="{{ count($columns) + 1 }}" class="rpt-empty">{{ __('No records for this period.') }}</td></tr>
                 @endforelse
@@ -77,7 +93,7 @@
                 </tfoot>
             @endif
         </table>
-        <div class="rpt-count">{{ __('Total records: :count', ['count' => shop_digits(count($document['rows']))]) }}</div>
+        <div class="rpt-count">{{ __('Total records: :count', ['count' => shop_digits(collect($document['rows'])->whereNull('_style')->count())]) }}</div>
     @endif
 
     @foreach ($document['sections'] as $section)

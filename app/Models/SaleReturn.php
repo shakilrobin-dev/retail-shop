@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['branch_id', 'sale_id', 'reference_no', 'total', 'reason', 'user_id', 'cash_shift_id'])]
+#[Fillable(['branch_id', 'sale_id', 'reference_no', 'total', 'refund_amount', 'reason', 'user_id', 'cash_shift_id'])]
 class SaleReturn extends Model
 {
     /**
@@ -20,6 +20,7 @@ class SaleReturn extends Model
     {
         return [
             'total' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
         ];
     }
 

@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'payment_status' => [
+        'paid' => 'Paid',
+        'partial' => 'Partly paid',
+        'due' => 'Due',
+    ],
     'sale_status' => [
         'held' => 'On hold',
         'completed' => 'Completed',

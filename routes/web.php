@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/sales/{sale}/receipt', [ReceiptController::class, 'show'])->name('sales.receipt');
         Route::livewire('/customers', CustomerIndex::class)->name('customers.index');
         Route::livewire('/customers/{customer}', CustomerShow::class)->name('customers.show');
+        Route::get('/due-receipts/{customerPayment}', [ReceiptController::class, 'due'])->name('due-receipts.show');
     });
 
     Route::middleware('can:repairs.manage')->group(function () {

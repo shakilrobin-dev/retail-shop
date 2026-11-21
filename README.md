@@ -29,6 +29,7 @@ No Node.js, Redis, queue worker or WebSockets are needed on the server.
 php artisan db:seed --class=DemoDataSeeder     # sample products
 php artisan db:seed --class=DemoHistorySeeder  # 30 days of sales, purchases, repairs, expenses
 php artisan db:seed --class=DemoUsersSeeder    # second branch + one user per role
+php artisan db:seed --class=DemoDuesSeeder     # credit customers, due invoices, part payments, money receipts
 ```
 
 | Username | Role | Branch | Can do |

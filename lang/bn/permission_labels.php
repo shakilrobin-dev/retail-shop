@@ -15,6 +15,8 @@ return [
     'pos.edit-price' => 'POS-এ দাম পরিবর্তন',
     'pos.open-drawer' => 'বিক্রয় ছাড়া ক্যাশ ড্রয়ার খোলা',
     'sales.return' => 'ফেরত / রিফান্ড গ্রহণ',
+    'pos.credit-sale' => 'বাকিতে বিক্রয়',
+    'customers.collect-due' => 'গ্রাহকের বাকি আদায়',
     'sales.void' => 'বিক্রয় বাতিল',
     'repairs.manage' => 'মেরামত কাজ',
     'expenses.manage' => 'খরচ',

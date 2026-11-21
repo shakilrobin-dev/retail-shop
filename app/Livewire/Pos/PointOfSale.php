@@ -50,6 +50,9 @@ class PointOfSale extends Component
 
     public string $note = '';
 
+    /** When the due should be paid (only for sales on due). */
+    public string $dueDate = '';
+
     public string $holdNote = '';
 
     public bool $showPayment = false;
@@ -137,7 +140,7 @@ class PointOfSale extends Component
 
     public function clearCart(): void
     {
-        $this->reset('cart', 'customerId', 'customerSearch', 'discountType', 'discountValue', 'payments', 'note', 'holdNote', 'showPayment');
+        $this->reset('cart', 'customerId', 'customerSearch', 'discountType', 'discountValue', 'payments', 'note', 'holdNote', 'showPayment', 'dueDate');
     }
 
     private function moveLineToTop(int $index): void
@@ -240,6 +243,16 @@ class PointOfSale extends Component
         $this->payments[$index]['amount'] = (string) max(0, round($this->totals()['total'] - $others, 2));
     }
 
+    /**
+     * Customer pays nothing now: the whole bill goes on their due.
+     */
+    public function allOnDue(): void
+    {
+        foreach ($this->payments as $index => $row) {
+            $this->payments[$index]['amount'] = '';
+        }
+    }
+
     public function complete(SaleService $sales): void
     {
         $this->authorize('pos.sell');
@@ -251,7 +264,8 @@ class PointOfSale extends Component
             'cart.*.quantity' => ['required', 'numeric', 'gt:0'],
             'cart.*.unit_price' => ['required', 'numeric', 'min:0'],
             'cart.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
-        ], [], ['cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price')]);
+            'dueDate' => ['nullable', 'date', 'after_or_equal:today'],
+        ], [], ['cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price'), 'dueDate' => __('due date')]);
 
         $sale = $sales->complete(
             app(CurrentBranch::class)->get(),
@@ -265,6 +279,7 @@ class PointOfSale extends Component
             (float) $this->discountValue,
             $this->customerId,
             $this->note,
+            $this->dueDate ?: null,
         );
 
         $this->clearCart();
@@ -337,12 +352,12 @@ class PointOfSale extends Component
     }
 
     /**
-     * @return array{subtotal: float, discount_amount: float, vat_amount: float, total: float}
+     * @return array{subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function totals(): array
     {
         if ($this->cart === []) {
-            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'total' => 0];
+            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
         }
 
         try {
@@ -353,7 +368,7 @@ class PointOfSale extends Component
                 (float) $this->discountValue,
             );
         } catch (ValidationException) {
-            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'total' => 0];
+            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
         }
 
         unset($totals['lines']);
@@ -372,6 +387,7 @@ class PointOfSale extends Component
         $settings = app(Settings::class);
         $totals = $this->totals();
         $paid = $this->paidSoFar();
+        $customer = $this->customerId ? Customer::query()->find($this->customerId) : null;
 
         return view('livewire.pos.point-of-sale', [
             'shift' => $branch ? app(PaymentService::class)->openShift($branch) : null,
@@ -381,7 +397,10 @@ class PointOfSale extends Component
             'change' => max(0, round($paid - $totals['total'], 2)),
             'due' => max(0, round($totals['total'] - $paid, 2)),
             'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get(),
-            'customer' => $this->customerId ? Customer::query()->find($this->customerId) : null,
+            'customer' => $customer,
+            'customerDue' => $customer?->totalDue() ?? 0,
+            'creditAllowed' => $branch && app(SaleService::class)->creditAllowed($branch),
+            'defaultDueDate' => today()->addDays((int) $settings->get('credit_due_days', $branch?->id))->toDateString(),
             'customerResults' => mb_strlen($this->customerSearch) >= 3
                 ? Customer::query()->where('phone', 'like', "%{$this->customerSearch}%")->orWhere('name', 'like', "%{$this->customerSearch}%")->limit(5)->get()
                 : collect(),

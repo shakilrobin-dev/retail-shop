@@ -155,6 +155,14 @@
                             <div><div class="font-medium">{{ $customer->name }}</div><div class="text-muted-foreground-1">{{ $customer->phone }}</div></div>
                             <button type="button" wire:click="$set('customerId', null)" class="text-xs text-muted-foreground-1 hover:underline">{{ __('Change') }}</button>
                         </div>
+                        @if ($customerDue > 0 || $customer->credit_limit !== null)
+                            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-card-line pt-2 text-xs">
+                                <span @class(['font-medium', 'text-red-600' => $customerDue > 0, 'text-muted-foreground-1' => $customerDue <= 0])>{{ __('Previous due') }}: {{ money($customerDue) }}</span>
+                                @if ($customer->credit_limit !== null)
+                                    <span class="text-muted-foreground-1">{{ __('Credit limit') }}: {{ money($customer->credit_limit) }}</span>
+                                @endif
+                            </div>
+                        @endif
                     @else
                         <label class="form-label">{{ __('Customer (optional)') }}</label>
                         <input wire:model.live.debounce.300ms="customerSearch" type="search" placeholder="{{ __('Phone number') }}" class="form-input">
@@ -195,6 +203,9 @@
                     @if ($vatEnabled && $totals['vat_amount'] > 0)
                         <div class="flex justify-between"><span>{{ __('VAT') }}</span><span class="tabular-nums">{{ money($totals['vat_amount']) }}</span></div>
                     @endif
+                    @if ($totals['rounding_amount'] != 0)
+                        <div class="flex justify-between text-muted-foreground-1"><span>{{ __('Rounding') }}</span><span class="tabular-nums">{{ $totals['rounding_amount'] > 0 ? '+' : '−' }} {{ money(abs($totals['rounding_amount'])) }}</span></div>
+                    @endif
                     <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium text-muted-foreground">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
                 </div>
 
@@ -227,19 +238,42 @@
                                 <button type="button" wire:click="addPayment({{ $method->id }})" class="btn-secondary btn-sm">+ {{ $method->localName() }}</button>
                             @endforeach
                         </div>
+                        <div class="grid grid-cols-2 gap-1">
+                            <button type="button" wire:click="payExact(0)" class="btn-secondary btn-sm">{{ __('Full paid') }}</button>
+                            @if ($creditAllowed)
+                                <button type="button" wire:click="allOnDue" class="btn-secondary btn-sm text-red-600">{{ __('All on due') }}</button>
+                            @endif
+                        </div>
                         @error('payments') <p class="form-error text-sm">{{ $message }}</p> @enderror
                         <div class="space-y-1 border-t border-card-line pt-2 text-sm">
                             <div class="flex justify-between"><span>{{ __('Paid') }}</span><span class="tabular-nums">{{ money($paid) }}</span></div>
                             @if ($due > 0)
-                                <div class="flex justify-between font-semibold text-red-600"><span>{{ __('Due') }}</span><span class="tabular-nums">{{ money($due) }}</span></div>
+                                <div class="flex justify-between font-semibold text-red-600"><span>{{ $paid > 0 ? __('Due (partly paid)') : __('Due (not paid)') }}</span><span class="tabular-nums">{{ money($due) }}</span></div>
+                            @else
+                                <div class="flex justify-between text-xl font-bold text-emerald-700"><span>{{ __('Change amount') }}</span><span class="tabular-nums">{{ money($change) }}</span></div>
                             @endif
-                            <div class="flex justify-between text-xl font-bold text-emerald-700"><span>{{ __('Change amount') }}</span><span class="tabular-nums">{{ money($change) }}</span></div>
                         </div>
+                        @if ($due > 0)
+                            @if (! $creditAllowed)
+                                <p class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">{{ __('Full payment is required.') }}</p>
+                            @elseif (! $customer)
+                                <p class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{{ __('Select a customer above to sell on due.') }}</p>
+                            @else
+                                <div class="space-y-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                    <p>{{ __(':amount will be added to :name\'s due. Total due after this sale: :total.', ['amount' => money($due), 'name' => $customer->name, 'total' => money($customerDue + $due)]) }}</p>
+                                    <label class="flex items-center justify-between gap-2">
+                                        <span>{{ __('Pay by') }}</span>
+                                        <input wire:model="dueDate" type="date" min="{{ today()->toDateString() }}" placeholder="{{ $defaultDueDate }}" class="form-input h-7 w-36 py-0 text-xs">
+                                    </label>
+                                    @error('dueDate') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                            @endif
+                        @endif
                         <input wire:model="note" type="text" placeholder="{{ __('Note on receipt (optional)') }}" class="form-input text-sm">
                         <div class="flex gap-2">
                             <button type="button" wire:click="$set('showPayment', false)" class="btn-secondary">{{ __('Back') }}</button>
-                            <button type="button" wire:click="complete" wire:loading.attr="disabled" @disabled($due > 0) class="btn-primary h-11 flex-1 text-base">
-                                {{ __('Complete sale') }} (F10)
+                            <button type="button" wire:click="complete" wire:loading.attr="disabled" @disabled($due > 0 && (! $creditAllowed || ! $customer)) class="btn-primary h-11 flex-1 text-base">
+                                {{ $due > 0 && $creditAllowed && $customer ? __('Complete on due') : __('Complete sale') }} (F10)
                             </button>
                         </div>
                     </div>
@@ -267,10 +301,18 @@
                 <x-icon name="check" class="mx-auto size-12 text-emerald-600" />
                 <h2 class="mt-2 text-lg font-semibold">{{ __('Sale completed') }}</h2>
                 <p class="font-mono text-sm text-muted-foreground-1">{{ $completedSale->invoice_no }}</p>
-                <div class="mt-4 rounded-lg bg-muted p-3">
-                    <div class="text-sm text-muted-foreground-1">{{ __('Change to return') }}</div>
-                    <div class="text-3xl font-bold text-emerald-700">{{ money($completedSale->change_amount) }}</div>
-                </div>
+                @if ($completedSale->due_amount > 0)
+                    <div class="mt-4 rounded-lg bg-red-50 p-3">
+                        <div class="text-sm text-red-700">{{ __('Added to due') }}</div>
+                        <div class="text-3xl font-bold text-red-700">{{ money($completedSale->due_amount) }}</div>
+                        <div class="mt-1 text-xs text-red-700/80">{{ __('Pay by') }} {{ shop_digits($completedSale->due_date?->format('d M Y')) }}</div>
+                    </div>
+                @else
+                    <div class="mt-4 rounded-lg bg-muted p-3">
+                        <div class="text-sm text-muted-foreground-1">{{ __('Change to return') }}</div>
+                        <div class="text-3xl font-bold text-emerald-700">{{ money($completedSale->change_amount) }}</div>
+                    </div>
+                @endif
                 <div class="mt-5 flex flex-col gap-2">
                     @if ($printMode !== 'off')
                         <button type="button" x-on:click="printUrl('{{ route('sales.receipt', $completedSale) }}')" class="btn-secondary h-10">
