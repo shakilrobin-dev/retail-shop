@@ -9,6 +9,7 @@
     }"
     x-on:keydown.window.f2.prevent="focusScan()"
     x-on:keydown.window.f8.prevent="$wire.hold()"
+    x-on:keydown.window.f9.prevent="togglePosFull()"
     x-on:keydown.window.f10.prevent="$wire.showPayment ? $wire.complete() : $wire.openPayment()"
     x-on:keydown.window.escape="$wire.set('showPayment', false); focusScan()"
     x-on:print-receipt.window="printUrl($event.detail.url)"
@@ -18,6 +19,9 @@
 
     @if (! $shift)
         {{-- Register closed: ask for opening cash --}}
+        <div x-show="full" x-cloak class="mb-2 flex justify-end">
+            <button type="button" x-on:click="togglePosFull()" class="btn-secondary btn-sm"><x-icon name="minimize" class="size-3.5" /> {{ __('Exit full screen') }}</button>
+        </div>
         <div class="mx-auto mt-10 max-w-md card p-6 text-center">
             <h2 class="text-lg font-semibold">{{ __('Cash register is closed') }}</h2>
             <p class="mt-1 text-sm text-muted-foreground-1">{{ __('Count the cash in the drawer and open the register to start selling.') }}</p>
@@ -37,10 +41,15 @@
     @else
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
             <span class="flex items-center gap-2"><span class="size-2 rounded-full bg-emerald-500"></span> {{ __('Register is open') }} · {{ __('Open since') }} {{ shop_digits($shift->opened_at->format('h:i A')) }} · {{ $shift->user?->name }}</span>
-            @can('cash-shifts.manage')<a href="{{ route('cash-register') }}" wire:navigate class="font-medium hover:underline">{{ __('Cash register') }} →</a>@endcan
+            <span class="flex items-center gap-3">
+                @can('cash-shifts.manage')<a href="{{ route('cash-register') }}" wire:navigate class="font-medium hover:underline">{{ __('Cash register') }} →</a>@endcan
+                <button type="button" x-show="full" x-cloak x-on:click="togglePosFull()" class="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-white/60 px-2 py-0.5 text-xs font-medium hover:bg-white dark:bg-transparent">
+                    <x-icon name="minimize" class="size-3.5" /> {{ __('Exit full screen') }} (F9)
+                </button>
+            </span>
         </div>
 
-        <div class="grid gap-4 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {{-- Left: scan + cart --}}
             <div class="space-y-3 xl:col-span-2">
                 <x-product-search :results="$results" :message="$scanMessage" />
@@ -112,7 +121,7 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2 text-xs text-muted-foreground-1">
-                    @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
+                    @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F9' => __('Full screen'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
                         <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-card-line bg-layer px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground-2">{{ $key }}</kbd> {{ $label }}</span>
                     @endforeach
                 </div>
@@ -158,6 +167,11 @@
                         @if ($customerDue > 0 || $customer->credit_limit !== null)
                             <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-card-line pt-2 text-xs">
                                 <span @class(['font-medium', 'text-red-600' => $customerDue > 0, 'text-muted-foreground-1' => $customerDue <= 0])>{{ __('Previous due') }}: {{ money($customerDue) }}</span>
+                                @if ($customerDue > 0)
+                                    @can('customers.collect-due')
+                                        <a href="{{ route('customers.show', ['customer' => $customer, 'collect' => 1]) }}" target="_blank" class="font-medium text-primary hover:underline">{{ __('Collect due') }} ↗</a>
+                                    @endcan
+                                @endif
                                 @if ($customer->credit_limit !== null)
                                     <span class="text-muted-foreground-1">{{ __('Credit limit') }}: {{ money($customer->credit_limit) }}</span>
                                 @endif

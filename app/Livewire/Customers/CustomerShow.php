@@ -30,6 +30,11 @@ class CustomerShow extends Component
     public function mount(): void
     {
         $this->collectMethodId = PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->value('id');
+
+        /* Links such as "Collect" in the customer list open the form straight away. */
+        if (request()->boolean('collect') && auth()->user()->can('customers.collect-due') && $this->customer->totalDue() > 0) {
+            $this->openCollect();
+        }
     }
 
     public function openCollect(?int $saleId = null): void

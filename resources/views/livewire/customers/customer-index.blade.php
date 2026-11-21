@@ -31,7 +31,7 @@
                         <x-table.sort field="due" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Due') }}</x-table.sort>
                         <x-table.sort field="repairs" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Repairs') }}</x-table.sort>
                         <x-table.sort field="created" :sort="$sortField" :dir="$sortDirection">{{ __('Since') }}</x-table.sort>
-                        <th class="w-12"></th>
+                        <th class="w-12"><span class="sr-only">{{ __('Actions') }}</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,7 +53,12 @@
                             <td class="text-right tabular-nums">@if ($customer->due_sum > 0)<span class="font-semibold text-red-600">{{ money($customer->due_sum) }}</span>@else<span class="text-muted-foreground">—</span>@endif</td>
                             <td class="text-right tabular-nums">{{ shop_digits($customer->repair_jobs_count) }}</td>
                             <td class="whitespace-nowrap text-xs text-muted-foreground-1">{{ shop_digits($customer->created_at->format('d M Y')) }}</td>
-                            <td class="text-right" x-on:click.stop>
+                            <td class="whitespace-nowrap text-right" x-on:click.stop>
+                                @if ($customer->due_sum > 0)
+                                    @can('customers.collect-due')
+                                        <a href="{{ route('customers.show', ['customer' => $customer, 'collect' => 1]) }}" wire:navigate class="btn-secondary btn-sm">{{ __('Collect') }}</a>
+                                    @endcan
+                                @endif
                                 <button type="button" wire:click="edit({{ $customer->id }})" class="btn-ghost btn-sm" title="{{ __('Edit') }}"><x-icon name="pencil" class="size-4" /></button>
                             </td>
                         </tr>

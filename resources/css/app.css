@@ -27,6 +27,11 @@ html:lang(bn) body {
     display: none !important;
 }
 
+/* Grid cells may shrink below their content, so wide tables scroll inside their card instead of stretching the page on phones. */
+main .grid > * {
+    min-width: 0;
+}
+
 .scroll-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
@@ -187,7 +192,7 @@ body {
         padding: 0 !important;
     }
 
-    .lg\:ps-65, .lg\:ps-\[72px\] {
+    .md\:ps-\[60px\], .lg\:ps-60, .lg\:ps-\[60px\] {
         padding-left: 0 !important;
     }
 }

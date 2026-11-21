@@ -16,7 +16,7 @@
     $incomingTransfers = $user->can('stock.transfer') ? StockTransfer::query()->where('to_branch_id', $branch?->id)->where('status', TransferStatus::InTransit)->count() : 0;
 
     /**
-     * Sidebar: groups of [label, icon, route, permission, active patterns, badge].
+     * Sidebar: groups of [label, icon, route, permission, active patterns, badge, route params].
      */
     $menu = [
         [null, [
@@ -26,6 +26,7 @@
             [__('POS / Sale'), 'cart', 'pos', 'pos.sell', 'pos', 0],
             [__('Sales'), 'receipt', 'sales.index', 'pos.sell', 'sales.*', 0],
             [__('Customers'), 'users', 'customers.index', 'pos.sell', 'customers.*', 0],
+            [__('Due collection'), 'banknotes', 'customers.index', 'customers.collect-due', 'customers.index', 0, ['dueFilter' => 'due']],
             [__('Cash register'), 'banknotes', 'cash-register', 'cash-shifts.manage', 'cash-register', 0],
         ]],
         [__('Service'), [
@@ -53,12 +54,18 @@
 
     $crumbGroup = null;
     $crumbPage = null;
+    $activeKey = null;
+    $activeScore = -1;
 
-    foreach ($menu as [$groupLabel, $items]) {
-        foreach ($items as [$label, , $routeName, , $patterns]) {
-            if (request()->routeIs(...explode('|', $patterns))) {
-                $crumbGroup = $groupLabel;
-                $crumbPage = $label;
+    /* The item with the most matching query values wins, so "Due collection" beats "Customers". */
+    foreach ($menu as $groupIndex => [$groupLabel, $items]) {
+        foreach ($items as $itemIndex => $item) {
+            $params = $item[6] ?? [];
+            $matches = request()->routeIs(...explode('|', $item[4]))
+                && collect($params)->every(fn ($value, $key) => request()->query($key) === $value);
+
+            if ($matches && count($params) > $activeScore) {
+                [$activeKey, $activeScore, $crumbGroup, $crumbPage] = ["$groupIndex.$itemIndex", count($params), $groupLabel, $item[0]];
             }
         }
     }
@@ -74,7 +81,30 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-background-1 text-foreground"
-    x-data="{ mobileMenu: false, collapsed: $persist(false).as('sidebar-collapsed') }">
+    x-data="{
+        mobileMenu: false,
+        collapsed: $persist(false).as('sidebar-collapsed'),
+        screen: 'lg',
+        isPos: @js(request()->routeIs('pos')),
+        posFull: $persist(false).as('pos-fullscreen'),
+        {{-- Icon-only rail: always on tablets, on desktop when the user collapses it. --}}
+        get mini() { return ! this.mobileMenu && (this.screen === 'md' || (this.screen === 'lg' && this.collapsed)) },
+        get full() { return this.isPos && this.posFull },
+        init() {
+            const md = window.matchMedia('(min-width: 768px)'), lg = window.matchMedia('(min-width: 1024px)');
+            const update = () => { this.screen = lg.matches ? 'lg' : (md.matches ? 'md' : 'sm'); if (lg.matches) this.mobileMenu = false };
+            update(); md.addEventListener('change', update); lg.addEventListener('change', update);
+            document.addEventListener('fullscreenchange', () => { if (! document.fullscreenElement && this.isPos) this.posFull = false });
+            if (! this.isPos && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        },
+        togglePosFull() {
+            this.posFull = ! this.posFull;
+            if (this.posFull && ! document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+            if (! this.posFull && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        },
+    }"
+    x-bind:class="mobileMenu && 'overflow-hidden lg:overflow-auto'"
+    x-on:keydown.escape.window="mobileMenu = false">
 
     <x-flash global />
     <x-confirm-dialog />
@@ -82,25 +112,25 @@
     <div x-cloak x-show="mobileMenu" x-transition.opacity x-on:click="mobileMenu = false" class="fixed inset-0 z-50 bg-gray-900/40 lg:hidden"></div>
 
     {{-- Sidebar --}}
-    <aside
-        x-bind:class="[mobileMenu ? 'translate-x-0 bg-background shadow-xl' : '-translate-x-full lg:translate-x-0', collapsed ? 'lg:w-[60px]' : 'lg:w-60']"
-        class="fixed inset-y-0 start-0 z-60 flex w-60 -translate-x-full flex-col bg-background-1 transition-[width,transform] duration-200 lg:translate-x-0"
+    <aside x-show="! full"
+        x-bind:class="mobileMenu ? 'translate-x-0! w-60! bg-background shadow-xl' : (collapsed ? 'lg:w-[60px]!' : '')"
+        class="no-print fixed inset-y-0 start-0 z-60 flex w-60 -translate-x-full flex-col bg-background-1 transition-[width,transform] duration-200 md:w-[60px] md:translate-x-0 lg:w-60"
         aria-label="{{ __('Sidebar') }}">
 
         {{-- Workspace switcher --}}
-        <div class="px-2.5 pt-3">
-            <div class="hs-dropdown relative [--placement:bottom-left] [--offset:4]">
+        <div class="flex items-center gap-1 px-2.5 pt-3">
+            <div class="hs-dropdown relative min-w-0 flex-1 [--placement:bottom-left] [--offset:4]">
                 <button id="workspace-menu" type="button" class="hs-dropdown-toggle flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-muted-hover focus:outline-hidden" aria-haspopup="menu" aria-expanded="false">
                     @if ($logo)
                         <img src="{{ asset('storage/'.$logo) }}" alt="" class="size-6 shrink-0 rounded-md bg-layer object-contain ring-1 ring-layer-line">
                     @else
                         <span class="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">{{ mb_strtoupper(mb_substr($shopName, 0, 1)) }}</span>
                     @endif
-                    <span x-show="!collapsed" class="min-w-0 flex-1">
+                    <span x-show="! mini" class="min-w-0 flex-1">
                         <span class="block truncate text-[13px] font-semibold leading-tight text-foreground">{{ $shopName }}</span>
                         <span class="block truncate text-[11px] leading-tight text-muted-foreground-1">{{ $branch?->localName() }}</span>
                     </span>
-                    <svg x-show="!collapsed" class="size-3.5 shrink-0 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5 11 7H5l3-3.5Zm0 9L5 9h6l-3 3.5Z"/></svg>
+                    <svg x-show="! mini" class="size-3.5 shrink-0 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5 11 7H5l3-3.5Zm0 9L5 9h6l-3 3.5Z"/></svg>
                 </button>
                 <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 z-70 hidden w-56 rounded-lg border border-dropdown-line bg-dropdown p-1 opacity-0 shadow-lg transition-[opacity,margin] duration" role="menu" aria-labelledby="workspace-menu">
                     <p class="px-2 py-1.5 text-[11px] font-medium text-muted-foreground-1">{{ __('Branches') }}</p>
@@ -120,10 +150,13 @@
                     @endcan
                 </div>
             </div>
+            <button type="button" x-show="mobileMenu" x-cloak x-on:click="mobileMenu = false" class="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover" aria-label="{{ __('Close menu') }}">
+                <x-icon name="close" class="size-4" />
+            </button>
         </div>
 
         {{-- Search --}}
-        <div class="px-2.5 pb-1 pt-2" x-show="!collapsed">
+        <div class="px-2.5 pb-1 pt-2" x-show="! mini">
             <livewire:global-search />
         </div>
 
@@ -134,25 +167,25 @@
                 @continue($visible->isEmpty())
                 <div class="mt-3 first:mt-1">
                     @if ($groupLabel)
-                        <p x-show="!collapsed" class="mb-0.5 px-2 text-[11px] font-medium text-muted-foreground-1">{{ $groupLabel }}</p>
+                        <p x-show="! mini" class="mb-0.5 px-2 text-[11px] font-medium text-muted-foreground-1">{{ $groupLabel }}</p>
                     @endif
                     <ul class="space-y-px">
-                        @foreach ($visible as [$label, $icon, $routeName, $permission, $patterns, $badge])
-                            @php $active = request()->routeIs(...explode('|', $patterns)); @endphp
+                        @foreach ($visible as $itemIndex => [$label, $icon, $routeName, $permission, $patterns, $badge])
+                            @php $active = $activeKey === "$groupIndex.$itemIndex"; @endphp
                             <li>
-                                <a href="{{ route($routeName) }}" wire:navigate @if ($active) aria-current="page" @endif
-                                    x-bind:title="collapsed ? @js($label) : null"
-                                    :class="collapsed ? 'lg:justify-center' : ''"
+                                <a href="{{ route($routeName, $items[$itemIndex][6] ?? []) }}" wire:navigate @if ($active) aria-current="page" @endif
+                                    x-bind:title="mini ? @js($label) : null"
+                                    :class="mini ? 'justify-center' : ''"
                                     @class([
                                         'relative flex h-7 items-center gap-x-2 rounded-md px-2 text-[13px] transition-colors focus:outline-hidden',
                                         'bg-layer font-medium text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-layer-line' => $active,
                                         'text-muted-foreground-2 hover:bg-muted-hover hover:text-foreground' => ! $active,
                                     ])>
                                     <x-icon :name="$icon" @class(['size-4 shrink-0', $iconColor, 'opacity-80' => ! $active]) />
-                                    <span x-show="!collapsed" class="flex-1 truncate">{{ $label }}</span>
+                                    <span x-show="! mini" class="flex-1 truncate">{{ $label }}</span>
                                     @if ($badge > 0)
-                                        <span x-show="!collapsed" class="rounded bg-primary/10 px-1.5 text-[11px] font-semibold text-primary">{{ shop_digits($badge) }}</span>
-                                        <span x-show="collapsed" x-cloak class="absolute end-1 top-1 size-1.5 rounded-full bg-primary"></span>
+                                        <span x-show="! mini" class="rounded bg-primary/10 px-1.5 text-[11px] font-semibold text-primary">{{ shop_digits($badge) }}</span>
+                                        <span x-show="mini" x-cloak class="absolute end-1 top-1 size-1.5 rounded-full bg-primary"></span>
                                     @endif
                                 </a>
                             </li>
@@ -167,7 +200,7 @@
             <div class="hs-dropdown relative [--placement:top-left] [--offset:6]">
                 <button id="user-menu" type="button" class="hs-dropdown-toggle flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-muted-hover focus:outline-hidden" aria-haspopup="menu" aria-expanded="false" aria-label="{{ __('User menu') }}">
                     <x-avatar :name="$user->name" size="size-6" class="text-[10px]" />
-                    <span x-show="!collapsed" class="min-w-0 flex-1">
+                    <span x-show="! mini" class="min-w-0 flex-1">
                         <span class="block truncate text-[13px] font-medium leading-tight text-foreground">{{ $user->name }}</span>
                         <span class="block truncate text-[11px] leading-tight text-muted-foreground-1">{{ __(ucfirst($user->getRoleNames()->first() ?? '')) }}</span>
                     </span>
@@ -192,10 +225,13 @@
     </aside>
 
     {{-- Content panel --}}
-    <div x-bind:class="collapsed ? 'lg:ps-[60px]' : 'lg:ps-60'" class="transition-[padding] duration-200 lg:ps-60">
-        <div class="min-h-screen bg-background lg:my-2 lg:me-2 lg:min-h-[calc(100vh-1rem)] lg:rounded-xl lg:border lg:border-card-line lg:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
-            <header class="no-print sticky top-0 z-40 flex h-12 items-center gap-x-3 border-b border-card-line bg-background/90 px-4 backdrop-blur lg:rounded-t-xl sm:px-6">
-                <button type="button" class="flex size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover lg:hidden" x-on:click="mobileMenu = true" aria-label="{{ __('Open menu') }}">
+    <div x-bind:class="full ? 'ps-0! md:ps-0! lg:ps-0!' : (collapsed ? 'lg:ps-[60px]!' : '')" class="transition-[padding] duration-200 md:ps-[60px] lg:ps-60">
+        <div x-bind:class="full && 'md:m-0! md:min-h-screen! md:rounded-none! md:border-0! md:shadow-none!'" class="min-h-screen bg-background md:my-2 md:me-2 md:min-h-[calc(100vh-1rem)] md:rounded-xl md:border md:border-card-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+            <header x-show="! full" class="no-print sticky top-0 z-40 flex h-12 items-center gap-x-3 border-b border-card-line bg-background/90 px-4 backdrop-blur md:rounded-t-xl sm:px-6">
+                <button type="button" class="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover lg:hidden" x-on:click="mobileMenu = true" aria-label="{{ __('Open menu') }}">
+                    <x-icon name="menu" class="size-4" />
+                </button>
+                <button type="button" class="hidden size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover lg:flex" x-on:click="collapsed = ! collapsed" x-bind:title="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))" aria-label="{{ __('Collapse menu') }}">
                     <x-icon name="menu" class="size-4" />
                 </button>
 
@@ -209,6 +245,12 @@
 
                 <div class="flex-1"></div>
 
+                @if (request()->routeIs('pos'))
+                    <button type="button" x-on:click="togglePosFull()" class="btn-secondary btn-sm" title="{{ __('Full screen') }} (F9)">
+                        <x-icon name="maximize" class="size-3.5" /> <span class="hidden sm:inline">{{ __('Full screen') }}</span>
+                    </button>
+                @endif
+
                 <button type="button" class="hs-dark-mode hs-dark-mode-active:hidden flex size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover" data-hs-theme-click-value="dark" aria-label="{{ __('Dark mode') }}">
                     <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                 </button>
@@ -217,7 +259,7 @@
                 </button>
             </header>
 
-            <main class="w-full px-4 py-5 sm:px-6">
+            <main x-bind:class="full && 'py-3! sm:px-4!'" class="w-full px-4 py-5 sm:px-6">
                 {{ $slot }}
             </main>
         </div>

@@ -201,6 +201,21 @@ class CreditSalesTest extends TestCase
         $this->get(route('sales.receipt', $sale))->assertOk();
     }
 
+    public function test_collect_link_opens_the_form_and_menu_shows_due_collection(): void
+    {
+        $customer = Customer::factory()->create(['name' => 'Karim Electronics']);
+        $this->sell(1, '0', $customer);
+
+        Livewire::withQueryParams(['collect' => 1])->test(CustomerShow::class, ['customer' => $customer])
+            ->assertSet('showCollect', true)
+            ->assertSet('collectAmount', '500');
+
+        $this->get(route('customers.index', ['dueFilter' => 'due']))->assertOk()
+            ->assertSee('Due collection')
+            ->assertSee(route('customers.show', ['customer' => $customer, 'collect' => 1]), false);
+        $this->get(route('pos'))->assertOk()->assertSee('Full screen');
+    }
+
     public function test_return_on_due_sale_reduces_due_before_refunding(): void
     {
         $customer = Customer::factory()->create();
