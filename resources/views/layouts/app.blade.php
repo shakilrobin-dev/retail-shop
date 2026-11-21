@@ -251,6 +251,8 @@
                     </button>
                 @endif
 
+                <x-language-switch class="shrink-0" />
+
                 <button type="button" class="hs-dark-mode hs-dark-mode-active:hidden flex size-8 items-center justify-center rounded-md text-muted-foreground-2 hover:bg-muted-hover" data-hs-theme-click-value="dark" aria-label="{{ __('Dark mode') }}">
                     <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                 </button>

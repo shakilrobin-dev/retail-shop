@@ -213,7 +213,7 @@ class CreditSalesTest extends TestCase
         $this->get(route('customers.index', ['dueFilter' => 'due']))->assertOk()
             ->assertSee('Due collection')
             ->assertSee(route('customers.show', ['customer' => $customer, 'collect' => 1]), false);
-        $this->get(route('pos'))->assertOk()->assertSee('Full screen');
+        $this->get(route('pos'))->assertOk()->assertSee('Full screen')->assertSee(route('locale.switch'));
     }
 
     public function test_return_on_due_sale_reduces_due_before_refunding(): void
