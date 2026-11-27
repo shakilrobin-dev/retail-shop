@@ -50,6 +50,10 @@ return [
         'amount' => 'টাকা',
         'percent' => 'শতাংশ',
     ],
+    'commission_type' => [
+        'profit_percent' => 'লাভের %',
+        'amount' => 'নির্দিষ্ট টাকা',
+    ],
     'stock_movement_type' => [
         'opening' => 'প্রারম্ভিক স্টক',
         'purchase' => 'ক্রয়',

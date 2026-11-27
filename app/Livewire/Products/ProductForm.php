@@ -55,6 +55,17 @@ class ProductForm extends Component
 
     public string $opening_stock = '0';
 
+    /** Sold by a measurement such as sqft (tiles). Stock stays in pieces. */
+    public bool $is_measured = false;
+
+    public string $measure_unit = 'sqft';
+
+    /** How much measurement one base unit (piece) has, e.g. 1.77 sqft. */
+    public string $measure_per_unit = '';
+
+    /** Selling rate per measurement, e.g. 120 per sqft. */
+    public string $measure_price = '';
+
     /**
      * @var list<array{id: int|null, name: string, name_bn: string, quantity: string, selling_price: string, wholesale_price: string, is_base: bool, barcodes: list<array{id: int|null, code: string, is_generated: bool}>}>
      */
@@ -73,6 +84,7 @@ class ProductForm extends Component
             $this->vat_rate = (string) ($product->vat_rate + 0);
             $this->reorder_level = (string) ($product->reorder_level + 0);
             $this->warranty_days = (string) $product->warranty_days;
+            $this->fillMeasurement($product);
 
             $this->units = $product->units->sortByDesc('is_base')->values()->map(fn ($unit): array => [
                 'id' => $unit->id,
@@ -105,6 +117,7 @@ class ProductForm extends Component
             $this->vat_rate = (string) ($copyFrom->vat_rate + 0);
             $this->reorder_level = (string) ($copyFrom->reorder_level + 0);
             $this->warranty_days = (string) $copyFrom->warranty_days;
+            $this->fillMeasurement($copyFrom);
             $this->units = $copyFrom->units->sortByDesc('is_base')->values()->map(fn ($unit): array => [
                 'id' => null,
                 'name' => $unit->name,
@@ -134,6 +147,74 @@ class ProductForm extends Component
         ]];
     }
 
+    private function fillMeasurement(Product $product): void
+    {
+        $this->is_measured = $product->isMeasured();
+
+        if ($this->is_measured) {
+            $this->measure_unit = (string) $product->measure_unit;
+            $this->measure_per_unit = (string) ($product->measure_per_unit + 0);
+            $this->measure_price = $product->measure_price !== null ? (string) $product->measure_price : '';
+        }
+    }
+
+    /**
+     * Rate per sqft or sqft per piece changed: work out the piece and carton prices.
+     */
+    public function updatedMeasurePrice(): void
+    {
+        $this->applyMeasurePrices();
+    }
+
+    public function updatedMeasurePerUnit(): void
+    {
+        $this->applyMeasurePrices();
+    }
+
+    /**
+     * Pieces in a pack changed: update its price when selling by measurement.
+     */
+    public function updatedUnits(mixed $value, string $key): void
+    {
+        if (str_ends_with($key, '.quantity')) {
+            $this->applyMeasurePrices();
+        }
+    }
+
+    public function updatedIsMeasured(): void
+    {
+        $this->applyMeasurePrices();
+    }
+
+    /**
+     * Selling price of each unit = rate × measurement per piece × pieces in the unit.
+     */
+    private function applyMeasurePrices(): void
+    {
+        if (! $this->is_measured || ! is_numeric($this->measure_price) || ! is_numeric($this->measure_per_unit) || (float) $this->measure_per_unit <= 0) {
+            return;
+        }
+
+        foreach ($this->units as $index => $unit) {
+            $pieces = $unit['is_base'] ? 1 : (float) $unit['quantity'];
+            $this->units[$index]['selling_price'] = (string) round((float) $this->measure_price * (float) $this->measure_per_unit * $pieces, 2);
+        }
+    }
+
+    /**
+     * Measurement of each unit, e.g. Carton = 17.7 sqft (shown in the units table).
+     */
+    public function measureOfUnit(int $index): ?float
+    {
+        if (! $this->is_measured || ! is_numeric($this->measure_per_unit) || ! isset($this->units[$index])) {
+            return null;
+        }
+
+        $pieces = $this->units[$index]['is_base'] ? 1 : (float) $this->units[$index]['quantity'];
+
+        return round($pieces * (float) $this->measure_per_unit, 3);
+    }
+
     public function updatedUnitId(): void
     {
         $unit = Unit::query()->find($this->unit_id);
@@ -156,6 +237,8 @@ class ProductForm extends Component
             'is_base' => false,
             'barcodes' => [$this->emptyBarcode()],
         ];
+
+        $this->applyMeasurePrices();
     }
 
     public function removeUnit(int $index): void
@@ -204,6 +287,10 @@ class ProductForm extends Component
             'reorder_level' => ['required', 'numeric', 'min:0'],
             'warranty_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
             'opening_stock' => ['nullable', 'numeric', 'min:0'],
+            'is_measured' => ['boolean'],
+            'measure_unit' => ['exclude_unless:is_measured,true', 'required', 'string', 'max:20'],
+            'measure_per_unit' => ['exclude_unless:is_measured,true', 'required', 'numeric', 'gt:0'],
+            'measure_price' => ['exclude_unless:is_measured,true', 'nullable', 'numeric', 'min:0'],
             'units' => ['required', 'array', 'min:1'],
             'units.*.name' => ['required', 'string', 'max:50'],
             'units.*.name_bn' => ['nullable', 'string', 'max:50'],
@@ -224,6 +311,9 @@ class ProductForm extends Component
             'units.*.quantity' => __('pieces in pack'),
             'units.*.selling_price' => __('selling price'),
             'units.*.wholesale_price' => __('wholesale price'),
+            'measure_unit' => __('measurement'),
+            'measure_per_unit' => __('measurement per piece'),
+            'measure_price' => __('rate per measurement'),
             'units.*.barcodes.*.code' => __('barcode'),
         ];
     }
@@ -240,6 +330,8 @@ class ProductForm extends Component
             }
         }
 
+        $this->applyMeasurePrices();
+
         if (trim($this->newBrand) !== '') {
             $this->brand_id = Brand::query()->firstOrCreate(['name' => trim($this->newBrand)])->id;
             $this->newBrand = '';
@@ -254,6 +346,9 @@ class ProductForm extends Component
             'category_id' => $this->category_id,
             'brand_id' => $this->brand_id,
             'unit_id' => $this->unit_id,
+            'measure_unit' => $this->is_measured ? trim($this->measure_unit) : null,
+            'measure_per_unit' => $this->is_measured ? $this->measure_per_unit : null,
+            'measure_price' => $this->is_measured && $this->measure_price !== '' ? $this->measure_price : null,
             'compatible_models' => $this->compatible_models ?: null,
             'description' => $this->description ?: null,
             'cost_price' => $this->cost_price,

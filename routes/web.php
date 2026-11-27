@@ -21,6 +21,7 @@ use App\Livewire\Products\ProductIndex;
 use App\Livewire\Purchases\PurchaseForm;
 use App\Livewire\Purchases\PurchaseIndex;
 use App\Livewire\Purchases\PurchaseShow;
+use App\Livewire\Referrers\ReferrerIndex;
 use App\Livewire\Repairs\RepairForm;
 use App\Livewire\Repairs\RepairIndex;
 use App\Livewire\Repairs\RepairShow;
@@ -74,6 +75,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::livewire('/expenses', ExpenseIndex::class)->middleware('can:expenses.manage')->name('expenses.index');
+    Route::livewire('/references', ReferrerIndex::class)->middleware('can:commissions.manage')->name('referrers.index');
 
     Route::middleware('can:reports.view')->group(function () {
         Route::livewire('/reports', ReportIndex::class)->name('reports.index');

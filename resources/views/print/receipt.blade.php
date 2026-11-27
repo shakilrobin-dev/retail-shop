@@ -53,11 +53,20 @@
                     <tr>
                         <td colspan="3">{{ $item->product_name }}@if ($item->unit_quantity > 1) ({{ $item->unit_name }})@endif</td>
                     </tr>
-                    <tr>
-                        <td class="muted">{{ shop_digits(number_format((float) $item->unit_price, 2)) }} × </td>
-                        <td class="right">{{ shop_digits($item->quantity + 0) }}</td>
-                        <td class="right">{{ shop_digits(number_format((float) $item->line_total, 2)) }}</td>
-                    </tr>
+                    @if ($item->measure_quantity !== null)
+                        <tr>
+                            <td class="muted">{{ shop_digits($item->measure_quantity + 0) }} {{ $item->measure_unit }} × {{ shop_digits(number_format((float) $item->measure_rate, 2)) }}</td>
+                            <td class="right">{{ shop_digits($item->quantity + 0) }}</td>
+                            <td class="right">{{ shop_digits(number_format((float) $item->line_total, 2)) }}</td>
+                        </tr>
+                        <tr><td colspan="3" class="muted">= {{ $item->product?->stockBreakdown((float) $item->base_quantity) }}</td></tr>
+                    @else
+                        <tr>
+                            <td class="muted">{{ shop_digits(number_format((float) $item->unit_price, 2)) }} × </td>
+                            <td class="right">{{ shop_digits($item->quantity + 0) }}</td>
+                            <td class="right">{{ shop_digits(number_format((float) $item->line_total, 2)) }}</td>
+                        </tr>
+                    @endif
                     @if ($item->discount_amount > 0)
                         <tr><td colspan="3" class="muted">{{ __('Discount') }}: −{{ shop_digits(number_format((float) $item->discount_amount, 2)) }}</td></tr>
                     @endif

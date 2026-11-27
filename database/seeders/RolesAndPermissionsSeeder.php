@@ -32,6 +32,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'sales.return',
         'sales.void',
         'customers.collect-due',
+        'commissions.manage',
         'repairs.manage',
         'expenses.manage',
         'cash-shifts.manage',
@@ -89,12 +90,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'manager' => [
                 'products.manage', 'products.view-cost', 'purchases.manage', 'stock.adjust', 'stock.transfer',
                 'pos.sell', 'pos.credit-sale', 'pos.discount', 'pos.open-drawer', 'sales.return', 'customers.collect-due', 'repairs.manage',
-                'expenses.manage', 'cash-shifts.manage', 'reports.view',
+                'expenses.manage', 'cash-shifts.manage', 'reports.view', 'commissions.manage',
             ],
             'cashier' => ['pos.sell', 'pos.credit-sale', 'pos.discount', 'customers.collect-due', 'repairs.manage', 'cash-shifts.manage'],
             'technician' => ['repairs.manage'],
             'storekeeper' => ['products.manage', 'products.view-cost', 'purchases.manage', 'stock.adjust', 'stock.transfer'],
-            'accountant' => ['reports.view', 'expenses.manage', 'products.view-cost', 'cash-shifts.manage', 'purchases.manage'],
+            'accountant' => ['reports.view', 'expenses.manage', 'products.view-cost', 'cash-shifts.manage', 'purchases.manage', 'commissions.manage'],
         ];
     }
 

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['branch_id', 'expense_category_id', 'expense_date', 'amount', 'note', 'user_id'])]
+#[Fillable(['branch_id', 'expense_category_id', 'referrer_id', 'expense_date', 'amount', 'note', 'user_id'])]
 class Expense extends Model
 {
     /** @use HasFactory<ExpenseFactory> */
@@ -44,6 +44,16 @@ class Expense extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    /**
+     * Set when this expense is a commission paid to a reference person.
+     *
+     * @return BelongsTo<Referrer, $this>
+     */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Referrer::class);
     }
 
     /**

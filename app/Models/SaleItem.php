@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['sale_id', 'product_id', 'product_unit_id', 'product_name', 'unit_name', 'quantity', 'unit_quantity', 'base_quantity', 'unit_price', 'unit_cost', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'warranty_days', 'returned_quantity'])]
+#[Fillable(['sale_id', 'product_id', 'product_unit_id', 'product_name', 'unit_name', 'quantity', 'unit_quantity', 'base_quantity', 'unit_price', 'measure_unit', 'measure_quantity', 'measure_rate', 'unit_cost', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'warranty_days', 'returned_quantity'])]
 class SaleItem extends Model
 {
     /**
@@ -21,6 +21,8 @@ class SaleItem extends Model
             'unit_quantity' => 'decimal:3',
             'base_quantity' => 'decimal:3',
             'unit_price' => 'decimal:2',
+            'measure_quantity' => 'decimal:3',
+            'measure_rate' => 'decimal:2',
             'unit_cost' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'vat_rate' => 'decimal:2',

@@ -59,7 +59,7 @@
                 @php
                     $costTotal = 0;
                     foreach ($cart as $costLine) {
-                        $costTotal += (float) $costLine['quantity'] * ($unitCosts[$costLine['product_unit_id']] ?? 0);
+                        $costTotal += (float) (empty($costLine['measure']) ? $costLine['quantity'] : $costLine['pieces']) * ($unitCosts[$costLine['product_unit_id']] ?? 0);
                     }
                     $profitTotal = round($totals['subtotal'] - $totals['discount_amount'] + $totals['rounding_amount'] - $costTotal, 2);
                 @endphp
@@ -83,23 +83,37 @@
                         <tbody>
                             @forelse ($cart as $index => $line)
                                 @php
+                                    $measure = $line['measure'] ?? null;
                                     $unitQty = $line['units'][$line['product_unit_id']]['quantity'] ?? 1;
-                                    $needed = (float) $line['quantity'] * $unitQty;
-                                    $lineTotal = max(0, (float) $line['quantity'] * (float) $line['unit_price'] - (float) $line['discount_amount']);
+                                    $soldQty = $measure ? (float) $line['pieces'] : (float) $line['quantity'];
+                                    $needed = $soldQty * $unitQty;
+                                    $billedMeasure = $measure ? round($soldQty * $measure['per'], 3) : 0;
+                                    $gross = $measure ? round($billedMeasure * (float) $line['unit_price'], 2) : (float) $line['quantity'] * (float) $line['unit_price'];
+                                    $lineTotal = max(0, $gross - (float) $line['discount_amount']);
                                     $unitCost = $unitCosts[$line['product_unit_id']] ?? 0;
-                                    $lineCost = (float) $line['quantity'] * $unitCost;
+                                    $lineCost = $soldQty * $unitCost;
                                     $lineProfit = $lineTotal - $lineCost;
                                 @endphp
                                 <tr wire:key="cart-{{ $line['product_unit_id'] }}-{{ $index }}">
                                     <td>
                                         <div class="flex items-center gap-1.5 font-medium">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></div>
                                         <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-muted-foreground' => $needed <= $line['stock']])>
-                                            {{ __('In stock') }}: {{ shop_digits($line['stock'] + 0) }}
+                                            {{ __('In stock') }}: {{ $measure ? $this->packBreakdown($line, (float) $line['stock']) : shop_digits($line['stock'] + 0) }}
                                         </div>
+                                        @if ($measure && $soldQty > 0)
+                                            <div class="mt-0.5 text-xs font-medium text-primary-700 dark:text-primary-400">
+                                                {{ __('Give') }}: {{ $this->packBreakdown($line, $soldQty) }} · {{ __('Billed') }} {{ shop_digits($billedMeasure + 0) }} {{ $measure['unit'] }}
+                                            </div>
+                                        @endif
                                         @error("cart.$index") <p class="form-error">{{ $message }}</p> @enderror
                                     </td>
                                     <td>
-                                        @if (count($line['units']) > 1)
+                                        @if ($measure)
+                                            <label class="flex items-center gap-1 text-xs text-muted-foreground-1">
+                                                <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-1 text-center" title="{{ __('Pieces') }}">
+                                                {{ $line['units'][$line['product_unit_id']]['name'] ?? __('pcs') }}
+                                            </label>
+                                        @elseif (count($line['units']) > 1)
                                             <select wire:model.live="cart.{{ $index }}.product_unit_id" class="form-input py-1">
                                                 @foreach ($line['units'] as $unitId => $unit)
                                                     <option value="{{ $unitId }}">{{ $unit['name'] }}@if ($unit['quantity'] > 1) ({{ $unit['quantity'] + 0 }})@endif</option>
@@ -112,9 +126,10 @@
                                     <td>
                                         <div class="flex items-center justify-center gap-1">
                                             <button type="button" wire:click="decrement({{ $index }})" class="btn-secondary btn-sm">−</button>
-                                            <input wire:model.live.debounce.400ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input w-14 px-1 py-1 text-center">
+                                            <input wire:model.live.debounce.600ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" @class(['form-input px-1 py-1 text-center', 'w-14' => ! $measure, 'w-20' => $measure]) @if ($measure) title="{{ $measure['unit'] }}" @endif>
                                             <button type="button" wire:click="increment({{ $index }})" class="btn-secondary btn-sm">+</button>
                                         </div>
+                                        @if ($measure)<div class="mt-0.5 text-center text-[11px] text-muted-foreground">{{ $measure['unit'] }}</div>@endif
                                     </td>
                                     <td>
                                         @if ($canEditPrice)
@@ -122,6 +137,7 @@
                                         @else
                                             <span class="tabular-nums">{{ money($line['unit_price']) }}</span>
                                         @endif
+                                        @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">/ {{ $measure['unit'] }}</div>@endif
                                     </td>
                                     @can('pos.discount')
                                         <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input min-w-14 py-1"></td>
@@ -130,7 +146,7 @@
                                     @if ($canViewCost)
                                         <td x-show="showProfit" x-cloak class="no-print whitespace-nowrap bg-amber-50/60 px-2! text-right tabular-nums dark:bg-amber-950/20">
                                             <div @class(['font-medium', 'text-emerald-700' => $lineProfit >= 0, 'text-red-600' => $lineProfit < 0])>{{ money($lineProfit) }}</div>
-                                            <div class="text-xs text-muted-foreground" title="{{ money($unitCost) }} × {{ shop_digits((float) $line['quantity'] + 0) }}">{{ money($lineCost) }}</div>
+                                            <div class="text-xs text-muted-foreground" title="{{ money($unitCost) }} × {{ shop_digits($soldQty + 0) }}">{{ money($lineCost) }}</div>
                                         </td>
                                     @endif
                                     <td><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this item from the cart?') }}" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
@@ -224,6 +240,59 @@
                             </div>
                             @error('customerSearch') <p class="form-error">{{ $message }}</p> @enderror
                             @error('newCustomerName') <p class="form-error">{{ $message }}</p> @enderror
+                        @endif
+                    @endif
+                </div>
+
+                {{-- Reference person (optional) --}}
+                <div class="card p-4">
+                    @if ($referrer)
+                        <div class="flex items-center justify-between gap-2 text-sm">
+                            <div class="min-w-0">
+                                <div class="text-xs text-muted-foreground-1">{{ __('Reference') }}</div>
+                                <div class="truncate font-medium">{{ $referrer->name }}@if ($referrer->phone) <span class="font-normal text-muted-foreground-1">· {{ $referrer->phone }}</span>@endif</div>
+                            </div>
+                            <button type="button" wire:click="clearReferrer" class="shrink-0 text-xs text-muted-foreground-1 hover:underline">{{ __('Remove') }}</button>
+                        </div>
+                        @if ($canManageCommission)
+                            <div class="no-print mt-2 space-y-1.5 border-t border-card-line pt-2">
+                                <div class="flex items-center justify-between gap-2 text-xs">
+                                    <span class="text-muted-foreground-1">{{ __('Commission') }}</span>
+                                    <div class="flex gap-1">
+                                        <select wire:model.live="commissionType" class="form-input h-8 w-32 py-0 text-xs">
+                                            @foreach (\App\Enums\CommissionType::cases() as $type)
+                                                <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input wire:model.live.debounce.400ms="commissionValue" type="number" step="0.01" min="0" placeholder="0" class="form-input h-8 w-20 py-0 text-right text-xs">
+                                    </div>
+                                </div>
+                                @error('commissionValue') <p class="form-error">{{ $message }}</p> @enderror
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-muted-foreground-1">{{ __('Commission on this invoice') }}</span>
+                                    <span class="font-semibold tabular-nums">{{ money($commissionPreview) }}</span>
+                                </div>
+                            </div>
+                        @endif
+                    @else
+                        <label class="form-label">{{ __('Reference (optional)') }}</label>
+                        <input wire:model.live.debounce.300ms="referrerSearch" type="search" placeholder="{{ __('Name or phone') }}" class="form-input">
+                        @foreach ($referrerResults as $result)
+                            <button type="button" wire:click="selectReferrer({{ $result->id }})" wire:key="ref-{{ $result->id }}" class="mt-1 block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted-hover">
+                                {{ $result->name }}@if ($result->phone) · {{ $result->phone }}@endif
+                            </button>
+                        @endforeach
+                        @if (mb_strlen(trim($referrerSearch)) >= 2 && $referrerResults->isEmpty())
+                            <div class="mt-2 space-y-1.5 rounded-md border border-dashed border-card-line p-2">
+                                <p class="text-xs text-muted-foreground-1">{{ __('Not found. Add a new reference:') }}</p>
+                                <input wire:model="newReferrerName" type="text" placeholder="{{ __('Name') }}" class="form-input py-1 text-sm">
+                                <div class="flex gap-2">
+                                    <input wire:model="newReferrerPhone" type="text" placeholder="{{ __('Phone (optional)') }}" class="form-input py-1 text-sm">
+                                    <button type="button" wire:click="createReferrer" class="btn-secondary btn-sm shrink-0">{{ __('Add') }}</button>
+                                </div>
+                                @error('newReferrerName') <p class="form-error">{{ $message }}</p> @enderror
+                                @error('newReferrerPhone') <p class="form-error">{{ $message }}</p> @enderror
+                            </div>
                         @endif
                     @endif
                 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CommissionType;
 use App\Enums\DiscountType;
 use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethodType;
@@ -38,7 +39,10 @@ class SaleService
     /**
      * Work out all line and bill totals for a cart.
      *
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string}>  $cart
+     * A line with "measure_rate" is a product sold by measurement (e.g. tiles by sqft):
+     * its quantity is whole base units (pieces) and it is billed as pieces × measurement per piece × rate.
+     *
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
      * @return array{lines: list<array<string, mixed>>, subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function calculate(Branch $branch, array $cart, ?DiscountType $discountType = null, float $discountValue = 0): array
@@ -59,8 +63,19 @@ class SaleService
 
             $quantity = round((float) $row['quantity'], 3);
             $unitPrice = round((float) $row['unit_price'], 2);
-            $lineDiscount = min(round((float) ($row['discount_amount'] ?? 0), 2), round($quantity * $unitPrice, 2));
-            $lineTotal = round($quantity * $unitPrice - $lineDiscount, 2);
+            $gross = round($quantity * $unitPrice, 2);
+            $measure = null;
+
+            if (($row['measure_rate'] ?? null) !== null && $row['measure_rate'] !== '' && $unit->product->isMeasured()) {
+                $measureRate = round((float) $row['measure_rate'], 2);
+                $measureQuantity = $unit->product->measureForPieces($quantity * (float) $unit->quantity);
+                $gross = round($measureQuantity * $measureRate, 2);
+                $unitPrice = $quantity > 0 ? round($gross / $quantity, 2) : 0.0;
+                $measure = ['unit' => $unit->product->measure_unit, 'quantity' => $measureQuantity, 'rate' => $measureRate];
+            }
+
+            $lineDiscount = min(round((float) ($row['discount_amount'] ?? 0), 2), $gross);
+            $lineTotal = round($gross - $lineDiscount, 2);
             $subtotal += $lineTotal;
 
             $lines[] = [
@@ -70,6 +85,7 @@ class SaleService
                 'discount_amount' => $lineDiscount,
                 'line_total' => $lineTotal,
                 'vat_rate' => $vatEnabled ? (float) $unit->product->vat_rate : 0.0,
+                'measure' => $measure,
             ];
         }
 
@@ -142,8 +158,9 @@ class SaleService
     /**
      * Complete a sale: save it, take stock out and record payments.
      *
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string}>  $cart
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
      * @param  list<array{payment_method_id: int, amount: float|string, transaction_ref?: string|null}>  $payments
+     * @param  array{referrer_id: int, commission_type?: CommissionType|null, commission_value?: float|string|null}|null  $reference  reference person and their commission
      */
     public function complete(
         Branch $branch,
@@ -154,6 +171,7 @@ class SaleService
         ?int $customerId = null,
         ?string $note = null,
         ?string $dueDate = null,
+        ?array $reference = null,
     ): Sale {
         if ($cart === []) {
             throw ValidationException::withMessages(['cart' => __('The cart is empty.')]);
@@ -165,11 +183,12 @@ class SaleService
             throw ValidationException::withMessages(['cart' => __('Open the cash register before selling.')]);
         }
 
-        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift, $dueDate): Sale {
+        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift, $dueDate, $reference): Sale {
             $totals = $this->calculate($branch, $cart, $discountType, $discountValue);
             $this->checkPrices($branch, $totals);
 
             [$paymentRows, $paid, $change, $due] = $this->preparePayments($payments, $totals['total'], $this->creditAllowed($branch));
+            $commission = $this->commission($totals, $reference);
 
             if ($due > 0) {
                 $this->checkCredit($customerId, $due);
@@ -180,6 +199,10 @@ class SaleService
                 'invoice_no' => $this->numbers->next($branch, 'invoice'),
                 'status' => SaleStatus::Completed,
                 'customer_id' => $customerId,
+                'referrer_id' => $commission['referrer_id'],
+                'commission_type' => $commission['type'],
+                'commission_value' => $commission['value'],
+                'commission_amount' => $commission['amount'],
                 'user_id' => Auth::id(),
                 'cash_shift_id' => $shift->id,
                 'sold_at' => now(),
@@ -212,6 +235,9 @@ class SaleService
                     'unit_quantity' => $unit->quantity,
                     'base_quantity' => $baseQuantity,
                     'unit_price' => $line['unit_price'],
+                    'measure_unit' => $line['measure']['unit'] ?? null,
+                    'measure_quantity' => $line['measure']['quantity'] ?? null,
+                    'measure_rate' => $line['measure']['rate'] ?? null,
                     'unit_cost' => round((float) $unit->product->cost_price * (float) $unit->quantity, 2),
                     'discount_amount' => $line['discount_amount'],
                     'vat_rate' => $line['vat_rate'],
@@ -240,15 +266,16 @@ class SaleService
      *
      * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string}>  $cart
      */
-    public function hold(Branch $branch, array $cart, ?string $holdNote = null, ?int $customerId = null): Sale
+    public function hold(Branch $branch, array $cart, ?string $holdNote = null, ?int $customerId = null, ?int $referrerId = null): Sale
     {
-        return DB::transaction(function () use ($branch, $cart, $holdNote, $customerId): Sale {
+        return DB::transaction(function () use ($branch, $cart, $holdNote, $customerId, $referrerId): Sale {
             $totals = $this->calculate($branch, $cart);
 
             $sale = Sale::query()->create([
                 'branch_id' => $branch->id,
                 'status' => SaleStatus::Held,
                 'customer_id' => $customerId,
+                'referrer_id' => $referrerId,
                 'user_id' => Auth::id(),
                 'subtotal' => $totals['subtotal'],
                 'total' => $totals['total'],
@@ -266,6 +293,9 @@ class SaleService
                     'unit_quantity' => $unit->quantity,
                     'base_quantity' => round($line['quantity'] * (float) $unit->quantity, 3),
                     'unit_price' => $line['unit_price'],
+                    'measure_unit' => $line['measure']['unit'] ?? null,
+                    'measure_quantity' => $line['measure']['quantity'] ?? null,
+                    'measure_rate' => $line['measure']['rate'] ?? null,
                     'discount_amount' => $line['discount_amount'],
                     'line_total' => $line['line_total'],
                 ]);
@@ -278,7 +308,7 @@ class SaleService
     /**
      * Take a held sale back into the cart. The held record is removed.
      *
-     * @return array{cart: list<array{product_unit_id: int, quantity: float, unit_price: float, discount_amount: float}>, customer_id: int|null}
+     * @return array{cart: list<array{product_unit_id: int, quantity: float, unit_price: float, discount_amount: float, measure_rate: float|null}>, customer_id: int|null, referrer_id: int|null}
      */
     public function resume(Sale $sale): array
     {
@@ -292,13 +322,15 @@ class SaleService
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'discount_amount' => (float) $item->discount_amount,
+                'measure_rate' => $item->measure_rate !== null ? (float) $item->measure_rate : null,
             ])->all();
 
             $customerId = $sale->customer_id;
+            $referrerId = $sale->referrer_id;
             $sale->items()->delete();
             $sale->delete();
 
-            return ['cart' => $cart, 'customer_id' => $customerId];
+            return ['cart' => $cart, 'customer_id' => $customerId, 'referrer_id' => $referrerId];
         });
     }
 
@@ -438,6 +470,51 @@ class SaleService
     /**
      * @param  array{lines: list<array<string, mixed>>}  $totals
      */
+    /**
+     * Commission for the reference person: a % of this invoice's profit, or a fixed amount.
+     * Profit = sales without VAT − cost of the goods (same as the reports).
+     *
+     * @param  array<string, mixed>  $totals  result of calculate()
+     * @param  array{referrer_id: int, commission_type?: CommissionType|null, commission_value?: float|string|null}|null  $reference
+     * @return array{referrer_id: int|null, type: CommissionType|null, value: float, amount: float}
+     */
+    public function commission(array $totals, ?array $reference): array
+    {
+        if (! $reference || empty($reference['referrer_id'])) {
+            return ['referrer_id' => null, 'type' => null, 'value' => 0.0, 'amount' => 0.0];
+        }
+
+        $type = $reference['commission_type'] ?? null;
+        $value = max(0, round((float) ($reference['commission_value'] ?? 0), 2));
+
+        if (! $type || $value <= 0) {
+            return ['referrer_id' => (int) $reference['referrer_id'], 'type' => null, 'value' => 0.0, 'amount' => 0.0];
+        }
+
+        if ($type === CommissionType::ProfitPercent && $value > 100) {
+            throw ValidationException::withMessages(['commissionValue' => __('Commission cannot be more than 100% of the profit.')]);
+        }
+
+        $amount = match ($type) {
+            CommissionType::ProfitPercent => round(max(0, $this->profit($totals)) * $value / 100, 2),
+            CommissionType::Amount => $value,
+        };
+
+        return ['referrer_id' => (int) $reference['referrer_id'], 'type' => $type, 'value' => $value, 'amount' => $amount];
+    }
+
+    /**
+     * Profit of a calculated cart: sales without VAT − cost of goods at today's average cost.
+     *
+     * @param  array<string, mixed>  $totals  result of calculate()
+     */
+    public function profit(array $totals): float
+    {
+        $cost = collect($totals['lines'])->sum(fn (array $line): float => $line['quantity'] * round((float) $line['unit']->product->cost_price * (float) $line['unit']->quantity, 2));
+
+        return round($totals['total'] - $totals['vat_amount'] - $cost, 2);
+    }
+
     private function checkPrices(Branch $branch, array $totals): void
     {
         foreach ($totals['lines'] as $index => $line) {

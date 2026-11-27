@@ -7,6 +7,7 @@ return [
     'users.manage' => 'ব্যবহারকারী ও অনুমতি',
     'products.manage' => 'পণ্য যোগ / সম্পাদনা',
     'products.view-cost' => 'ক্রয়মূল্য ও লাভ দেখা',
+    'commissions.manage' => 'রেফারেন্স ও কমিশন পরিশোধ',
     'purchases.manage' => 'ক্রয় ও সরবরাহকারী',
     'stock.adjust' => 'স্টক সমন্বয় / গণনা',
     'stock.transfer' => 'শাখার মধ্যে স্টক ট্রান্সফার',

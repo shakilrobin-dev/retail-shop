@@ -39,6 +39,11 @@ class ShopSetupSeeder extends Seeder
             ['Pair', 'জোড়া', 'pair', false],
             ['Set', 'সেট', 'set', false],
             ['Meter', 'মিটার', 'm', true],
+            ['Kg', 'কেজি', 'kg', true],
+            ['Ton', 'টন', 'ton', true],
+            ['Bag', 'বস্তা', 'bag', false],
+            ['Feet', 'ফুট', 'ft', true],
+            ['Box', 'বক্স', 'box', false],
         ];
         foreach ($units as [$name, $nameBn, $short, $allowsDecimal]) {
             Unit::query()->firstOrCreate(['short_name' => $short], [
@@ -70,6 +75,7 @@ class ShopSetupSeeder extends Seeder
             ['Internet', 'ইন্টারনেট'],
             ['Transport', 'পরিবহন'],
             ['Food & Tea', 'খাবার ও চা'],
+            ['Commission', 'কমিশন'],
             ['Other', 'অন্যান্য'],
         ];
         foreach ($expenseCategories as [$name, $nameBn]) {

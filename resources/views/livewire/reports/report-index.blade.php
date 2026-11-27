@@ -1,8 +1,8 @@
 @php
     $groups = [
-        __('Financial') => ['summary' => __('Profit & loss'), 'payments' => __('Collections by payment'), 'expenses' => __('Expense report')],
+        __('Financial') => ['summary' => __('Profit & loss'), 'payments' => __('Collections by payment'), 'expenses' => __('Expense report'), 'commissions' => __('Commission report')],
         __('Customer due') => ['customer-dues' => __('Customer due'), 'due-collections' => __('Due collections')],
-        __('Sales') => ['daily' => __('Daily sales'), 'sales-register' => __('Sales register'), 'products' => __('Product sales'), 'categories' => __('Sales by category'), 'staff' => __('Sales by staff')],
+        __('Sales') => ['daily' => __('Daily sales'), 'sales-register' => __('Sales register'), 'products' => __('Product sales'), 'categories' => __('Sales by category'), 'staff' => __('Sales by staff'), 'referrers' => __('Sales by reference')],
         __('Inventory') => ['stock-valuation' => __('Stock valuation'), 'dead-stock' => __('Dead stock')],
     ];
     $dated = \App\Services\ReportDocument::REPORTS[$activeTab][1];

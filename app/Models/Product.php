@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['sku', 'name', 'name_bn', 'category_id', 'brand_id', 'unit_id', 'compatible_models', 'description', 'cost_price', 'min_selling_price', 'vat_rate', 'reorder_level', 'warranty_days', 'is_serialized', 'image_path', 'is_active'])]
+#[Fillable(['sku', 'name', 'name_bn', 'category_id', 'brand_id', 'unit_id', 'measure_unit', 'measure_per_unit', 'measure_price', 'compatible_models', 'description', 'cost_price', 'min_selling_price', 'vat_rate', 'reorder_level', 'warranty_days', 'is_serialized', 'image_path', 'is_active'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -28,6 +28,8 @@ class Product extends Model
     {
         return [
             'cost_price' => 'decimal:2',
+            'measure_per_unit' => 'decimal:4',
+            'measure_price' => 'decimal:2',
             'min_selling_price' => 'decimal:2',
             'vat_rate' => 'decimal:2',
             'reorder_level' => 'decimal:3',
@@ -120,6 +122,34 @@ class Product extends Model
         $text = shop_digits($packs).' '.$pack->localName();
 
         return $rest > 0 ? $text.' + '.shop_digits($rest + 0).' '.$baseName : $text;
+    }
+
+    /**
+     * Sold by a measurement such as sqft (e.g. tiles)?
+     */
+    public function isMeasured(): bool
+    {
+        return filled($this->measure_unit) && (float) $this->measure_per_unit > 0;
+    }
+
+    /**
+     * Whole base units (pieces) needed to cover a measurement, e.g. 500 sqft of 1.77 sqft tiles = 283 pieces.
+     */
+    public function piecesForMeasure(float $measure): int
+    {
+        if (! $this->isMeasured() || $measure <= 0) {
+            return 0;
+        }
+
+        return (int) ceil(round($measure / (float) $this->measure_per_unit, 6));
+    }
+
+    /**
+     * Measurement covered by a number of base units, e.g. 283 pieces = 500.91 sqft.
+     */
+    public function measureForPieces(float $pieces): float
+    {
+        return round($pieces * (float) $this->measure_per_unit, 3);
     }
 
     /**

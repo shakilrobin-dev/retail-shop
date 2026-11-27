@@ -27,6 +27,7 @@
             [__('Sales'), 'receipt', 'sales.index', 'pos.sell', 'sales.*', 0],
             [__('Customers'), 'users', 'customers.index', 'pos.sell', 'customers.*', 0],
             [__('Due collection'), 'banknotes', 'customers.index', 'customers.collect-due', 'customers.index', 0, ['dueFilter' => 'due']],
+            [__('References'), 'user', 'referrers.index', 'commissions.manage', 'referrers.*', 0],
             [__('Cash register'), 'banknotes', 'cash-register', 'cash-shifts.manage', 'cash-register', 0],
         ]],
         [__('Service'), [

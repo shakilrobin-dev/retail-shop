@@ -24,6 +24,15 @@
             @endif
         </div></div>
         <div><div class="text-muted-foreground-1">{{ __('Cashier') }}</div><div>{{ $sale->user?->name }}</div></div>
+        @if ($sale->referrer)
+            <div><div class="text-muted-foreground-1">{{ __('Reference') }}</div><div>{{ $sale->referrer->name }}@if ($sale->referrer->phone) · {{ $sale->referrer->phone }}@endif</div></div>
+            @can('commissions.manage')
+                <div class="no-print"><div class="text-muted-foreground-1">{{ __('Commission') }}</div><div class="font-medium tabular-nums">
+                    {{ money($sale->commission_amount) }}
+                    @if ($sale->commission_type === \App\Enums\CommissionType::ProfitPercent)<span class="text-xs font-normal text-muted-foreground-1">({{ shop_digits($sale->commission_value + 0) }}% {{ __('of profit') }})</span>@endif
+                </div></div>
+            @endcan
+        @endif
     </div>
 
     @if ($sale->status === \App\Enums\SaleStatus::Completed && ($sale->due_amount > 0 || $sale->payment_status !== \App\Enums\PaymentStatus::Paid || $sale->payments->whereNotNull('customer_payment_id')->isNotEmpty()))
@@ -105,6 +114,9 @@
                 @foreach ($sale->items as $item)
                     <tr wire:key="sitem-{{ $item->id }}">
                         <td>{{ $item->product_name }}@if ($item->unit_quantity > 1) <span class="text-xs text-muted-foreground-1">({{ $item->unit_name }})</span>@endif
+                            @if ($item->measure_quantity !== null)
+                                <div class="text-xs text-muted-foreground-1">{{ shop_digits($item->measure_quantity + 0) }} {{ $item->measure_unit }} × {{ money($item->measure_rate) }} · {{ $item->product?->stockBreakdown((float) $item->base_quantity) }}</div>
+                            @endif
                             @if ($item->warranty_days)<div class="text-xs text-muted-foreground">{{ __('Warranty till :date', ['date' => shop_digits($sale->sold_at->copy()->addDays($item->warranty_days)->format('d M Y'))]) }}</div>@endif
                         </td>
                         <td class="text-right">{{ shop_digits($item->quantity + 0) }}</td>

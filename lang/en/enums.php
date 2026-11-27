@@ -50,6 +50,10 @@ return [
         'amount' => 'Amount',
         'percent' => 'Percent',
     ],
+    'commission_type' => [
+        'profit_percent' => '% of profit',
+        'amount' => 'Fixed amount',
+    ],
     'stock_movement_type' => [
         'opening' => 'Opening stock',
         'purchase' => 'Purchase',

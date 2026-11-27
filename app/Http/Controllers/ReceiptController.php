@@ -32,7 +32,7 @@ class ReceiptController extends Controller
             ? $request->query('paper')
             : (string) $settings->get('receipt_paper', $sale->branch_id);
 
-        $sale->load(['items', 'payments.paymentMethod', 'customer', 'user', 'branch']);
+        $sale->load(['items.product.units', 'payments.paymentMethod', 'customer', 'user', 'branch']);
 
         return view('print.receipt', $this->shopDetails($settings, $sale->branch, $locale) + [
             'sale' => $sale,

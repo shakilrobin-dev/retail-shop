@@ -2,7 +2,7 @@
     $unitsHelp = __('Scan the barcode printed on the product, or press "Generate" to make a new one. Add a pack (e.g. Box of 10) if you also sell by box.');
     $tabErrors = [
         'general' => $errors->hasAny(['category_id', 'sku', 'compatible_models', 'description']),
-        'units' => collect($errors->keys())->contains(fn ($key) => str_starts_with($key, 'units')),
+        'units' => collect($errors->keys())->contains(fn ($key) => str_starts_with($key, 'units') || str_starts_with($key, 'measure_')),
         'pricing' => $errors->hasAny(['cost_price', 'min_selling_price', 'vat_rate', 'reorder_level', 'warranty_days', 'opening_stock']),
     ];
     $firstErrorTab = collect($tabErrors)->filter()->keys()->first();
@@ -138,6 +138,38 @@
                     </div>
                     @error('units') <p class="form-error">{{ $message }}</p> @enderror
 
+                    {{-- Sell by measurement (tiles by sqft etc.) --}}
+                    <div @class(['rounded-lg border p-4', 'border-primary-200 bg-primary-50/40 dark:border-primary-900 dark:bg-primary-950/20' => $is_measured, 'border-card-line' => ! $is_measured])>
+                        <label class="flex cursor-pointer items-start gap-2.5">
+                            <input wire:model.live="is_measured" type="checkbox" class="mt-0.5 rounded border-layer-line">
+                            <span>
+                                <span class="block text-sm font-medium text-foreground">{{ __('Sell by measurement (sqft, rft, kg...)') }}</span>
+                                <span class="block text-xs text-muted-foreground-1">{{ __('For tiles and similar items. At the POS you type e.g. 500 sqft and the pieces and cartons are worked out. Stock is kept in :unit.', ['unit' => $baseUnitName ?: __('pieces')]) }}</span>
+                            </span>
+                        </label>
+                        @if ($is_measured)
+                            <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                                <div>
+                                    <label for="measure_unit" class="form-label">{{ __('Measurement') }} <span class="text-red-500">*</span></label>
+                                    <input wire:model.live.debounce.400ms="measure_unit" id="measure_unit" type="text" list="measure-units" class="form-input" placeholder="sqft">
+                                    <datalist id="measure-units"><option value="sqft"><option value="sqm"><option value="rft"><option value="kg"><option value="meter"></datalist>
+                                    @error('measure_unit') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label for="measure_per_unit" class="form-label">{{ __(':measure in 1 :unit', ['measure' => $measure_unit ?: 'sqft', 'unit' => $baseUnitName ?: __('piece')]) }} <span class="text-red-500">*</span></label>
+                                    <input wire:model.live.debounce.400ms="measure_per_unit" id="measure_per_unit" type="number" step="0.0001" min="0" class="form-input text-right" placeholder="1.77">
+                                    @error('measure_per_unit') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label for="measure_price" class="form-label">{{ __('Selling rate per :measure', ['measure' => $measure_unit ?: 'sqft']) }}</label>
+                                    <input wire:model.live.debounce.400ms="measure_price" id="measure_price" type="number" step="0.01" min="0" class="form-input text-right" placeholder="0.00">
+                                    @error('measure_price') <p class="form-error">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                            <p class="mt-3 text-xs text-muted-foreground-1">{{ __('Add the carton as a pack below (e.g. Carton = 10 pieces). Selling prices of piece and carton are worked out from the rate.') }}</p>
+                        @endif
+                    </div>
+
                     <div class="overflow-hidden rounded-lg border border-card-line">
                         <table class="data-table">
                             <thead>
@@ -145,6 +177,7 @@
                                     <th>{{ __('Unit') }}</th>
                                     <th>{{ __('Name (Bangla)') }}</th>
                                     <th class="w-28 text-right">{{ __('Pieces inside') }}</th>
+                                    @if ($is_measured)<th class="w-28 text-right">{{ $measure_unit ?: 'sqft' }}</th>@endif
                                     <th class="w-36 text-right">{{ __('Selling price') }}</th>
                                     <th class="w-36 text-right">{{ __('Wholesale price') }}</th>
                                     <th>{{ __('Barcode') }}</th>
@@ -161,9 +194,12 @@
                                         </td>
                                         <td class="align-top"><input wire:model="units.{{ $unitIndex }}.name_bn" type="text" class="form-input" @disabled($unit['is_base'])></td>
                                         <td class="align-top">
-                                            <input wire:model="units.{{ $unitIndex }}.quantity" type="number" step="1" min="1" class="form-input text-right" @disabled($unit['is_base'])>
+                                            <input wire:model.live.debounce.500ms="units.{{ $unitIndex }}.quantity" type="number" step="1" min="1" class="form-input text-right" @disabled($unit['is_base'])>
                                             @error("units.$unitIndex.quantity") <p class="form-error">{{ $message }}</p> @enderror
                                         </td>
+                                        @if ($is_measured)
+                                            <td class="pt-4 text-right align-top tabular-nums text-muted-foreground-2">{{ $this->measureOfUnit($unitIndex) !== null ? shop_digits($this->measureOfUnit($unitIndex) + 0) : '—' }}</td>
+                                        @endif
                                         <td class="align-top">
                                             <input wire:model="units.{{ $unitIndex }}.selling_price" type="number" step="0.01" min="0" class="form-input text-right font-medium">
                                             @error("units.$unitIndex.selling_price") <p class="form-error">{{ $message }}</p> @enderror

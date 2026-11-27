@@ -7,6 +7,7 @@ return [
     'users.manage' => 'Manage users & permissions',
     'products.manage' => 'Add / edit products',
     'products.view-cost' => 'See cost price & profit',
+    'commissions.manage' => 'Manage references & pay commission',
     'purchases.manage' => 'Purchases & suppliers',
     'stock.adjust' => 'Adjust / count stock',
     'stock.transfer' => 'Transfer stock between branches',

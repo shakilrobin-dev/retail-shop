@@ -26,6 +26,8 @@ class ReportDocument
         'categories' => ['Sales by category', true, false],
         'payments' => ['Collections by payment method', true, false],
         'staff' => ['Sales by staff', true, false],
+        'referrers' => ['Sales by reference', true, false],
+        'commissions' => ['Commission report', true, false],
         'expenses' => ['Expense report', true, false],
         'customer-dues' => ['Customer due report', false, true],
         'due-collections' => ['Due collection report', true, false],
@@ -79,6 +81,8 @@ class ReportDocument
             'categories' => $this->categories($document, $branchId, $from, $to, (bool) ($options['main_categories'] ?? false)),
             'payments' => $this->payments($document, $branchId, $from, $to),
             'staff' => $this->staff($document, $branchId, $from, $to),
+            'referrers' => $this->referrers($document, $branchId, $from, $to),
+            'commissions' => $this->commissions($document, $branchId, $from, $to),
             'expenses' => $this->expenses($document, $branchId, $from, $to),
             'customer-dues' => $this->customerDues($document, $branchId, $options['customer_id'] ?? null, $options['due_detail'] ?? 'summary'),
             'due-collections' => $this->dueCollections($document, $branchId, $from, $to),
@@ -165,6 +169,8 @@ class ReportDocument
                 [__('Profit from repairs'), $s['repair_profit'], 'money', 'total'],
             ]],
             ['title' => __('Operating expenses'), 'lines' => [
+                [__('Commission given'), -$s['commission_given'], 'money', 'muted'],
+                [__('Other expenses'), -$s['other_expenses'], 'money', 'muted'],
                 [__('Total expenses'), -$s['expenses'], 'money', 'total'],
             ]],
             ['title' => null, 'lines' => [
@@ -273,6 +279,51 @@ class ReportDocument
             'average' => $row->invoices ? $row->sales / $row->invoices : 0, 'discounts' => (float) $row->discounts,
         ])->all();
         $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => (float) $rows->sum('sales'), 'discounts' => (float) $rows->sum('discounts')];
+
+        return $document;
+    }
+
+    private function referrers(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $rows = $this->reports->byReferrer($branchId, $from, $to)->map(function ($row): array {
+            $net = (float) $row->sales - (float) $row->vat;
+            $profit = $net - (float) $row->cost;
+
+            return [
+                'name' => $row->referrer_id ? $row->name.($row->phone ? ' ('.$row->phone.')' : '') : __('Without reference'),
+                'invoices' => (int) $row->invoices, 'sales' => $net, 'cost' => (float) $row->cost, 'profit' => $profit,
+                'margin' => $net > 0 ? $profit / $net * 100 : 0, 'commission' => (float) $row->commission,
+                'after' => $profit - (float) $row->commission,
+            ];
+        });
+
+        $document['columns'] = $this->columns([
+            ['name', __('Reference')], ['invoices', __('Invoices'), 'int'], ['sales', __('Sales'), 'money'], ['cost', __('Cost of goods'), 'money'],
+            ['profit', __('Gross profit'), 'money'], ['margin', __('Margin'), 'percent'], ['commission', __('Commission'), 'money'], ['after', __('Profit after commission'), 'money'],
+        ]);
+        $document['rows'] = $rows->all();
+        $sales = (float) $rows->sum('sales');
+        $profit = (float) $rows->sum('profit');
+        $document['totals'] = [
+            'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'cost' => (float) $rows->sum('cost'),
+            'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0, 'commission' => (float) $rows->sum('commission'), 'after' => (float) $rows->sum('after'),
+        ];
+        $document['notes'][] = __('Sales are without VAT. Returns are not deducted here; see the profit & loss for returns.');
+
+        return $document;
+    }
+
+    private function commissions(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $rows = $this->reports->commissions($branchId, $from, $to);
+        $document['columns'] = $this->columns([
+            ['name', __('Reference')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'],
+            ['earned', __('Earned in period'), 'money'], ['paid', __('Paid in period'), 'money'], ['due', __('Due now'), 'money'],
+        ]);
+        $document['rows'] = $rows->all();
+        $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'earned' => (float) $rows->sum('earned'), 'paid' => (float) $rows->sum('paid'), 'due' => (float) $rows->sum('due')];
+        $document['notes'][] = __('Commission is earned when the sale is made and counted as an expense (commission given) when it is paid.');
+        $document['notes'][] = __('"Due now" is all unpaid commission up to today, not only this period.');
 
         return $document;
     }

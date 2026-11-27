@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CommissionType;
 use App\Enums\DiscountType;
 use App\Enums\PaymentStatus;
 use App\Enums\SaleStatus;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['branch_id', 'invoice_no', 'status', 'customer_id', 'user_id', 'cash_shift_id', 'sold_at', 'subtotal', 'discount_type', 'discount_value', 'discount_amount', 'vat_amount', 'rounding_amount', 'total', 'paid_amount', 'change_amount', 'due_amount', 'payment_status', 'due_date', 'hold_note', 'note', 'voided_at', 'voided_by', 'void_reason'])]
+#[Fillable(['branch_id', 'invoice_no', 'status', 'customer_id', 'referrer_id', 'commission_type', 'commission_value', 'commission_amount', 'user_id', 'cash_shift_id', 'sold_at', 'subtotal', 'discount_type', 'discount_value', 'discount_amount', 'vat_amount', 'rounding_amount', 'total', 'paid_amount', 'change_amount', 'due_amount', 'payment_status', 'due_date', 'hold_note', 'note', 'voided_at', 'voided_by', 'void_reason'])]
 class Sale extends Model
 {
     /** @use HasFactory<SaleFactory> */
@@ -42,6 +43,9 @@ class Sale extends Model
             'due_amount' => 'decimal:2',
             'payment_status' => PaymentStatus::class,
             'due_date' => 'date',
+            'commission_type' => CommissionType::class,
+            'commission_value' => 'decimal:2',
+            'commission_amount' => 'decimal:2',
         ];
     }
 
@@ -59,6 +63,16 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Reference person who brought this sale.
+     *
+     * @return BelongsTo<Referrer, $this>
+     */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Referrer::class);
     }
 
     /**
