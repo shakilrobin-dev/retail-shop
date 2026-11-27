@@ -59,7 +59,7 @@
                         <button type="button" wire:click="clearCart" data-confirm="{{ __('Clear the cart?') }}" class="text-xs font-medium hover:underline">{{ __('Cancel') }}</button>
                     </div>
                 @endif
-                <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create />
+                <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" measure-entry quick-create />
                 @error('cart') <p class="form-error text-sm">{{ $message }}</p> @enderror
 
                 @php

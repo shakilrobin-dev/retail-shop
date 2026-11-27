@@ -236,6 +236,36 @@ trait ManagesCartLines
     }
 
     /**
+     * Add a measurement of a product sold by measurement, e.g. 100 sqft of tiles.
+     * Whole pieces are worked out; an existing line of the product gets the measurement added.
+     */
+    public function addMeasureToCart(int $productUnitId, float $measure): void
+    {
+        $unit = ProductUnit::query()->with('product.units')->findOrFail($productUnitId);
+
+        if (! $unit->product->isMeasured()) {
+            $this->addToCart($productUnitId);
+
+            return;
+        }
+
+        foreach ($this->cart as $index => $line) {
+            if ($line['product_id'] === $unit->product_id && ! empty($line['measure'])) {
+                $total = round((float) $line['quantity'] + $measure, 3);
+                $this->cart[$index]['quantity'] = (string) $total;
+                $this->cart[$index]['pieces'] = (string) $this->piecesFor($line, $total);
+                $this->moveLineToTop($index);
+
+                return;
+            }
+        }
+
+        $this->pickMeasured($unit);
+        $this->cart[0]['quantity'] = (string) round($measure, 3);
+        $this->cart[0]['pieces'] = (string) $this->piecesFor($this->cart[0], $measure);
+    }
+
+    /**
      * Put a saved line back on the list (a held sale or a quotation).
      */
     protected function addSavedLine(int $productUnitId, float $quantity, float $unitPrice, ?float $measureRate, float $discount): void

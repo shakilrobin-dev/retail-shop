@@ -29,7 +29,7 @@
     </div>
 
     <div class="card space-y-3 p-5">
-        <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create :quick-create-stock="false" />
+        <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" measure-entry quick-create :quick-create-stock="false" />
         @error('cart') <p class="form-error">{{ $message }}</p> @enderror
 
         <div class="overflow-x-auto">

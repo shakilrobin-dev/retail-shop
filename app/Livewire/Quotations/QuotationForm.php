@@ -72,6 +72,11 @@ class QuotationForm extends Component
         $this->addToCart($productUnitId);
     }
 
+    public function pickMeasure(int $productUnitId, float $measure): void
+    {
+        $this->addMeasureToCart($productUnitId, $measure);
+    }
+
     /**
      * Prices on a quotation can always be changed.
      */

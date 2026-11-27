@@ -49,7 +49,7 @@
         <div class="card">
             @if ($product)
                 <div class="flex flex-wrap justify-end gap-2 border-b border-card-divider px-5 py-3">
-                    <x-smart-button icon="archive" :label="__('On hand')" :value="shop_digits($stats['onHand'] + 0).' '.$baseUnitName" :href="route('stock.movements', ['productId' => $product->id])" />
+                    <x-smart-button icon="archive" :label="__('On hand')" :value="$product->isMeasured() ? shop_digits($product->measureForPieces($stats['onHand']) + 0).' '.$product->measure_unit : shop_digits($stats['onHand'] + 0).' '.$baseUnitName" :href="route('stock.movements', ['productId' => $product->id])" />
                     <x-smart-button icon="building" :label="__('All branches')" :value="shop_digits($stats['allBranches'] + 0)" />
                     <x-smart-button icon="trending-up" :label="__('Sold (30 days)')" :value="shop_digits($stats['sold30'] + 0)" />
                     <x-smart-button icon="truck" :label="__('Purchases')" :value="shop_digits($stats['purchases'])" />
@@ -157,7 +157,16 @@
                                 </div>
                                 <div>
                                     <label for="measure_per_unit" class="form-label">{{ __(':measure in 1 :unit', ['measure' => $measure_unit ?: 'sqft', 'unit' => $baseUnitName ?: __('piece')]) }} <span class="text-red-500">*</span></label>
-                                    <input wire:model.live.debounce.400ms="measure_per_unit" id="measure_per_unit" type="number" step="0.0001" min="0" class="form-input text-right" placeholder="1.77">
+                                    <input wire:model.live.debounce.400ms="measure_per_unit" id="measure_per_unit" type="number" step="any" min="0" class="form-input text-right" placeholder="1.77">
+                                    @if (in_array(strtolower(trim($measure_unit)), ['sqft', 'sft', 'sq ft'], true))
+                                        <div class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground-1" x-data="{ w: '', h: '', fill() { if (this.w > 0 && this.h > 0) { $wire.set('measure_per_unit', (this.w * this.h / 144).toFixed(6)) } } }">
+                                            {{ __('Tile size') }}
+                                            <input x-model="w" x-on:input.debounce.400ms="fill()" type="number" step="any" min="0" placeholder="8" class="form-input h-7 w-14 px-1 py-0 text-center text-xs" aria-label="{{ __('Width (inch)') }}">
+                                            ×
+                                            <input x-model="h" x-on:input.debounce.400ms="fill()" type="number" step="any" min="0" placeholder="12" class="form-input h-7 w-14 px-1 py-0 text-center text-xs" aria-label="{{ __('Height (inch)') }}">
+                                            {{ __('inch') }}
+                                        </div>
+                                    @endif
                                     @error('measure_per_unit') <p class="form-error">{{ $message }}</p> @enderror
                                 </div>
                                 <div>

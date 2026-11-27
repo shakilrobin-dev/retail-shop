@@ -78,6 +78,29 @@ trait SearchesProducts
     }
 
     /**
+     * Tiles etc. added from the search by typing the measurement, e.g. 100 sqft.
+     * Screens that support it implement pickMeasure(); others just add one unit.
+     */
+    public function pickFromSearchMeasure(int $productUnitId, mixed $measure): void
+    {
+        if (! is_numeric($measure) || (float) $measure <= 0) {
+            return;
+        }
+
+        $this->productSearch = '';
+        $this->scanMessage = '';
+        $this->missingProductTerm = '';
+
+        if (method_exists($this, 'pickMeasure')) {
+            $this->pickMeasure($productUnitId, (float) $measure);
+
+            return;
+        }
+
+        $this->pickUnit($productUnitId);
+    }
+
+    /**
      * A product was just made in the quick "add product" pop-up: put it on this screen's list.
      */
     #[On('quick-product-created')]

@@ -7,6 +7,7 @@
     'missing' => '',
     'quickCreate' => false,
     'quickCreateStock' => true,
+    'measureEntry' => false,
 ])
 
 {{--
@@ -20,6 +21,7 @@
 <div class="relative" x-data="{ showMissing: true }" x-on:click.outside="showMissing = false" x-on:scan-not-found.window="$refs.scanInput.select()">
     <input x-ref="scanInput" wire:model.live.debounce.250ms="productSearch" wire:keydown.enter.prevent="scan"
         type="search" autocomplete="off" autofocus data-scan-input x-on:focus="showMissing = true" x-on:input="showMissing = true"
+        x-on:keydown.enter="$nextTick(() => $root.querySelector('[data-measure-input]')?.focus())"
         placeholder="{{ $placeholder ?? __('Scan barcode or type product name...') }}"
         class="form-input h-10 text-sm">
 
@@ -50,7 +52,23 @@
                     @if ($result->compatible_models)
                         <div class="text-xs text-muted-foreground">{{ $result->compatible_models }}</div>
                     @endif
+                    @if ($measureEntry && $result->isMeasured())
+                        @php $baseUnit = $result->units->firstWhere('is_base', true); @endphp
+                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5" x-data="{ measure: '' }">
+                            <div class="flex items-center gap-1">
+                                <input x-model="measure" type="number" step="any" min="0" inputmode="decimal" placeholder="{{ $result->measure_unit }}"
+                                    x-on:keydown.enter.prevent.stop="measure > 0 && $wire.pickFromSearchMeasure({{ $baseUnit?->id ?? 0 }}, measure)"
+                                    class="form-input h-8 w-28 py-0 text-right text-sm" aria-label="{{ $result->measure_unit }}" data-measure-input>
+                                <span class="text-xs font-medium text-muted-foreground-2">{{ $result->measure_unit }}</span>
+                                <button type="button" x-on:click="measure > 0 && $wire.pickFromSearchMeasure({{ $baseUnit?->id ?? 0 }}, measure)" class="btn-primary btn-sm">{{ __('Add') }}</button>
+                            </div>
+                            @if ($result->measure_price !== null)
+                                <span class="text-xs text-muted-foreground-1">{{ money($result->measure_price) }} / {{ $result->measure_unit }}</span>
+                            @endif
+                            <span class="text-xs text-muted-foreground">{{ __('or') }}</span>
+                    @else
                     <div class="mt-1 flex flex-wrap gap-1">
+                    @endif
                         @foreach ($result->units as $unit)
                             <button type="button" wire:click="pickFromSearch({{ $unit->id }})" class="btn-secondary btn-sm">
                                 + {{ $unit->localName() }}@if ($result->isMeasured()) ({{ shop_digits($result->measureForPieces((float) $unit->quantity) + 0) }} {{ $result->measure_unit }})@endif · {{ money($unit->selling_price) }}

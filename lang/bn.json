@@ -1209,5 +1209,10 @@
     "Purchase and due history of every customer.": "প্রত্যেক কাস্টমারের কেনাকাটা ও বাকির হিসাব।",
     "Sales, stock and quotations in one place.": "বিক্রয়, স্টক ও কোটেশন এক জায়গায়।",
     "Sell by piece, carton or sqft, track every piece of stock across branches, and send quotations to customers.": "পিস, কার্টন বা sqft এ বিক্রি করুন, সব শাখার স্টক দেখুন, এবং কাস্টমারকে কোটেশন পাঠান।",
-    "One tile (piece). The product is sold and shown in :measure; whole pieces are counted in stock.": "একটি টাইল (পিস)। পণ্যটি :measure এ বিক্রি ও দেখানো হয়; স্টকে পুরো পিস গোনা হয়।"
+    "One tile (piece). The product is sold and shown in :measure; whole pieces are counted in stock.": "একটি টাইল (পিস)। পণ্যটি :measure এ বিক্রি ও দেখানো হয়; স্টকে পুরো পিস গোনা হয়।",
+    "or": "অথবা",
+    "Tile size": "টাইলের মাপ",
+    "Width (inch)": "প্রস্থ (ইঞ্চি)",
+    "Height (inch)": "দৈর্ঘ্য (ইঞ্চি)",
+    "inch": "ইঞ্চি"
 }

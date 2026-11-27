@@ -28,7 +28,7 @@ class Product extends Model
     {
         return [
             'cost_price' => 'decimal:2',
-            'measure_per_unit' => 'decimal:4',
+            'measure_per_unit' => 'decimal:6',
             'measure_price' => 'decimal:2',
             'min_selling_price' => 'decimal:2',
             'vat_rate' => 'decimal:2',

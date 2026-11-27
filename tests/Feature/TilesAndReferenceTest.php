@@ -9,6 +9,7 @@ use App\Livewire\Pos\PointOfSale;
 use App\Livewire\Products\ProductForm;
 use App\Livewire\Products\QuickProductForm;
 use App\Livewire\Purchases\PurchaseForm;
+use App\Livewire\Quotations\QuotationForm;
 use App\Livewire\Referrers\ReferrerIndex;
 use App\Models\Branch;
 use App\Models\Category;
@@ -74,6 +75,9 @@ class TilesAndReferenceTest extends TestCase
         $this->assertSame(1, $product->piecesForMeasure(1.77));
         $this->assertSame(2, $product->piecesForMeasure(1.78));
         $this->assertEquals(500.91, $product->measureForPieces(283));
+
+        $eightByTwelve = new Product(['measure_unit' => 'sqft', 'measure_per_unit' => round(8 * 12 / 144, 6)]);
+        $this->assertSame(150, $eightByTwelve->piecesForMeasure(100));
     }
 
     public function test_tiles_are_shown_in_sqft_with_cartons_and_pieces(): void
@@ -115,6 +119,39 @@ class TilesAndReferenceTest extends TestCase
         $this->assertEquals(120, (float) $item->measure_rate);
         $this->assertSame('sqft', $item->measure_unit);
         $this->assertEquals(217, app(StockService::class)->quantity($this->branch, $product));
+    }
+
+    public function test_sqft_typed_in_the_search_adds_the_line_in_sqft(): void
+    {
+        $product = $this->tiles();
+        $this->startSelling();
+        $base = $product->units->firstWhere('is_base', true);
+
+        Livewire::test(PointOfSale::class)
+            ->set('productSearch', 'Floor tiles')
+            ->assertSee(__('Add'))
+            ->call('pickFromSearchMeasure', $base->id, '100')
+            ->assertSet('productSearch', '')
+            ->assertCount('cart', 1)
+            ->assertSet('cart.0.quantity', '100')
+            ->assertSet('cart.0.pieces', '57')
+            ->assertSee('5 Carton + 7 Piece')
+            ->call('pickFromSearchMeasure', $base->id, '50')
+            ->assertCount('cart', 1)
+            ->assertSet('cart.0.quantity', '150')
+            ->assertSet('cart.0.pieces', '85')
+            ->call('pickFromSearchMeasure', $base->id, '0')
+            ->assertSet('cart.0.quantity', '150');
+
+        Livewire::test(QuotationForm::class)
+            ->call('pickFromSearchMeasure', $base->id, '100')
+            ->assertSet('cart.0.quantity', '100')
+            ->assertSet('cart.0.pieces', '57');
+
+        Livewire::test(PurchaseForm::class)
+            ->call('pickFromSearchMeasure', $base->id, '500')
+            ->assertSet('items.0.quantity', '500')
+            ->assertSet('items.0.pieces', '283');
     }
 
     public function test_typing_pieces_works_out_sqft_and_carton_adds_ten_pieces(): void

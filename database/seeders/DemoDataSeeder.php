@@ -41,7 +41,7 @@ class DemoDataSeeder extends Seeder
             ['Portland Cement 50kg', 'পোর্টল্যান্ড সিমেন্ট ৫০ কেজি', 'Cement', 'Shah Cement', 'bag', 480, 530, 300, null, null, null],
             ['Composite Cement 50kg', 'কম্পোজিট সিমেন্ট ৫০ কেজি', 'Cement', 'Seven Rings', 'bag', 465, 515, 250, null, null, null],
             ['Floor Tiles 24x24 Glossy', 'ফ্লোর টাইলস ২৪x২৪', 'Floor Tiles', 'RAK', 'pcs', 300, 380, 400, '8901000000017', ['Carton', 4, 1520], ['sqft', 4, 95]],
-            ['Wall Tiles 12x20 Matt', 'ওয়াল টাইলস ১২x২০', 'Wall Tiles', 'DBL', 'pcs', 105, 125.25, 600, '8901000000024', ['Carton', 10, 1252.50], ['sqft', 1.67, 75]],
+            ['Wall Tiles 12x20 Matt', 'ওয়াল টাইলস ১২x২০', 'Wall Tiles', 'DBL', 'pcs', 105, 125, 600, '8901000000024', ['Carton', 10, 1250], ['sqft', 1.666667, 75]],
             ['Mirror Wall Tiles 1.77', 'মিরর ওয়াল টাইলস', 'Wall Tiles', 'Akij', 'pcs', 150, 212.40, 500, '8901000000031', ['Carton', 10, 2124], ['sqft', 1.77, 120]],
             ['Stair Tiles 12x48', 'সিঁড়ির টাইলস ১২x৪৮', 'Stair Tiles', 'RAK', 'pcs', 420, 520, 120, null, ['Carton', 3, 1560], ['sqft', 4, 130]],
             ['Commode One-Piece', 'কমোড ওয়ান-পিস', 'Commode & Basin', 'RAK', 'pcs', 7500, 9500, 6, null, null, null],

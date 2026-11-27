@@ -79,6 +79,34 @@ class PurchaseForm extends Component
     }
 
     /**
+     * Bought by typing the measurement, e.g. 500 sqft of tiles: whole pieces are worked out.
+     */
+    public function pickMeasure(int $productUnitId, float $measure): void
+    {
+        $unit = ProductUnit::query()->with('product.units')->findOrFail($productUnitId);
+
+        if (! $unit->product->isMeasured()) {
+            $this->pickUnit($productUnitId);
+
+            return;
+        }
+
+        $per = (float) $unit->product->measure_per_unit;
+        $index = collect($this->items)->search(fn (array $item): bool => $item['product_id'] === $unit->product_id && ! empty($item['measure']));
+
+        if ($index === false) {
+            $this->pickMeasured($unit);
+            $index = array_key_last($this->items);
+            $total = round($measure, 3);
+        } else {
+            $total = round((float) $this->items[$index]['quantity'] + $measure, 3);
+        }
+
+        $this->items[$index]['quantity'] = (string) $total;
+        $this->items[$index]['pieces'] = (string) (int) ceil(round($total / $per, 6));
+    }
+
+    /**
      * Tiles etc. go on one line per product, counted in whole pieces; a carton adds its pieces.
      */
     private function pickMeasured(ProductUnit $unit): void

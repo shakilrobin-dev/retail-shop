@@ -108,6 +108,12 @@ class PointOfSale extends Component
         $this->addToCart($productUnitId);
     }
 
+    public function pickMeasure(int $productUnitId, float $measure): void
+    {
+        $this->completedSaleId = null;
+        $this->addMeasureToCart($productUnitId, $measure);
+    }
+
     public function clearCart(): void
     {
         $this->reset('cart', 'customerId', 'customerSearch', 'discountType', 'discountValue', 'payments', 'note', 'holdNote', 'showPayment', 'dueDate', 'quotationId');
