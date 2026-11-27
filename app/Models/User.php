@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\Settings;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,11 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, LogsActivity, Notifiable;
+    use HasFactory, LogsActivity, Notifiable;
+
+    use HasRoles {
+        checkPermissionTo as roleCheckPermissionTo;
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -50,6 +55,19 @@ class User extends Authenticatable
     /**
      * Whether this user can see and switch between all branches.
      */
+    /**
+     * Permissions of a switched-off module are denied for everyone (e.g. repairs when the shop does not repair).
+     * This is what @can, $user->can() and the can: route middleware use.
+     */
+    public function checkPermissionTo($permission, ?string $guardName = null): bool
+    {
+        if ($permission === 'repairs.manage' && ! app(Settings::class)->bool('repairs_enabled')) {
+            return false;
+        }
+
+        return $this->roleCheckPermissionTo($permission, $guardName);
+    }
+
     public function canAccessAllBranches(): bool
     {
         return $this->branch_id === null || $this->hasRole('admin');

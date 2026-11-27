@@ -148,6 +148,7 @@
         </table>
     </div>
 
+    @if (app(\App\Services\Settings::class)->bool('repairs_enabled'))
     <div class="card overflow-x-auto">
         <h3 class="px-4 pt-4 font-semibold">{{ __('Repairs') }}</h3>
         <table class="data-table">
@@ -168,4 +169,5 @@
             </tbody>
         </table>
     </div>
+    @endif
 </div>

@@ -1203,5 +1203,10 @@
     "pack name": "প্যাকের নাম",
     "pack price": "প্যাকের দাম",
     "to": "পর্যন্ত",
-    "valid until": "মেয়াদ"
+    "valid until": "মেয়াদ",
+    "Use the repair service": "মেরামত সেবা চালু রাখুন",
+    "Shows Repairs in the menu, dashboard and search. Turn off if the shop does not repair anything.": "মেনু, ড্যাশবোর্ড ও সার্চে মেরামত দেখাবে। দোকানে মেরামতের কাজ না হলে বন্ধ রাখুন।",
+    "Purchase and due history of every customer.": "প্রত্যেক কাস্টমারের কেনাকাটা ও বাকির হিসাব।",
+    "Sales, stock and quotations in one place.": "বিক্রয়, স্টক ও কোটেশন এক জায়গায়।",
+    "Sell by piece, carton or sqft, track every piece of stock across branches, and send quotations to customers.": "পিস, কার্টন বা sqft এ বিক্রি করুন, সব শাখার স্টক দেখুন, এবং কাস্টমারকে কোটেশন পাঠান।"
 }

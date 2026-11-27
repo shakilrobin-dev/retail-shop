@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\Settings\RolePermissions;
 use App\Models\Branch;
 use App\Models\User;
+use App\Services\Settings;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoUsersSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,6 +35,7 @@ class RolesAndUsersTest extends TestCase
     public function test_each_role_only_sees_its_own_pages(): void
     {
         $this->seed([DatabaseSeeder::class, DemoUsersSeeder::class]);
+        app(Settings::class)->set('repairs_enabled', true);
 
         $this->actingAs(User::query()->where('username', 'technician')->sole());
         $this->get(route('repairs.index'))->assertOk();

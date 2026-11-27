@@ -77,7 +77,7 @@
                 @php $figures = $document['figures']; @endphp
                 <div class="no-print grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <x-kpi :label="__('Sales profit')" :value="money($figures['sales_profit'])" icon="cart" tone="indigo" :hint="__('Net sales').' '.money($figures['net_sales'])" />
-                    <x-kpi :label="__('Repair profit')" :value="money($figures['repair_profit'])" icon="wrench" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($figures['repair_count'])])" />
+                    @if ($figures['repair_income'] > 0 || app(\App\Services\Settings::class)->bool('repairs_enabled'))<x-kpi :label="__('Repair profit')" :value="money($figures['repair_profit'])" icon="wrench" tone="amber" :hint="__(':count delivered', ['count' => shop_digits($figures['repair_count'])])" />@endif
                     <x-kpi :label="__('Expenses')" :value="'− '.money($figures['expenses'])" icon="banknotes" tone="rose" />
                     <x-kpi :label="__('Net profit')" :value="money($figures['net_profit'])" icon="trending-up" :tone="$figures['net_profit'] >= 0 ? 'emerald' : 'rose'" />
                 </div>

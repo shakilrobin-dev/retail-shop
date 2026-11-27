@@ -27,10 +27,11 @@
                 <span class="text-lg font-semibold">{{ $shopName }}</span>
             </div>
             <div class="relative mt-auto max-w-md">
-                <h2 class="text-3xl font-semibold leading-tight">{{ __('Sales, stock and repairs in one place.') }}</h2>
-                <p class="mt-4 text-muted-foreground">{{ __('Scan to sell, track every piece of stock across branches, and follow each repair from intake to delivery.') }}</p>
+                @php $repairsOn = app(\App\Services\Settings::class)->bool('repairs_enabled'); @endphp
+                <h2 class="text-3xl font-semibold leading-tight">{{ $repairsOn ? __('Sales, stock and repairs in one place.') : __('Sales, stock and quotations in one place.') }}</h2>
+                <p class="mt-4 text-muted-foreground">{{ $repairsOn ? __('Scan to sell, track every piece of stock across branches, and follow each repair from intake to delivery.') : __('Sell by piece, carton or sqft, track every piece of stock across branches, and send quotations to customers.') }}</p>
                 <div class="mt-8 grid grid-cols-3 gap-4 text-sm">
-                    @foreach ([['cart', __('POS')], ['archive', __('Inventory')], ['wrench', __('Repairs')]] as [$icon, $label])
+                    @foreach ([['cart', __('POS')], ['archive', __('Inventory')], $repairsOn ? ['wrench', __('Repairs')] : ['document', __('Quotations')]] as [$icon, $label])
                         <div class="rounded-xl border border-white/10 bg-layer/5 p-3"><x-icon :name="$icon" class="size-5 text-primary-300" /><div class="mt-2 font-medium">{{ $label }}</div></div>
                     @endforeach
                 </div>

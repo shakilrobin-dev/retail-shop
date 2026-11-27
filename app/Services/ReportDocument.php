@@ -162,12 +162,12 @@ class ReportDocument
                 [__('Less: cost of goods sold'), -$s['cost_of_goods'], 'money', 'muted'],
                 [__('Gross profit from sales'), $s['sales_profit'], 'money', 'total'],
             ]],
-            ['title' => __('Repair service'), 'lines' => [
+            ...($s['repair_income'] > 0 || $s['repair_count'] > 0 || $this->settings->bool('repairs_enabled') ? [['title' => __('Repair service'), 'lines' => [
                 [__('Delivered jobs'), $s['repair_count'], 'int', ''],
                 [__('Repair income'), $s['repair_income'], 'money', ''],
                 [__('Less: parts used'), -$s['repair_parts_cost'], 'money', 'muted'],
                 [__('Profit from repairs'), $s['repair_profit'], 'money', 'total'],
-            ]],
+            ]]] : []),
             ['title' => __('Operating expenses'), 'lines' => [
                 [__('Commission given'), -$s['commission_given'], 'money', 'muted'],
                 [__('Other expenses'), -$s['other_expenses'], 'money', 'muted'],

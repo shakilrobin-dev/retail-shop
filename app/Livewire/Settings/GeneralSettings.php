@@ -44,7 +44,7 @@ class GeneralSettings extends Component
         ],
         'repair' => [
             'repair_default_warranty_days' => 'int', 'repair_terms' => 'string', 'repair_terms_bn' => 'string',
-            'technicians_enabled' => 'bool',
+            'technicians_enabled' => 'bool', 'repairs_enabled' => 'bool',
         ],
         'reports' => [
             'report_tagline' => 'string', 'report_footer_note' => 'string', 'report_show_signatures' => 'bool',

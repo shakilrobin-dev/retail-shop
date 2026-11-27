@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\RepairJob;
+use App\Services\Settings;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -29,6 +30,7 @@ class RepairTest extends TestCase
 
         $this->branch = Branch::factory()->create(['code' => 'B1']);
         PaymentMethod::factory()->create(['type' => PaymentMethodType::Cash]);
+        app(Settings::class)->set('repairs_enabled', true);
     }
 
     private function createJob(float $advance = 0): RepairJob

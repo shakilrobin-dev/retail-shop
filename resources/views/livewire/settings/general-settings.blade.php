@@ -157,12 +157,19 @@
         @endif
 
         @if ($tab === 'repair')
+            <label class="mb-4 flex items-start gap-2 rounded-lg border border-card-line p-3 text-sm">
+                <input wire:model.live="values.repairs_enabled" type="checkbox" class="mt-0.5 rounded border-layer-line">
+                <span><span class="font-medium">{{ __('Use the repair service') }}</span>
+                    <span class="block text-xs text-muted-foreground-1">{{ __('Shows Repairs in the menu, dashboard and search. Turn off if the shop does not repair anything.') }}</span></span>
+            </label>
+            @if ($values['repairs_enabled'])
             <div class="grid gap-4 md:grid-cols-3">
                 <div><label class="form-label">{{ __('Default repair warranty (days)') }}</label><input wire:model="values.repair_default_warranty_days" type="number" min="0" class="form-input"></div>
                 <div class="md:col-span-2"><label class="form-label">{{ __('Job slip terms (English)') }}</label><textarea wire:model="values.repair_terms" rows="2" class="form-input"></textarea></div>
                 <div class="md:col-span-3"><label class="form-label">{{ __('Job slip terms (Bangla)') }}</label><textarea wire:model="values.repair_terms_bn" rows="2" class="form-input"></textarea></div>
                 <label class="flex items-center gap-2 text-sm md:col-span-3"><input wire:model.live="values.technicians_enabled" type="checkbox" class="rounded border-layer-line"> <span class="font-medium">{{ __('Use technicians (assign jobs to technicians)') }}</span></label>
             </div>
+            @endif
         @endif
 
         @if ($tab === 'reports')
@@ -203,7 +210,7 @@
         </div>
     </form>
 
-    @if ($tab === 'repair' && $values['technicians_enabled'])
+    @if ($tab === 'repair' && $values['repairs_enabled'] && $values['technicians_enabled'])
         <div class="card p-6">
             <h3 class="mb-3 font-semibold">{{ __('Technicians') }}</h3>
             <form wire:submit="addTechnician" class="mb-3 flex flex-wrap gap-2">

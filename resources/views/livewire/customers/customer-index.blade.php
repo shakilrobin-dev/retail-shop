@@ -1,7 +1,8 @@
+@php $repairsOn = app(\App\Services\Settings::class)->bool('repairs_enabled'); @endphp
 @php $pageIds = $customers->pluck('id')->all(); @endphp
 <div>
     <x-flash />
-    <x-page-header :title="__('Customers')" :subtitle="__('Purchase and repair history of every customer.')">
+    <x-page-header :title="__('Customers')" :subtitle="$repairsOn ? __('Purchase and repair history of every customer.') : __('Purchase and due history of every customer.')">
         <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
         <button type="button" wire:click="create" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New customer') }}</button>
     </x-page-header>
@@ -29,7 +30,7 @@
                         <x-table.sort field="purchases" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Purchases') }}</x-table.sort>
                         <x-table.sort field="spent" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Total spent') }}</x-table.sort>
                         <x-table.sort field="due" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Due') }}</x-table.sort>
-                        <x-table.sort field="repairs" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Repairs') }}</x-table.sort>
+                        @if ($repairsOn)<x-table.sort field="repairs" :sort="$sortField" :dir="$sortDirection" align="right">{{ __('Repairs') }}</x-table.sort>@endif
                         <x-table.sort field="created" :sort="$sortField" :dir="$sortDirection">{{ __('Since') }}</x-table.sort>
                         <th class="w-12"><span class="sr-only">{{ __('Actions') }}</span></th>
                     </tr>
@@ -51,7 +52,7 @@
                             <td class="text-right tabular-nums">{{ shop_digits($customer->sales_count) }}</td>
                             <td class="text-right font-medium tabular-nums">{{ money($customer->sales_sum_total) }}</td>
                             <td class="text-right tabular-nums">@if ($customer->due_sum > 0)<span class="font-semibold text-red-600">{{ money($customer->due_sum) }}</span>@else<span class="text-muted-foreground">—</span>@endif</td>
-                            <td class="text-right tabular-nums">{{ shop_digits($customer->repair_jobs_count) }}</td>
+                            @if ($repairsOn)<td class="text-right tabular-nums">{{ shop_digits($customer->repair_jobs_count) }}</td>@endif
                             <td class="whitespace-nowrap text-xs text-muted-foreground-1">{{ shop_digits($customer->created_at->format('d M Y')) }}</td>
                             <td class="whitespace-nowrap text-right" x-on:click.stop>
                                 @if ($customer->due_sum > 0)
@@ -63,7 +64,7 @@
                             </td>
                         </tr>
                     @empty
-                        <x-empty :colspan="9" icon="users" :title="__('No customers found.')" :text="__('Customers are added from the POS or repair desk, or here.')" />
+                        <x-empty :colspan="$repairsOn ? 9 : 8" icon="users" :title="__('No customers found.')" :text="__('Customers are added from the POS or repair desk, or here.')" />
                     @endforelse
                 </tbody>
             </table>

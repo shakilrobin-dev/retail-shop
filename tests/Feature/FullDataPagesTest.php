@@ -36,7 +36,7 @@ class FullDataPagesTest extends TestCase
 
         $pages = [
             route('dashboard'), route('pos'), route('sales.index'), route('sales.index', ['status' => '']),
-            route('customers.index'), route('cash-register'), route('repairs.index'), route('repairs.index', ['view' => 'list', 'status' => 'all']),
+            route('customers.index'), route('cash-register'),
             route('products.index'), route('products.create'), route('catalog.setup'), route('labels.index'),
             route('stock.index'), route('stock.movements'), route('stock.adjust'), route('stock.transfers.index'),
             route('purchases.index'), route('purchases.create'), route('suppliers.index'), route('expenses.index'),
@@ -55,5 +55,9 @@ class FullDataPagesTest extends TestCase
         foreach ($pages as $url) {
             $this->get($url)->assertOk();
         }
+
+        /** The repair service is off by default for this shop. */
+        $this->get(route('repairs.index'))->assertForbidden();
+        $this->get(route('dashboard'))->assertDontSee(__('Repairs in shop'));
     }
 }

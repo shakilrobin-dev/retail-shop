@@ -68,6 +68,8 @@ return [
         // Optional features (off by default)
         'cash_drawer_enabled' => false,
         'technicians_enabled' => false,
+        // Repair service module (menu, dashboard, job slips). Off for shops that do not repair.
+        'repairs_enabled' => false,
         'sms_enabled' => false,
         'sms_api_url' => null,
         'sms_api_key' => null,
