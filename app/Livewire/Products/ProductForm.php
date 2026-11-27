@@ -56,7 +56,7 @@ class ProductForm extends Component
     public string $opening_stock = '0';
 
     /**
-     * @var list<array{id: int|null, name: string, name_bn: string, quantity: string, selling_price: string, is_base: bool, barcodes: list<array{id: int|null, code: string, is_generated: bool}>}>
+     * @var list<array{id: int|null, name: string, name_bn: string, quantity: string, selling_price: string, wholesale_price: string, is_base: bool, barcodes: list<array{id: int|null, code: string, is_generated: bool}>}>
      */
     public array $units = [];
 
@@ -80,6 +80,7 @@ class ProductForm extends Component
                 'name_bn' => (string) $unit->name_bn,
                 'quantity' => (string) ($unit->quantity + 0),
                 'selling_price' => (string) $unit->selling_price,
+                'wholesale_price' => (string) $unit->wholesale_price,
                 'is_base' => $unit->is_base,
                 'barcodes' => $unit->barcodes->map(fn ($barcode): array => [
                     'id' => $barcode->id,
@@ -110,6 +111,7 @@ class ProductForm extends Component
                 'name_bn' => (string) $unit->name_bn,
                 'quantity' => (string) ($unit->quantity + 0),
                 'selling_price' => (string) $unit->selling_price,
+                'wholesale_price' => (string) $unit->wholesale_price,
                 'is_base' => $unit->is_base,
                 'barcodes' => [$this->emptyBarcode()],
             ])->all();
@@ -126,6 +128,7 @@ class ProductForm extends Component
             'name_bn' => (string) ($defaultUnit->name_bn ?? ''),
             'quantity' => '1',
             'selling_price' => '',
+            'wholesale_price' => '',
             'is_base' => true,
             'barcodes' => [$this->emptyBarcode()],
         ]];
@@ -149,6 +152,7 @@ class ProductForm extends Component
             'name_bn' => 'বক্স',
             'quantity' => '10',
             'selling_price' => '',
+            'wholesale_price' => '',
             'is_base' => false,
             'barcodes' => [$this->emptyBarcode()],
         ];
@@ -205,6 +209,7 @@ class ProductForm extends Component
             'units.*.name_bn' => ['nullable', 'string', 'max:50'],
             'units.*.quantity' => ['required', 'numeric', 'gt:0'],
             'units.*.selling_price' => ['required', 'numeric', 'min:0'],
+            'units.*.wholesale_price' => ['nullable', 'numeric', 'min:0'],
             'units.*.barcodes.*.code' => ['nullable', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/'],
         ];
     }
@@ -218,6 +223,7 @@ class ProductForm extends Component
             'units.*.name' => __('unit name'),
             'units.*.quantity' => __('pieces in pack'),
             'units.*.selling_price' => __('selling price'),
+            'units.*.wholesale_price' => __('wholesale price'),
             'units.*.barcodes.*.code' => __('barcode'),
         ];
     }

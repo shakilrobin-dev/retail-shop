@@ -108,6 +108,10 @@
 
     <x-flash global />
     <x-confirm-dialog />
+    <livewire:products.product-info />
+    @can('products.manage')
+        <livewire:products.quick-product-form />
+    @endcan
 
     <div x-cloak x-show="mobileMenu" x-transition.opacity x-on:click="mobileMenu = false" class="fixed inset-0 z-50 bg-gray-900/40 lg:hidden"></div>
 

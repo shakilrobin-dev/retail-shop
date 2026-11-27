@@ -22,7 +22,7 @@ class ProductService
 
     /**
      * @param  array<string, mixed>  $attributes  product fields
-     * @param  list<array{id?: int|null, name: string, name_bn?: string|null, quantity: float|string, selling_price: float|string, is_base: bool, barcodes: list<array{id?: int|null, code: string, is_generated?: bool}>}>  $units
+     * @param  list<array{id?: int|null, name: string, name_bn?: string|null, quantity: float|string, selling_price: float|string, wholesale_price?: float|string|null, is_base: bool, barcodes: list<array{id?: int|null, code: string, is_generated?: bool}>}>  $units
      */
     public function save(?Product $product, array $attributes, array $units, ?Branch $openingBranch = null, float $openingQuantity = 0): Product
     {
@@ -68,6 +68,7 @@ class ProductService
                 'name_bn' => $unitData['name_bn'] ?? null,
                 'quantity' => $unitData['is_base'] ? 1 : $unitData['quantity'],
                 'selling_price' => $unitData['selling_price'],
+                'wholesale_price' => ($unitData['wholesale_price'] ?? '') !== '' ? $unitData['wholesale_price'] : null,
                 'is_base' => (bool) $unitData['is_base'],
             ]);
             $unit->product_id = $product->id;

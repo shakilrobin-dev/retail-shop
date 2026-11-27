@@ -8,6 +8,7 @@ use App\Models\ProductStock;
 use App\Services\CurrentBranch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Livewire\Attributes\On;
 
 /**
  * Shared "scan barcode or search product" box.
@@ -21,6 +22,9 @@ trait SearchesProducts
 
     public string $scanMessage = '';
 
+    /** Last scanned code or name that matched nothing (offered as a new product). */
+    public string $missingProductTerm = '';
+
     abstract public function pickUnit(int $productUnitId): void;
 
     /**
@@ -30,6 +34,7 @@ trait SearchesProducts
     {
         $code = trim($this->productSearch);
         $this->scanMessage = '';
+        $this->missingProductTerm = '';
 
         if ($code === '') {
             return;
@@ -58,6 +63,7 @@ trait SearchesProducts
 
         if ($results->isEmpty()) {
             $this->scanMessage = __('No product found for ":code".', ['code' => $code]);
+            $this->missingProductTerm = $code;
             $this->productSearch = '';
             $this->dispatch('scan-not-found');
         }
@@ -67,7 +73,17 @@ trait SearchesProducts
     {
         $this->productSearch = '';
         $this->scanMessage = '';
+        $this->missingProductTerm = '';
         $this->pickUnit($productUnitId);
+    }
+
+    /**
+     * A product was just made in the quick "add product" pop-up: put it on this screen's list.
+     */
+    #[On('quick-product-created')]
+    public function addQuickCreatedProduct(int $productUnitId): void
+    {
+        $this->pickFromSearch($productUnitId);
     }
 
     /**

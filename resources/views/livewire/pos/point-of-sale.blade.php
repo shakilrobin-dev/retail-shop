@@ -1,4 +1,5 @@
 <div x-data="{
+        showProfit: false,
         focusScan() { document.querySelector('[data-scan-input]')?.focus() },
         printUrl(url) {
             const old = document.getElementById('receipt-frame'); if (old) old.remove();
@@ -52,19 +53,30 @@
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {{-- Left: scan + cart --}}
             <div class="space-y-3 xl:col-span-2">
-                <x-product-search :results="$results" :message="$scanMessage" />
+                <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create />
                 @error('cart') <p class="form-error text-sm">{{ $message }}</p> @enderror
+
+                @php
+                    $costTotal = 0;
+                    foreach ($cart as $costLine) {
+                        $costTotal += (float) $costLine['quantity'] * ($unitCosts[$costLine['product_unit_id']] ?? 0);
+                    }
+                    $profitTotal = round($totals['subtotal'] - $totals['discount_amount'] + $totals['rounding_amount'] - $costTotal, 2);
+                @endphp
 
                 <div class="card min-h-64 overflow-x-auto">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>{{ __('Product') }}</th>
-                                <th class="w-36">{{ __('Unit') }}</th>
-                                <th class="w-36 text-center">{{ __('Qty') }}</th>
+                                <th class="w-28">{{ __('Unit') }}</th>
+                                <th class="w-28 text-center">{{ __('Qty') }}</th>
                                 <th class="w-28">{{ __('Price') }}</th>
                                 @can('pos.discount')<th class="w-24">{{ __('Disc.') }}</th>@endcan
-                                <th class="w-28 text-right">{{ __('Total') }}</th>
+                                <th class="w-24 whitespace-nowrap text-right">{{ __('Total') }}</th>
+                                @if ($canViewCost)
+                                    <th x-show="showProfit" x-cloak class="no-print whitespace-nowrap bg-amber-50 px-2! text-right dark:bg-amber-950/30">{{ __('Profit') }}<div class="text-[10px] font-normal normal-case">{{ __('Buying price') }}</div></th>
+                                @endif
                                 <th class="w-10"></th>
                             </tr>
                         </thead>
@@ -73,10 +85,14 @@
                                 @php
                                     $unitQty = $line['units'][$line['product_unit_id']]['quantity'] ?? 1;
                                     $needed = (float) $line['quantity'] * $unitQty;
+                                    $lineTotal = max(0, (float) $line['quantity'] * (float) $line['unit_price'] - (float) $line['discount_amount']);
+                                    $unitCost = $unitCosts[$line['product_unit_id']] ?? 0;
+                                    $lineCost = (float) $line['quantity'] * $unitCost;
+                                    $lineProfit = $lineTotal - $lineCost;
                                 @endphp
                                 <tr wire:key="cart-{{ $line['product_unit_id'] }}-{{ $index }}">
                                     <td>
-                                        <div class="font-medium">{{ $line['name'] }}</div>
+                                        <div class="flex items-center gap-1.5 font-medium">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></div>
                                         <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-muted-foreground' => $needed <= $line['stock']])>
                                             {{ __('In stock') }}: {{ shop_digits($line['stock'] + 0) }}
                                         </div>
@@ -96,34 +112,50 @@
                                     <td>
                                         <div class="flex items-center justify-center gap-1">
                                             <button type="button" wire:click="decrement({{ $index }})" class="btn-secondary btn-sm">−</button>
-                                            <input wire:model.live.debounce.400ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input w-16 px-1 py-1 text-center">
+                                            <input wire:model.live.debounce.400ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input w-14 px-1 py-1 text-center">
                                             <button type="button" wire:click="increment({{ $index }})" class="btn-secondary btn-sm">+</button>
                                         </div>
                                     </td>
                                     <td>
                                         @if ($canEditPrice)
-                                            <input wire:model.live.debounce.500ms="cart.{{ $index }}.unit_price" type="number" step="0.01" min="0" class="form-input py-1">
+                                            <input wire:model.live.debounce.500ms="cart.{{ $index }}.unit_price" type="number" step="0.01" min="0" class="form-input min-w-20 py-1">
                                         @else
                                             <span class="tabular-nums">{{ money($line['unit_price']) }}</span>
                                         @endif
                                     </td>
                                     @can('pos.discount')
-                                        <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input py-1"></td>
+                                        <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input min-w-14 py-1"></td>
                                     @endcan
-                                    <td class="text-right font-medium tabular-nums">{{ money(max(0, (float) $line['quantity'] * (float) $line['unit_price'] - (float) $line['discount_amount'])) }}</td>
+                                    <td class="text-right font-medium tabular-nums">{{ money($lineTotal) }}</td>
+                                    @if ($canViewCost)
+                                        <td x-show="showProfit" x-cloak class="no-print whitespace-nowrap bg-amber-50/60 px-2! text-right tabular-nums dark:bg-amber-950/20">
+                                            <div @class(['font-medium', 'text-emerald-700' => $lineProfit >= 0, 'text-red-600' => $lineProfit < 0])>{{ money($lineProfit) }}</div>
+                                            <div class="text-xs text-muted-foreground" title="{{ money($unitCost) }} × {{ shop_digits((float) $line['quantity'] + 0) }}">{{ money($lineCost) }}</div>
+                                        </td>
+                                    @endif
                                     <td><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this item from the cart?') }}" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                                 </tr>
                             @empty
-                                <x-empty :colspan="7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
+                                <x-empty :colspan="$canViewCost ? 8 : 7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                <div class="flex flex-wrap gap-2 text-xs text-muted-foreground-1">
-                    @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F9' => __('Full screen'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
-                        <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-card-line bg-layer px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground-2">{{ $key }}</kbd> {{ $label }}</span>
-                    @endforeach
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap gap-2 text-xs text-muted-foreground-1">
+                        @foreach (['F2' => __('Search'), 'F8' => __('Hold'), 'F9' => __('Full screen'), 'F10' => __('Pay'), 'Esc' => __('Back')] as $key => $label)
+                            <span class="inline-flex items-center gap-1.5"><kbd class="rounded border border-card-line bg-layer px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground-2">{{ $key }}</kbd> {{ $label }}</span>
+                        @endforeach
+                    </div>
+                    @if ($canViewCost)
+                        <button type="button" x-on:click="showProfit = ! showProfit" x-bind:aria-pressed="showProfit" class="no-print btn-secondary btn-sm"
+                            x-bind:class="showProfit && 'border-amber-300! bg-amber-50! text-amber-800! dark:bg-amber-950/40! dark:text-amber-300!'">
+                            <x-icon name="eye" class="size-3.5" x-show="! showProfit" />
+                            <x-icon name="eye-off" class="size-3.5" x-show="showProfit" x-cloak />
+                            <span x-text="showProfit ? @js(__('Hide cost & profit')) : @js(__('Show cost & profit'))">{{ __('Show cost & profit') }}</span>
+                        </button>
+                    @endif
                 </div>
 
                 @if ($quickItems->isNotEmpty())
@@ -219,6 +251,15 @@
                     @endif
                     @if ($totals['rounding_amount'] != 0)
                         <div class="flex justify-between text-muted-foreground-1"><span>{{ __('Rounding') }}</span><span class="tabular-nums">{{ $totals['rounding_amount'] > 0 ? '+' : '−' }} {{ money(abs($totals['rounding_amount'])) }}</span></div>
+                    @endif
+                    @if ($canViewCost && $cart)
+                        <div x-show="showProfit" x-cloak class="no-print space-y-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs dark:border-amber-900 dark:bg-amber-950/30">
+                            <div class="flex justify-between text-amber-900 dark:text-amber-200"><span>{{ __('Total buying price') }}</span><span class="tabular-nums">{{ money($costTotal) }}</span></div>
+                            <div @class(['flex justify-between text-sm font-semibold', 'text-emerald-700' => $profitTotal >= 0, 'text-red-600' => $profitTotal < 0])>
+                                <span>{{ __('Total profit') }}</span>
+                                <span class="tabular-nums">{{ money($profitTotal) }}@if ($totals['subtotal'] - $totals['discount_amount'] > 0) <span class="text-xs font-normal">({{ shop_digits(round($profitTotal / ($totals['subtotal'] - $totals['discount_amount']) * 100, 1)) }}%)</span>@endif</span>
+                            </div>
+                        </div>
                     @endif
                     <div class="-mx-4 -mb-4 mt-3 flex items-baseline justify-between rounded-b-xl bg-slate-900 px-4 py-4 text-white"><span class="text-sm font-medium text-muted-foreground">{{ __('Total') }}</span><span class="text-3xl font-bold tabular-nums">{{ money($totals['total']) }}</span></div>
                 </div>

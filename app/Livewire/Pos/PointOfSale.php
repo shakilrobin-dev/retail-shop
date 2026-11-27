@@ -388,6 +388,7 @@ class PointOfSale extends Component
         $totals = $this->totals();
         $paid = $this->paidSoFar();
         $customer = $this->customerId ? Customer::query()->find($this->customerId) : null;
+        $canViewCost = (bool) Auth::user()?->can('products.view-cost');
 
         return view('livewire.pos.point-of-sale', [
             'shift' => $branch ? app(PaymentService::class)->openShift($branch) : null,
@@ -413,7 +414,24 @@ class PointOfSale extends Component
             'drawerEnabled' => $settings->bool('cash_drawer_enabled', $branch?->id),
             'lastShift' => $branch ? CashShift::query()->where('branch_id', $branch->id)->latest('closed_at')->first() : null,
             'quickItems' => $this->quickItems(),
+            'canViewCost' => $canViewCost,
+            'unitCosts' => $canViewCost ? $this->unitCosts() : [],
         ])->title(__('POS / Sale'));
+    }
+
+    /**
+     * Buying price of each unit in the cart (product cost × pieces in the unit), keyed by product unit id.
+     * Only sent to the page for users who may see costs.
+     *
+     * @return array<int, float>
+     */
+    private function unitCosts(): array
+    {
+        $unitIds = collect($this->cart)->flatMap(fn (array $line): array => array_keys($line['units']))->unique()->all();
+
+        return ProductUnit::query()->with('product')->whereIn('id', $unitIds)->get()
+            ->mapWithKeys(fn (ProductUnit $unit): array => [$unit->id => round((float) $unit->product?->cost_price * (float) $unit->quantity, 2)])
+            ->all();
     }
 
     /**

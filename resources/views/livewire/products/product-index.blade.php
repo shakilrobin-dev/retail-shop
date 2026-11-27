@@ -74,7 +74,7 @@
                                 <div class="flex items-center gap-3">
                                     <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface text-muted-foreground"><x-icon name="cube" class="size-4" /></span>
                                     <div class="min-w-0">
-                                        <div class="truncate font-medium text-foreground">{{ $product->localName() }}</div>
+                                        <div class="flex min-w-0 items-center gap-1.5"><span class="truncate font-medium text-foreground">{{ $product->localName() }}</span> <x-product-info-button :product-id="$product->id" x-on:click.stop="" /></div>
                                         <div class="truncate text-xs text-muted-foreground-1">
                                             <span class="font-mono">{{ $product->sku }}</span>
                                             @if ($product->brand) · {{ $product->brand->name }} @endif

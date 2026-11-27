@@ -15,7 +15,7 @@
                 ? __('Scan every item on the shelf (each scan adds 1), or type the counted number. The system saves the difference.')
                 : __('Enter a minus number to remove (e.g. -2 damaged) or a plus number to add (e.g. 3 found). Quantities are in pieces.') }}
         </p>
-        <x-product-search :results="$results" :message="$scanMessage" />
+        <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create :quick-create-stock="false" />
         @error('lines') <p class="form-error">{{ $message }}</p> @enderror
 
         <table class="data-table">
@@ -24,7 +24,7 @@
                 @forelse ($lines as $index => $line)
                     @php $after = $mode === 'count' ? (float) $line['value'] : $line['current'] + (float) $line['value']; @endphp
                     <tr wire:key="adj-{{ $line['product_id'] }}">
-                        <td>{{ $line['name'] }}</td>
+                        <td><span class="inline-flex items-center gap-1.5">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></span></td>
                         <td class="text-right">{{ shop_digits($line['current'] + 0) }}</td>
                         <td><input wire:model.live.debounce.400ms="lines.{{ $index }}.value" type="number" step="any" class="form-input">@error("lines.$index.value") <p class="form-error">{{ $message }}</p> @enderror</td>
                         <td @class(['text-right font-medium', 'text-red-600' => $after < $line['current'], 'text-emerald-700' => $after > $line['current']])>{{ shop_digits($after + 0) }}</td>

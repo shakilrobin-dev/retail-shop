@@ -146,6 +146,7 @@
                                     <th>{{ __('Name (Bangla)') }}</th>
                                     <th class="w-28 text-right">{{ __('Pieces inside') }}</th>
                                     <th class="w-36 text-right">{{ __('Selling price') }}</th>
+                                    <th class="w-36 text-right">{{ __('Wholesale price') }}</th>
                                     <th>{{ __('Barcode') }}</th>
                                     <th class="w-10"></th>
                                 </tr>
@@ -166,6 +167,10 @@
                                         <td class="align-top">
                                             <input wire:model="units.{{ $unitIndex }}.selling_price" type="number" step="0.01" min="0" class="form-input text-right font-medium">
                                             @error("units.$unitIndex.selling_price") <p class="form-error">{{ $message }}</p> @enderror
+                                        </td>
+                                        <td class="align-top">
+                                            <input wire:model="units.{{ $unitIndex }}.wholesale_price" type="number" step="0.01" min="0" placeholder="{{ __('Optional') }}" class="form-input text-right">
+                                            @error("units.$unitIndex.wholesale_price") <p class="form-error">{{ $message }}</p> @enderror
                                         </td>
                                         <td class="space-y-1.5 align-top">
                                             @foreach ($unit['barcodes'] as $barcodeIndex => $barcode)

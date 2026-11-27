@@ -20,12 +20,14 @@
             @error('purchase_date') <p class="form-error">{{ $message }}</p> @enderror
         </div>
         <div class="flex items-end">
-            <a href="{{ route('products.create') }}" target="_blank" class="btn-secondary w-full">+ {{ __('New product') }}</a>
+            @can('products.manage')
+                <button type="button" wire:click="$dispatch('open-quick-product', { term: '', withStock: false })" class="btn-secondary w-full">+ {{ __('New product') }}</button>
+            @endcan
         </div>
     </div>
 
     <div class="card space-y-3 p-5">
-        <x-product-search :results="$results" :message="$scanMessage" />
+        <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create :quick-create-stock="false" />
         @error('items') <p class="form-error">{{ $message }}</p> @enderror
 
         <div class="overflow-x-auto">
@@ -44,7 +46,7 @@
                 <tbody>
                     @forelse ($items as $index => $item)
                         <tr wire:key="item-{{ $index }}-{{ $item['product_id'] }}">
-                            <td class="font-medium">{{ $item['name'] }}</td>
+                            <td class="font-medium"><span class="inline-flex items-center gap-1.5">{{ $item['name'] }} <x-product-info-button :product-id="$item['product_id']" /></span></td>
                             <td>
                                 <select wire:model.live="items.{{ $index }}.product_unit_id" class="form-input">
                                     @foreach ($item['units'] as $unitId => $unitName)

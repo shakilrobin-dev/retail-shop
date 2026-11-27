@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['product_id', 'name', 'name_bn', 'quantity', 'selling_price', 'is_base'])]
+#[Fillable(['product_id', 'name', 'name_bn', 'quantity', 'selling_price', 'wholesale_price', 'is_base'])]
 class ProductUnit extends Model
 {
     /** @use HasFactory<ProductUnitFactory> */
@@ -27,6 +27,7 @@ class ProductUnit extends Model
         return [
             'quantity' => 'decimal:3',
             'selling_price' => 'decimal:2',
+            'wholesale_price' => 'decimal:2',
             'is_base' => 'boolean',
         ];
     }
@@ -65,6 +66,6 @@ class ProductUnit extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['name', 'quantity', 'selling_price'])->logOnlyDirty()->dontSubmitEmptyLogs();
+        return LogOptions::defaults()->logOnly(['name', 'quantity', 'selling_price', 'wholesale_price'])->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 }
