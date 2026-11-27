@@ -112,7 +112,7 @@
                         <x-form.field :label="__('SKU / code')" for="sku" error="sku" :hint="__('Leave empty to create automatically')">
                             <input wire:model="sku" id="sku" type="text" class="form-input font-mono">
                         </x-form.field>
-                        <x-form.field :label="__('Base unit')" for="unit_id" required :hint="__('Stock is counted in this unit.')">
+                        <x-form.field :label="__('Base unit')" for="unit_id" required :hint="$is_measured ? __('One tile (piece). The product is sold and shown in :measure; whole pieces are counted in stock.', ['measure' => $measure_unit ?: 'sqft']) : __('Stock is counted in this unit.')">
                             <select wire:model.live="unit_id" id="unit_id" class="form-input">
                                 @foreach ($unitOptions as $unitOption)
                                     <option value="{{ $unitOption->id }}">{{ $unitOption->localName() }}</option>

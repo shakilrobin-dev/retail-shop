@@ -44,7 +44,7 @@
                         <tr wire:key="stock-{{ $product->id }}">
                             <td><div class="font-medium text-foreground">{{ $product->localName() }}</div><div class="font-mono text-xs text-muted-foreground">{{ $product->sku }}</div></td>
                             <td class="max-w-56 truncate text-xs text-muted-foreground-2">{{ $tree->path($product->category_id) }}</td>
-                            <td class="text-right"><x-badge :tone="$qty <= 0 ? 'red' : ($low ? 'amber' : 'green')">{{ $product->stockBreakdown($qty) }}</x-badge></td>
+                            <td class="text-right"><x-badge :tone="$qty <= 0 ? 'red' : ($low ? 'amber' : 'green')">{{ $product->stockLabel($qty) }}</x-badge></td>
                             <td class="text-right text-muted-foreground-1">{{ shop_digits($product->reorder_level + 0) }}</td>
                             @can('products.view-cost')<td class="text-right tabular-nums">{{ money(max(0, $qty) * (float) $product->cost_price) }}</td>@endcan
                             <td class="text-right"><a href="{{ route('stock.movements', ['productId' => $product->id]) }}" class="btn-ghost btn-sm" wire:navigate><x-icon name="history" class="size-4" /> {{ __('History') }}</a></td>

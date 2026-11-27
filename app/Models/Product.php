@@ -153,6 +153,28 @@ class Product extends Model
     }
 
     /**
+     * The unit people see: the measurement for tiles (sqft), otherwise the base unit (piece, kg, bag...).
+     * Needs the "units" relation loaded for products without a measurement.
+     */
+    public function unitLabel(): string
+    {
+        return $this->isMeasured() ? (string) $this->measure_unit : (string) $this->units->firstWhere('is_base', true)?->localName();
+    }
+
+    /**
+     * Stock as people count it: "500.91 sqft (28 Carton + 3 Piece)" for tiles, "3 Box + 4 Piece" otherwise.
+     * Needs the "units" relation loaded.
+     */
+    public function stockLabel(float $baseQuantity): string
+    {
+        if (! $this->isMeasured()) {
+            return $this->stockBreakdown($baseQuantity);
+        }
+
+        return shop_digits($this->measureForPieces($baseQuantity) + 0).' '.$this->measure_unit.' ('.$this->stockBreakdown($baseQuantity).')';
+    }
+
+    /**
      * Name in the current language.
      */
     public function localName(): string

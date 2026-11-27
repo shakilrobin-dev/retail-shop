@@ -1208,5 +1208,6 @@
     "Shows Repairs in the menu, dashboard and search. Turn off if the shop does not repair anything.": "মেনু, ড্যাশবোর্ড ও সার্চে মেরামত দেখাবে। দোকানে মেরামতের কাজ না হলে বন্ধ রাখুন।",
     "Purchase and due history of every customer.": "প্রত্যেক কাস্টমারের কেনাকাটা ও বাকির হিসাব।",
     "Sales, stock and quotations in one place.": "বিক্রয়, স্টক ও কোটেশন এক জায়গায়।",
-    "Sell by piece, carton or sqft, track every piece of stock across branches, and send quotations to customers.": "পিস, কার্টন বা sqft এ বিক্রি করুন, সব শাখার স্টক দেখুন, এবং কাস্টমারকে কোটেশন পাঠান।"
+    "Sell by piece, carton or sqft, track every piece of stock across branches, and send quotations to customers.": "পিস, কার্টন বা sqft এ বিক্রি করুন, সব শাখার স্টক দেখুন, এবং কাস্টমারকে কোটেশন পাঠান।",
+    "One tile (piece). The product is sold and shown in :measure; whole pieces are counted in stock.": "একটি টাইল (পিস)। পণ্যটি :measure এ বিক্রি ও দেখানো হয়; স্টকে পুরো পিস গোনা হয়।"
 }

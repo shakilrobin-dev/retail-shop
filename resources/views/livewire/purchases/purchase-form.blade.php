@@ -57,8 +57,9 @@
                             </td>
                             <td>
                                 @if ($measure)
-                                    <label class="flex items-center gap-1 text-xs text-muted-foreground-1">
-                                        <input wire:model.live.debounce.500ms="items.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-20 text-center">
+                                    <div class="text-sm font-semibold text-foreground">{{ $measure['unit'] }}</div>
+                                    <label class="mt-1 flex items-center gap-1 text-xs text-muted-foreground-1">
+                                        <input wire:model.live.debounce.500ms="items.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-20 py-0.5 text-center text-xs" title="{{ __('Pieces') }}">
                                         {{ $item['units'][$item['product_unit_id']] ?? __('pcs') }}
                                     </label>
                                 @else

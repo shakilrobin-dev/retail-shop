@@ -104,7 +104,7 @@
                                     <td>
                                         <div class="flex items-center gap-1.5 font-medium">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></div>
                                         <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-muted-foreground' => $needed <= $line['stock']])>
-                                            {{ __('In stock') }}: {{ $measure ? $this->packBreakdown($line, (float) $line['stock']) : shop_digits($line['stock'] + 0) }}
+                                            {{ __('In stock') }}: {{ $measure ? shop_digits(round((float) $line['stock'] * $measure['per'], 3) + 0).' '.$measure['unit'].' ('.$this->packBreakdown($line, (float) $line['stock']).')' : shop_digits($line['stock'] + 0) }}
                                         </div>
                                         @if ($measure && $soldQty > 0)
                                             <div class="mt-0.5 text-xs font-medium text-primary-700 dark:text-primary-400">
@@ -115,8 +115,9 @@
                                     </td>
                                     <td>
                                         @if ($measure)
-                                            <label class="flex items-center gap-1 text-xs text-muted-foreground-1">
-                                                <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-1 text-center" title="{{ __('Pieces') }}">
+                                            <div class="text-sm font-semibold text-foreground">{{ $measure['unit'] }}</div>
+                                            <label class="mt-1 flex items-center gap-1 text-xs text-muted-foreground-1">
+                                                <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-0.5 text-center text-xs" title="{{ __('Pieces') }}">
                                                 {{ $line['units'][$line['product_unit_id']]['name'] ?? __('pcs') }}
                                             </label>
                                         @elseif (count($line['units']) > 1)
@@ -188,7 +189,7 @@
                                 <button type="button" wire:click="pickUnit({{ $quick->id }})" wire:key="quick-{{ $quick->id }}"
                                     class="flex min-h-16 flex-col justify-between rounded-lg border border-card-line bg-layer p-2.5 text-left transition hover:border-primary-400 hover:bg-primary-50">
                                     <span class="line-clamp-2 text-xs font-medium text-foreground">{{ $quick->product->localName() }}@unless ($quick->is_base) ({{ $quick->localName() }})@endunless</span>
-                                    <span class="mt-1 text-xs font-semibold tabular-nums text-primary-700">{{ money($quick->selling_price) }}</span>
+                                    <span class="mt-1 text-xs font-semibold tabular-nums text-primary-700">@if ($quick->product->isMeasured() && $quick->product->measure_price !== null){{ money($quick->product->measure_price) }} / {{ $quick->product->measure_unit }}@else{{ money($quick->selling_price) }}@endif</span>
                                 </button>
                             @endforeach
                         </div>

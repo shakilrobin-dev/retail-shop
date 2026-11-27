@@ -76,6 +76,19 @@ class TilesAndReferenceTest extends TestCase
         $this->assertEquals(500.91, $product->measureForPieces(283));
     }
 
+    public function test_tiles_are_shown_in_sqft_with_cartons_and_pieces(): void
+    {
+        $product = $this->tiles(283);
+
+        $this->assertSame('sqft', $product->unitLabel());
+        $this->assertSame('500.91 sqft (28 Carton + 3 Piece)', $product->stockLabel(283));
+        $this->assertSame('Piece', $this->makeProduct()->unitLabel());
+
+        $this->actingAsRole('manager', $this->branch);
+        $this->get(route('products.index'))->assertOk()->assertSee('500.91 sqft (28 Carton + 3 Piece)')->assertSee('/ sqft');
+        $this->get(route('stock.index'))->assertOk()->assertSee('500.91 sqft');
+    }
+
     public function test_typing_sqft_works_out_pieces_and_bills_whole_pieces(): void
     {
         $product = $this->tiles();

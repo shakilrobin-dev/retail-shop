@@ -44,7 +44,7 @@
                             <x-product-info-button :product-id="$result->id" />
                         </span>
                         @if ($showStock)
-                            <span class="shrink-0 text-xs text-muted-foreground-1">{{ __('Stock') }}: {{ $result->stockBreakdown((float) $result->branch_stock) }}</span>
+                            <span class="shrink-0 text-xs text-muted-foreground-1">{{ __('Stock') }}: {{ $result->stockLabel((float) $result->branch_stock) }}</span>
                         @endif
                     </div>
                     @if ($result->compatible_models)
@@ -53,7 +53,7 @@
                     <div class="mt-1 flex flex-wrap gap-1">
                         @foreach ($result->units as $unit)
                             <button type="button" wire:click="pickFromSearch({{ $unit->id }})" class="btn-secondary btn-sm">
-                                + {{ $unit->localName() }} · {{ money($unit->selling_price) }}
+                                + {{ $unit->localName() }}@if ($result->isMeasured()) ({{ shop_digits($result->measureForPieces((float) $unit->quantity) + 0) }} {{ $result->measure_unit }})@endif · {{ money($unit->selling_price) }}
                             </button>
                         @endforeach
                     </div>

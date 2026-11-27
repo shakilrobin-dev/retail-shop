@@ -4,12 +4,16 @@
             <div class="grid grid-cols-2 gap-3">
                 <div @class(['rounded-lg border p-3', 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40' => $branchStock <= 0, 'border-card-line bg-layer' => $branchStock > 0])>
                     <div class="text-xs text-muted-foreground-1">{{ __('Stock (this branch)') }}</div>
-                    <div @class(['mt-0.5 text-lg font-semibold tabular-nums', 'text-red-600' => $branchStock <= 0])>{{ $product->stockBreakdown($branchStock) }}</div>
-                    @if ($product->isMeasured())<div class="text-xs text-muted-foreground-1">= {{ shop_digits($product->measureForPieces($branchStock) + 0) }} {{ $product->measure_unit }}</div>@endif
+                    @if ($product->isMeasured())
+                        <div @class(['mt-0.5 text-lg font-semibold tabular-nums', 'text-red-600' => $branchStock <= 0])>{{ shop_digits($product->measureForPieces($branchStock) + 0) }} {{ $product->measure_unit }}</div>
+                        <div class="text-xs text-muted-foreground-1">{{ $product->stockBreakdown($branchStock) }}</div>
+                    @else
+                        <div @class(['mt-0.5 text-lg font-semibold tabular-nums', 'text-red-600' => $branchStock <= 0])>{{ $product->stockBreakdown($branchStock) }}</div>
+                    @endif
                 </div>
                 <div class="rounded-lg border border-card-line bg-layer p-3">
                     <div class="text-xs text-muted-foreground-1">{{ __('Stock (all branches)') }}</div>
-                    <div class="mt-0.5 text-lg font-semibold tabular-nums">{{ $product->stockBreakdown($allBranchesStock) }}</div>
+                    <div class="mt-0.5 text-lg font-semibold tabular-nums">{{ $product->isMeasured() ? shop_digits($product->measureForPieces($allBranchesStock) + 0).' '.$product->measure_unit : $product->stockBreakdown($allBranchesStock) }}</div>
                 </div>
             </div>
 

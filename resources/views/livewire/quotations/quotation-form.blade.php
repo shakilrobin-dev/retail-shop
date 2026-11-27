@@ -64,10 +64,11 @@
                             </td>
                             <td>
                                 @if ($measure)
-                                    <label class="flex items-center gap-1 text-xs text-muted-foreground-1">
-                                        <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-1 text-center">
-                                        {{ $line['units'][$line['product_unit_id']]['name'] ?? __('pcs') }}
-                                    </label>
+                                            <div class="text-sm font-semibold text-foreground">{{ $measure['unit'] }}</div>
+                                            <label class="mt-1 flex items-center gap-1 text-xs text-muted-foreground-1">
+                                                <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-0.5 text-center text-xs" title="{{ __('Pieces') }}">
+                                                {{ $line['units'][$line['product_unit_id']]['name'] ?? __('pcs') }}
+                                            </label>
                                 @elseif (count($line['units']) > 1)
                                     <select wire:model.live="cart.{{ $index }}.product_unit_id" class="form-input py-1">
                                         @foreach ($line['units'] as $unitId => $unit)

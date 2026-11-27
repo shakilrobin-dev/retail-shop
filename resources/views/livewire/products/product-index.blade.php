@@ -91,7 +91,12 @@
                                 @if ($barcodes->count() > 1)<span class="ml-1 rounded bg-surface px-1 font-sans text-[10px] text-muted-foreground-1">+{{ $barcodes->count() - 1 }}</span>@endif
                             </td>
                             <td class="text-right tabular-nums">
-                                <div class="font-medium text-foreground">{{ money($product->base_price) }}</div>
+                                @if ($product->isMeasured() && $product->measure_price !== null)
+                                    <div class="font-medium text-foreground">{{ money($product->measure_price) }} / {{ $product->measure_unit }}</div>
+                                    <div class="text-xs text-muted-foreground">{{ money($product->base_price) }} / {{ $product->units->firstWhere('is_base', true)?->localName() }}</div>
+                                @else
+                                    <div class="font-medium text-foreground">{{ money($product->base_price) }}</div>
+                                @endif
                                 @if ($product->units->count() > 1)
                                     @php $pack = $product->units->where('is_base', false)->first(); @endphp
                                     <div class="text-xs text-muted-foreground">{{ money($pack->selling_price) }} / {{ $pack->localName() }}</div>
@@ -101,7 +106,7 @@
                                 <td class="text-right tabular-nums text-muted-foreground-1">{{ money($product->cost_price) }}</td>
                             @endcan
                             <td class="text-right">
-                                <x-badge :tone="$stockQty <= 0 ? 'red' : ($isLow ? 'amber' : 'green')">{{ $product->stockBreakdown($stockQty) }}</x-badge>
+                                <x-badge :tone="$stockQty <= 0 ? 'red' : ($isLow ? 'amber' : 'green')">{{ $product->stockLabel($stockQty) }}</x-badge>
                             </td>
                             <td class="text-right" x-on:click.stop>
                                 <x-dropdown trigger="⋯" width="min-w-48">
