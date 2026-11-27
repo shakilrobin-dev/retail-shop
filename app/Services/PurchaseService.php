@@ -28,7 +28,7 @@ class PurchaseService
 
     /**
      * @param  array{supplier_id: int|null, supplier_invoice_no: string|null, purchase_date: string, discount: float|string, note: string|null}  $header
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_cost: float|string, new_selling_price?: float|string|null}>  $items
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_cost: float|string, new_selling_price?: float|string|null, measure_rate?: float|string|null, new_measure_price?: float|string|null}>  $items  a line with measure_rate is bought by measurement: quantity = whole pieces
      */
     public function create(Branch $branch, array $header, array $items, PaymentMethod $paymentMethod, ?string $transactionRef = null, bool $paidFromDrawer = false): Purchase
     {
@@ -52,9 +52,23 @@ class PurchaseService
                 $quantity = (float) $item['quantity'];
                 $unitCost = (float) $item['unit_cost'];
                 $lineTotal = round($quantity * $unitCost, 2);
+                $measure = null;
+
+                /** Bought by measurement (tiles by sqft): quantity is whole pieces, cost is pieces × sqft per piece × rate. */
+                if (($item['measure_rate'] ?? null) !== null && $item['measure_rate'] !== '' && $unit->product->isMeasured()) {
+                    $rate = round((float) $item['measure_rate'], 2);
+                    $measureQuantity = $unit->product->measureForPieces($quantity * (float) $unit->quantity);
+                    $lineTotal = round($measureQuantity * $rate, 2);
+                    $unitCost = $quantity > 0 ? round($lineTotal / $quantity, 2) : 0.0;
+                    $measure = ['unit' => $unit->product->measure_unit, 'quantity' => $measureQuantity, 'rate' => $rate];
+                }
+
                 $subtotal += $lineTotal;
 
-                $lines[] = compact('unit', 'quantity', 'unitCost', 'lineTotal') + ['newPrice' => $item['new_selling_price'] ?? null];
+                $lines[] = compact('unit', 'quantity', 'unitCost', 'lineTotal', 'measure') + [
+                    'newPrice' => $item['new_selling_price'] ?? null,
+                    'newMeasurePrice' => $item['new_measure_price'] ?? null,
+                ];
             }
 
             $discount = min((float) $header['discount'], $subtotal);
@@ -88,6 +102,9 @@ class PurchaseService
                     'unit_quantity' => $unit->quantity,
                     'base_quantity' => $baseQuantity,
                     'unit_cost' => $line['unitCost'],
+                    'measure_unit' => $line['measure']['unit'] ?? null,
+                    'measure_quantity' => $line['measure']['quantity'] ?? null,
+                    'measure_rate' => $line['measure']['rate'] ?? null,
                     'line_total' => $line['lineTotal'],
                 ]);
 
@@ -100,6 +117,10 @@ class PurchaseService
 
                 if ($line['newPrice'] !== null && $line['newPrice'] !== '') {
                     $unit->update(['selling_price' => $line['newPrice']]);
+                }
+
+                if ($line['newMeasurePrice'] !== null && $line['newMeasurePrice'] !== '' && $product->isMeasured()) {
+                    $this->setMeasurePrice($product, (float) $line['newMeasurePrice']);
                 }
             }
 
@@ -172,5 +193,17 @@ class PurchaseService
 
             return $purchaseReturn;
         });
+    }
+
+    /**
+     * New selling rate per measurement (e.g. per sqft): piece and carton prices follow.
+     */
+    private function setMeasurePrice(Product $product, float $rate): void
+    {
+        $product->update(['measure_price' => $rate]);
+
+        foreach ($product->units()->get() as $unit) {
+            $unit->update(['selling_price' => round($rate * (float) $product->measure_per_unit * (float) $unit->quantity, 2)]);
+        }
     }
 }

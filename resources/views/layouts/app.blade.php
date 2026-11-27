@@ -25,6 +25,7 @@
         [__('Sales'), [
             [__('POS / Sale'), 'cart', 'pos', 'pos.sell', 'pos', 0],
             [__('Sales'), 'receipt', 'sales.index', 'pos.sell', 'sales.*', 0],
+            [__('Quotations'), 'document', 'quotations.index', 'pos.sell', 'quotations.*', 0],
             [__('Customers'), 'users', 'customers.index', 'pos.sell', 'customers.*', 0],
             [__('Due collection'), 'banknotes', 'customers.index', 'customers.collect-due', 'customers.index', 0, ['dueFilter' => 'due']],
             [__('References'), 'user', 'referrers.index', 'commissions.manage', 'referrers.*', 0],

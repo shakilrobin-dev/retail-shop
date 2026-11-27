@@ -2,6 +2,7 @@
 <div>
     <x-flash />
     <x-page-header :title="__('Sales')" :subtitle="__('Invoices, returns and reprints.')">
+        <x-branch-badge :branch="app(\App\Services\CurrentBranch::class)->get()" />
         <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
         <a href="{{ route('pos') }}" class="btn-primary" wire:navigate><x-icon name="cart" class="size-4" /> {{ __('New sale') }}</a>
     </x-page-header>

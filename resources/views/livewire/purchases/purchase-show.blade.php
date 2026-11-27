@@ -29,7 +29,9 @@
             <tbody>
                 @foreach ($purchase->items as $item)
                     <tr wire:key="pitem-{{ $item->id }}">
-                        <td>{{ $item->product->name }}</td>
+                        <td>{{ $item->product->name }}
+                            @if ($item->measure_quantity !== null)<div class="text-xs text-muted-foreground-1">{{ shop_digits($item->measure_quantity + 0) }} {{ $item->measure_unit }} × {{ money($item->measure_rate) }} · {{ $item->product->stockBreakdown((float) $item->base_quantity) }}</div>@endif
+                        </td>
                         <td class="text-right">{{ shop_digits($item->quantity + 0) }} {{ $item->productUnit->name }}@if ($item->unit_quantity > 1)<div class="text-xs text-muted-foreground">= {{ shop_digits($item->base_quantity + 0) }} {{ __('pcs') }}</div>@endif</td>
                         <td class="text-right tabular-nums">{{ money($item->unit_cost) }}</td>
                         <td class="text-right tabular-nums">{{ money($item->line_total) }}</td>

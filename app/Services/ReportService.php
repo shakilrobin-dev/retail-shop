@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\RepairStatus;
 use App\Enums\SaleStatus;
+use App\Models\CommissionSettlement;
 use App\Models\CustomerPayment;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -186,10 +187,10 @@ class ReportService
     }
 
     /**
-     * Sales by reference person: invoices, sales, cost, profit and commission.
+     * Sales by reference person: invoices, sales, cost and profit.
      * Sales without a reference are one row with a null referrer_id.
      *
-     * @return Collection<int, object{referrer_id: int|null, name: string|null, phone: string|null, invoices: int, sales: float, vat: float, cost: float, commission: float}>
+     * @return Collection<int, object{referrer_id: int|null, name: string|null, phone: string|null, invoices: int, sales: float, vat: float, cost: float}>
      */
     public function byReferrer(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
     {
@@ -200,7 +201,7 @@ class ReportService
             ->leftJoinSub($cost, 'item_costs', 'item_costs.sale_id', '=', 'sales.id')
             ->whereIn('sales.id', $this->completedSales($branchId, $from, $to)->select('id'))
             ->selectRaw('sales.referrer_id as referrer_id, referrers.name as name, referrers.phone as phone, COUNT(*) as invoices,
-                SUM(sales.total) as sales, SUM(sales.vat_amount) as vat, SUM(COALESCE(item_costs.cost, 0)) as cost, SUM(sales.commission_amount) as commission')
+                SUM(sales.total) as sales, SUM(sales.vat_amount) as vat, SUM(COALESCE(item_costs.cost, 0)) as cost')
             ->groupBy('sales.referrer_id', 'referrers.name', 'referrers.phone')
             ->orderByRaw('sales.referrer_id IS NULL')
             ->orderByDesc('sales')
@@ -208,36 +209,43 @@ class ReportService
     }
 
     /**
-     * Commission per reference person: earned and paid in the period, and still due (all time).
+     * Commission per reference person: profit of their sales in the period, commission worked out
+     * for periods ending in it, commission paid in it, and what is still due (all time).
      *
-     * @return Collection<int, array{name: string, phone: string|null, invoices: int, earned: float, paid: float, due: float}>
+     * @return Collection<int, array{name: string, phone: string|null, invoices: int, profit: float, commission: float, paid: float, due: float}>
      */
     public function commissions(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
     {
-        $earnedInPeriod = $this->completedSales($branchId, $from, $to)->whereNotNull('referrer_id')
-            ->selectRaw('referrer_id, COUNT(*) as invoices, SUM(commission_amount) as earned')->groupBy('referrer_id')->get()->keyBy('referrer_id');
-        $paidInPeriod = Expense::query()->whereNotNull('referrer_id')
-            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+        $cost = SaleItem::query()->selectRaw('sale_id, SUM(unit_cost * quantity) as cost')->groupBy('sale_id');
+        $salesInPeriod = Sale::query()
+            ->leftJoinSub($cost, 'item_costs', 'item_costs.sale_id', '=', 'sales.id')
+            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to)->whereNotNull('referrer_id')->select('id'))
+            ->selectRaw('sales.referrer_id as referrer_id, COUNT(*) as invoices, SUM(sales.total - sales.vat_amount - COALESCE(item_costs.cost, 0)) as profit')
+            ->groupBy('sales.referrer_id')->get()->keyBy('referrer_id');
+        $settlements = CommissionSettlement::query()->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId));
+        $commissionInPeriod = (clone $settlements)
+            ->whereDate('period_to', '>=', $from->toDateString())->whereDate('period_to', '<=', $to->toDateString())
+            ->selectRaw('referrer_id, SUM(amount) as amount')->groupBy('referrer_id')->pluck('amount', 'referrer_id');
+        $commissionAllTime = (clone $settlements)->selectRaw('referrer_id, SUM(amount) as amount')->groupBy('referrer_id')->pluck('amount', 'referrer_id');
+        $payments = Expense::query()->whereNotNull('referrer_id')->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId));
+        $paidInPeriod = (clone $payments)
             ->whereDate('expense_date', '>=', $from->toDateString())->whereDate('expense_date', '<=', $to->toDateString())
             ->selectRaw('referrer_id, SUM(amount) as paid')->groupBy('referrer_id')->pluck('paid', 'referrer_id');
-        $earnedAllTime = Sale::query()->whereNotNull('referrer_id')->where('status', SaleStatus::Completed)
-            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
-            ->selectRaw('referrer_id, SUM(commission_amount) as earned')->groupBy('referrer_id')->pluck('earned', 'referrer_id');
-        $paidAllTime = Expense::query()->whereNotNull('referrer_id')
-            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
-            ->selectRaw('referrer_id, SUM(amount) as paid')->groupBy('referrer_id')->pluck('paid', 'referrer_id');
+        $paidAllTime = (clone $payments)->selectRaw('referrer_id, SUM(amount) as paid')->groupBy('referrer_id')->pluck('paid', 'referrer_id');
 
-        $ids = $earnedInPeriod->keys()->merge($paidInPeriod->keys())
-            ->merge($earnedAllTime->filter(fn ($earned, $id): bool => round((float) $earned - (float) ($paidAllTime[$id] ?? 0), 2) != 0)->keys())
+        $due = fn (int $id): float => round((float) ($commissionAllTime[$id] ?? 0) - (float) ($paidAllTime[$id] ?? 0), 2);
+        $ids = $salesInPeriod->keys()->merge($commissionInPeriod->keys())->merge($paidInPeriod->keys())
+            ->merge($commissionAllTime->keys()->filter(fn ($id): bool => $due((int) $id) != 0))
             ->unique();
 
         return Referrer::query()->whereIn('id', $ids)->orderBy('name')->get()->map(fn (Referrer $referrer): array => [
             'name' => $referrer->name,
             'phone' => $referrer->phone,
-            'invoices' => (int) ($earnedInPeriod[$referrer->id]->invoices ?? 0),
-            'earned' => round((float) ($earnedInPeriod[$referrer->id]->earned ?? 0), 2),
+            'invoices' => (int) ($salesInPeriod[$referrer->id]->invoices ?? 0),
+            'profit' => round((float) ($salesInPeriod[$referrer->id]->profit ?? 0), 2),
+            'commission' => round((float) ($commissionInPeriod[$referrer->id] ?? 0), 2),
             'paid' => round((float) ($paidInPeriod[$referrer->id] ?? 0), 2),
-            'due' => round((float) ($earnedAllTime[$referrer->id] ?? 0) - (float) ($paidAllTime[$referrer->id] ?? 0), 2),
+            'due' => $due($referrer->id),
         ]);
     }
 

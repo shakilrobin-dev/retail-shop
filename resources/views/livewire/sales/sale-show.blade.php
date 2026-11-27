@@ -24,14 +24,9 @@
             @endif
         </div></div>
         <div><div class="text-muted-foreground-1">{{ __('Cashier') }}</div><div>{{ $sale->user?->name }}</div></div>
+        <div><div class="text-muted-foreground-1">{{ __('Branch') }}</div><div class="font-medium">{{ $sale->branch?->localName() }}</div></div>
         @if ($sale->referrer)
-            <div><div class="text-muted-foreground-1">{{ __('Reference') }}</div><div>{{ $sale->referrer->name }}@if ($sale->referrer->phone) · {{ $sale->referrer->phone }}@endif</div></div>
-            @can('commissions.manage')
-                <div class="no-print"><div class="text-muted-foreground-1">{{ __('Commission') }}</div><div class="font-medium tabular-nums">
-                    {{ money($sale->commission_amount) }}
-                    @if ($sale->commission_type === \App\Enums\CommissionType::ProfitPercent)<span class="text-xs font-normal text-muted-foreground-1">({{ shop_digits($sale->commission_value + 0) }}% {{ __('of profit') }})</span>@endif
-                </div></div>
-            @endcan
+            <div class="no-print"><div class="text-muted-foreground-1">{{ __('Reference') }}</div><div>{{ $sale->referrer->name }}@if ($sale->referrer->phone) · {{ $sale->referrer->phone }}@endif</div></div>
         @endif
     </div>
 

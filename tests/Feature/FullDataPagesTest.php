@@ -41,6 +41,7 @@ class FullDataPagesTest extends TestCase
             route('sales.show', Sale::query()->latest('id')->first()), route('purchases.show', Purchase::query()->first()),
             route('repairs.show', RepairJob::query()->first()), route('customers.show', Customer::query()->first()),
             route('products.edit', Product::query()->first()),
+            route('quotations.index'), route('quotations.create'), route('referrers.index'),
         ];
 
         foreach (array_keys(ReportDocument::REPORTS) as $tab) {

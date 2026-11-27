@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Referrers;
 
+use App\Enums\CommissionType;
 use App\Enums\SaleStatus;
 use App\Livewire\Concerns\WithDataTable;
+use App\Models\CommissionSettlement;
 use App\Models\Expense;
 use App\Models\PaymentMethod;
 use App\Models\Referrer;
@@ -11,6 +13,7 @@ use App\Services\CommissionService;
 use App\Services\CurrentBranch;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -50,6 +53,28 @@ class ReferrerIndex extends Component
     public string $payNote = '';
 
     public bool $payFromDrawer = true;
+
+    /** Work out commission for a month or date range. */
+    public bool $showSettle = false;
+
+    public ?int $settlingId = null;
+
+    public string $settleFrom = '';
+
+    public string $settleTo = '';
+
+    public string $settleType = 'profit_percent';
+
+    public string $settleValue = '';
+
+    public string $settleNote = '';
+
+    /** Amount paid now (optional). */
+    public string $settlePay = '';
+
+    public ?int $settleMethodId = null;
+
+    public bool $settleFromDrawer = true;
 
     public function mount(): void
     {
@@ -144,6 +169,97 @@ class ReferrerIndex extends Component
         $this->dispatch('toast', message: __('Commission paid to :name.', ['name' => $referrer->name]));
     }
 
+    public function openSettle(int $id): void
+    {
+        $referrer = Referrer::query()->findOrFail($id);
+        $this->resetValidation();
+        $this->settlingId = $referrer->id;
+        $last = $referrer->settlements()->latest('period_to')->first();
+        $from = $last ? $last->period_to->copy()->addDay() : today()->startOfMonth();
+        $this->settleFrom = $from->toDateString();
+        $this->settleTo = today()->max($from)->toDateString();
+        $this->settleType = CommissionType::ProfitPercent->value;
+        $this->settleValue = $referrer->commission_percent !== null ? (string) ($referrer->commission_percent + 0) : '';
+        $this->settleNote = '';
+        $this->settlePay = '';
+        $this->settleMethodId ??= PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->value('id');
+        $this->showSettle = true;
+    }
+
+    public function settleMonth(string $which): void
+    {
+        $month = $which === 'last' ? today()->subMonthNoOverflow() : today();
+        $this->settleFrom = $month->copy()->startOfMonth()->toDateString();
+        $this->settleTo = $which === 'last' ? $month->copy()->endOfMonth()->toDateString() : today()->toDateString();
+    }
+
+    public function settle(CommissionService $commissions, CurrentBranch $currentBranch): void
+    {
+        $this->authorize('commissions.manage');
+
+        $this->validate([
+            'settleFrom' => ['required', 'date'],
+            'settleTo' => ['required', 'date', 'after_or_equal:settleFrom'],
+            'settleType' => ['required', 'in:'.implode(',', array_column(CommissionType::cases(), 'value'))],
+            'settleValue' => ['required', 'numeric', 'gt:0'],
+            'settleNote' => ['nullable', 'string', 'max:255'],
+            'settlePay' => ['nullable', 'numeric', 'min:0'],
+            'settleMethodId' => ['required_with:settlePay', 'nullable', 'exists:payment_methods,id'],
+        ], [], ['settleFrom' => __('from'), 'settleTo' => __('to'), 'settleValue' => __('commission'), 'settlePay' => __('amount paid')]);
+
+        $referrer = Referrer::query()->findOrFail($this->settlingId);
+
+        $commissions->settle(
+            $currentBranch->get(),
+            $referrer,
+            Carbon::parse($this->settleFrom),
+            Carbon::parse($this->settleTo),
+            CommissionType::from($this->settleType),
+            (float) $this->settleValue,
+            $this->settleNote,
+            (float) $this->settlePay,
+            $this->settleMethodId ? PaymentMethod::query()->find($this->settleMethodId) : null,
+            $this->settleFromDrawer,
+        );
+
+        $this->reset('showSettle', 'settlingId', 'settleValue', 'settleNote', 'settlePay');
+        $this->dispatch('toast', message: __('Commission saved for :name.', ['name' => $referrer->name]));
+    }
+
+    /**
+     * Live figures for the commission pop-up.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function settlePreview(): ?array
+    {
+        $referrer = $this->showSettle && $this->settlingId ? Referrer::query()->find($this->settlingId) : null;
+
+        if (! $referrer) {
+            return null;
+        }
+
+        try {
+            $from = Carbon::parse($this->settleFrom);
+            $to = Carbon::parse($this->settleTo);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $commissions = app(CommissionService::class);
+        $summary = $commissions->summary($referrer, $from, $to);
+        $type = CommissionType::tryFrom($this->settleType) ?? CommissionType::ProfitPercent;
+
+        return [
+            'referrer' => $referrer,
+            'summary' => $summary,
+            'amount' => $commissions->calculate($summary['profit'], $type, (float) $this->settleValue),
+            'due' => $referrer->commissionDue(),
+            'overlap' => $to->gte($from) ? $commissions->overlapping($referrer, $from, $to) : null,
+            'history' => $referrer->settlements()->latest('period_to')->limit(6)->get(),
+        ];
+    }
+
     private function resetForm(): void
     {
         $this->reset('editingId', 'name', 'phone', 'address', 'commission_percent', 'notes', 'showForm');
@@ -155,18 +271,18 @@ class ReferrerIndex extends Component
      */
     protected function sortableColumns(): array
     {
-        return ['name' => 'name', 'sales' => 'sales_count', 'earned' => 'sales_sum_commission_amount', 'paid' => 'commission_payments_sum_amount'];
+        return ['name' => 'name', 'sales' => 'sales_count', 'earned' => 'settlements_sum_amount', 'paid' => 'commission_payments_sum_amount'];
     }
 
     public function export(): StreamedResponse
     {
         $rows = $this->query()->orderBy('name')->get()->map(fn (Referrer $referrer): array => [
             $referrer->name, $referrer->phone, $referrer->commission_percent, $referrer->sales_count, (float) $referrer->sales_sum_total,
-            (float) $referrer->sales_sum_commission_amount, (float) $referrer->commission_payments_sum_amount,
-            round((float) $referrer->sales_sum_commission_amount - (float) $referrer->commission_payments_sum_amount, 2),
+            (float) $referrer->settlements_sum_amount, (float) $referrer->commission_payments_sum_amount,
+            round((float) $referrer->settlements_sum_amount - (float) $referrer->commission_payments_sum_amount, 2),
         ]);
 
-        return $this->csvDownload('references', ['Name', 'Phone', 'Default commission %', 'Invoices', 'Sales', 'Commission earned', 'Commission paid', 'Commission due'], $rows);
+        return $this->csvDownload('references', ['Name', 'Phone', 'Default commission %', 'Invoices', 'Sales', 'Commission given', 'Commission paid', 'Commission due'], $rows);
     }
 
     /**
@@ -179,7 +295,7 @@ class ReferrerIndex extends Component
         return Referrer::query()
             ->withCount(['sales' => $completed])
             ->withSum(['sales' => $completed], 'total')
-            ->withSum(['sales' => $completed], 'commission_amount')
+            ->withSum('settlements', 'amount')
             ->withSum('commissionPayments', 'amount')
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$this->search}%")
@@ -189,7 +305,7 @@ class ReferrerIndex extends Component
     public function render(): View
     {
         $referrers = $this->applySorting($this->query(), 'name')->paginate($this->perPage);
-        $earned = (float) Referrer::query()->join('sales', 'sales.referrer_id', '=', 'referrers.id')->where('sales.status', SaleStatus::Completed)->sum('sales.commission_amount');
+        $earned = (float) CommissionSettlement::query()->sum('amount');
         $paid = (float) Expense::query()->whereNotNull('referrer_id')->sum('amount');
         $paying = $this->payingId ? Referrer::query()->find($this->payingId) : null;
 
@@ -204,7 +320,8 @@ class ReferrerIndex extends Component
             ],
             'paying' => $paying,
             'payingDue' => $paying?->commissionDue() ?? 0,
-            'paymentMethods' => $this->showPay ? PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get() : collect(),
+            'settle' => $this->settlePreview(),
+            'paymentMethods' => $this->showPay || $this->showSettle ? PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get() : collect(),
             'history' => $this->editingId
                 ? Expense::query()->where('referrer_id', $this->editingId)->latest('expense_date')->latest('id')->limit(10)->get()
                 : collect(),

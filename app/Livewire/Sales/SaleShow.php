@@ -117,7 +117,7 @@ class SaleShow extends Component
 
     public function render(): View
     {
-        $this->sale->load(['items.product.units', 'referrer', 'payments.paymentMethod', 'payments.customerPayment', 'customer', 'user', 'voidedBy', 'returns.items.saleItem', 'returns.user']);
+        $this->sale->load(['items.product.units', 'referrer', 'branch', 'payments.paymentMethod', 'payments.customerPayment', 'customer', 'user', 'voidedBy', 'returns.items.saleItem', 'returns.user']);
 
         return view('livewire.sales.sale-show', [
             'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get(),

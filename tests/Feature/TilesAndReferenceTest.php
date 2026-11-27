@@ -7,18 +7,24 @@ use App\Enums\PaymentMethodType;
 use App\Enums\StockMovementType;
 use App\Livewire\Pos\PointOfSale;
 use App\Livewire\Products\ProductForm;
+use App\Livewire\Products\QuickProductForm;
+use App\Livewire\Purchases\PurchaseForm;
 use App\Livewire\Referrers\ReferrerIndex;
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\CommissionSettlement;
 use App\Models\Expense;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\Purchase;
 use App\Models\Referrer;
 use App\Models\Sale;
 use App\Models\Unit;
 use App\Services\CashShiftService;
+use App\Services\CommissionService;
 use App\Services\ReportDocument;
 use App\Services\ReportService;
+use App\Services\SaleService;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -183,11 +189,11 @@ class TilesAndReferenceTest extends TestCase
             ->assertHasErrors('measure_per_unit');
     }
 
-    public function test_reference_can_be_added_at_the_pos_and_gets_percent_of_profit(): void
+    public function test_reference_can_be_added_at_the_pos_and_is_kept_on_the_invoice_only(): void
     {
         $product = $this->makeProduct(['name' => 'Cement', 'cost_price' => 500], piecePrice: 550);
         app(StockService::class)->move($this->branch, $product, 100, StockMovementType::Opening);
-        $this->startSelling();
+        $this->startSelling('cashier');
 
         Livewire::test(PointOfSale::class)
             ->set('referrerSearch', '01712345678')
@@ -195,97 +201,21 @@ class TilesAndReferenceTest extends TestCase
             ->set('newReferrerName', 'Rahim Mistri')
             ->call('createReferrer')
             ->assertHasNoErrors()
+            ->assertDontSee(__('Commission'))
             ->call('pickUnit', $product->units->first()->id)
-            ->set('cart.0.quantity', '10')
-            ->set('commissionType', CommissionType::ProfitPercent->value)
-            ->set('commissionValue', '20')
-            ->assertSee(money(100))
             ->call('openPayment')->call('payExact', 0)->call('complete')
             ->assertHasNoErrors();
 
         $sale = Sale::query()->sole();
-        $referrer = Referrer::query()->sole();
-        $this->assertSame('Rahim Mistri', $referrer->name);
-        $this->assertSame($referrer->id, $sale->referrer_id);
-        $this->assertSame(CommissionType::ProfitPercent, $sale->commission_type);
-        $this->assertEquals(100, (float) $sale->commission_amount);
-        $this->assertEquals(100, $referrer->commissionDue());
+        $this->assertSame(Referrer::query()->sole()->id, $sale->referrer_id);
+
+        $this->get(route('sales.receipt', $sale))->assertOk()->assertDontSee('Rahim Mistri');
     }
 
-    public function test_fixed_commission_amount(): void
-    {
-        $product = $this->makeProduct(['cost_price' => 500], piecePrice: 550);
-        app(StockService::class)->move($this->branch, $product, 100, StockMovementType::Opening);
-        $referrer = Referrer::factory()->create();
-        $this->startSelling();
-
-        Livewire::test(PointOfSale::class)
-            ->call('pickUnit', $product->units->first()->id)
-            ->call('selectReferrer', $referrer->id)
-            ->set('commissionType', CommissionType::Amount->value)
-            ->set('commissionValue', '75')
-            ->call('openPayment')->call('payExact', 0)->call('complete')
-            ->assertHasNoErrors();
-
-        $this->assertEquals(75, (float) Sale::query()->sole()->commission_amount);
-    }
-
-    public function test_cashier_cannot_change_commission_and_gets_the_reference_default(): void
-    {
-        $product = $this->makeProduct(['cost_price' => 500], piecePrice: 550);
-        app(StockService::class)->move($this->branch, $product, 100, StockMovementType::Opening);
-        $referrer = Referrer::factory()->withPercent(10)->create();
-        $this->startSelling('cashier');
-
-        Livewire::test(PointOfSale::class)
-            ->call('pickUnit', $product->units->first()->id)
-            ->set('cart.0.quantity', '10')
-            ->call('selectReferrer', $referrer->id)
-            ->assertDontSee(__('Commission on this invoice'))
-            ->set('commissionType', CommissionType::Amount->value)
-            ->set('commissionValue', '5000')
-            ->call('openPayment')->call('payExact', 0)->call('complete')
-            ->assertHasNoErrors();
-
-        $this->assertEquals(50, (float) Sale::query()->sole()->commission_amount);
-    }
-
-    public function test_paying_commission_is_an_expense_and_shows_in_profit_and_loss(): void
-    {
-        $product = $this->makeProduct(['cost_price' => 500], piecePrice: 550);
-        app(StockService::class)->move($this->branch, $product, 100, StockMovementType::Opening);
-        $referrer = Referrer::factory()->withPercent(20)->create();
-        $this->startSelling();
-
-        Livewire::test(PointOfSale::class)
-            ->call('pickUnit', $product->units->first()->id)
-            ->set('cart.0.quantity', '10')
-            ->call('selectReferrer', $referrer->id)
-            ->call('openPayment')->call('payExact', 0)->call('complete')
-            ->assertHasNoErrors();
-
-        Livewire::test(ReferrerIndex::class)
-            ->call('openPay', $referrer->id)
-            ->assertSet('payAmount', '100')
-            ->set('payAmount', '150')
-            ->call('pay')
-            ->assertHasErrors('payAmount')
-            ->set('payAmount', '60')
-            ->call('pay')
-            ->assertHasNoErrors();
-
-        $expense = Expense::query()->sole();
-        $this->assertSame($referrer->id, $expense->referrer_id);
-        $this->assertSame('Commission', $expense->category->name);
-        $this->assertEquals(40, $referrer->fresh()->commissionDue());
-
-        $summary = app(ReportService::class)->summary($this->branch->id, today(), today());
-        $this->assertEquals(60, $summary['commission_given']);
-        $this->assertEquals(60, $summary['expenses']);
-        $this->assertEquals(500 - 60, $summary['net_profit']);
-    }
-
-    public function test_reference_and_commission_reports(): void
+    /**
+     * Two sales by Karim this month (profit 500 + 50) and one without a reference.
+     */
+    private function referredSales(): Referrer
     {
         $product = $this->makeProduct(['cost_price' => 500], piecePrice: 550);
         app(StockService::class)->move($this->branch, $product, 100, StockMovementType::Opening);
@@ -295,27 +225,107 @@ class TilesAndReferenceTest extends TestCase
 
         Livewire::test(PointOfSale::class)
             ->call('pickUnit', $unitId)->set('cart.0.quantity', '10')->call('selectReferrer', $referrer->id)
-            ->call('openPayment')->call('payExact', 0)->call('complete')
-            ->call('newSale')
+            ->call('openPayment')->call('payExact', 0)->call('complete')->call('newSale')
+            ->call('pickUnit', $unitId)->call('selectReferrer', $referrer->id)
+            ->call('openPayment')->call('payExact', 0)->call('complete')->call('newSale')
             ->call('pickUnit', $unitId)
             ->call('openPayment')->call('payExact', 0)->call('complete')
             ->assertHasNoErrors();
 
+        return $referrer;
+    }
+
+    public function test_commission_is_worked_out_on_the_total_profit_of_a_period_and_paid_later(): void
+    {
+        $referrer = $this->referredSales();
+
+        Livewire::test(ReferrerIndex::class)
+            ->call('openSettle', $referrer->id)
+            ->assertSet('settleFrom', today()->startOfMonth()->toDateString())
+            ->assertSet('settleValue', '20')
+            ->assertSee(money(550))
+            ->assertSee(money(110))
+            ->call('settle')
+            ->assertHasNoErrors();
+
+        $settlement = CommissionSettlement::query()->sole();
+        $this->assertSame(2, $settlement->invoices);
+        $this->assertEquals(550, (float) $settlement->profit);
+        $this->assertEquals(110, (float) $settlement->amount);
+        $this->assertEquals(110, $referrer->fresh()->commissionDue());
+        $this->assertSame(0, Expense::query()->count());
+
+        Livewire::test(ReferrerIndex::class)
+            ->call('openPay', $referrer->id)
+            ->assertSet('payAmount', '110')
+            ->set('payAmount', '200')->call('pay')->assertHasErrors('payAmount')
+            ->set('payAmount', '60')->call('pay')->assertHasNoErrors();
+
+        $expense = Expense::query()->sole();
+        $this->assertSame($referrer->id, $expense->referrer_id);
+        $this->assertSame('Commission', $expense->category->name);
+        $this->assertEquals(50, $referrer->fresh()->commissionDue());
+
+        $summary = app(ReportService::class)->summary($this->branch->id, today(), today());
+        $this->assertEquals(60, $summary['commission_given']);
+        $this->assertEquals(60, $summary['expenses']);
+        $this->assertEquals(550 + 550 - 500 - 60, $summary['net_profit'] + 0);
+    }
+
+    public function test_fixed_commission_paid_at_once_and_periods_cannot_overlap(): void
+    {
+        $referrer = $this->referredSales();
+
+        Livewire::test(ReferrerIndex::class)
+            ->call('openSettle', $referrer->id)
+            ->set('settleType', CommissionType::Amount->value)
+            ->set('settleValue', '300')
+            ->set('settlePay', '300')
+            ->call('settle')
+            ->assertHasNoErrors();
+
+        $this->assertEquals(300, (float) CommissionSettlement::query()->sole()->amount);
+        $this->assertEquals(300, (float) Expense::query()->sole()->amount);
+        $this->assertEquals(0, $referrer->fresh()->commissionDue());
+
+        Livewire::test(ReferrerIndex::class)
+            ->call('openSettle', $referrer->id)
+            ->set('settleFrom', today()->startOfMonth()->toDateString())
+            ->set('settleValue', '50')
+            ->call('settle')
+            ->assertHasErrors('settleFrom');
+    }
+
+    public function test_returns_are_taken_off_the_profit_for_commission(): void
+    {
+        $referrer = $this->referredSales();
+        $sale = Sale::query()->where('referrer_id', $referrer->id)->with('items')->orderBy('id')->first();
+        app(SaleService::class)->return($sale, [$sale->items->first()->id => ['quantity' => 5, 'restock' => true]], $this->cash, 'Too many');
+
+        $summary = app(CommissionService::class)->summary($referrer, today(), today());
+
+        $this->assertEquals(550 - 250, $summary['profit']);
+    }
+
+    public function test_reference_and_commission_reports(): void
+    {
+        $referrer = $this->referredSales();
+        app(CommissionService::class)->settle($this->branch, $referrer, today()->startOfMonth(), today(), CommissionType::ProfitPercent, 20);
+
         $document = app(ReportDocument::class)->build('referrers', $this->branch->id, today(), today());
         $karim = collect($document['rows'])->firstWhere('name', 'Karim Contractor ('.$referrer->phone.')');
-        $this->assertEquals(5500, $karim['sales']);
-        $this->assertEquals(500, $karim['profit']);
-        $this->assertEquals(100, $karim['commission']);
-        $this->assertEquals(400, $karim['after']);
+        $this->assertSame(2, $karim['invoices']);
+        $this->assertEquals(6050, $karim['sales']);
+        $this->assertEquals(550, $karim['profit']);
         $this->assertEqualsWithDelta(9.09, $karim['margin'], 0.01);
         $this->assertEquals(__('Without reference'), $document['rows'][1]['name']);
-        $this->assertEquals(6050, $document['totals']['sales']);
 
-        $commissions = app(ReportDocument::class)->build('commissions', $this->branch->id, today(), today());
-        $this->assertEquals(100, $commissions['rows'][0]['earned']);
-        $this->assertEquals(100, $commissions['rows'][0]['due']);
+        $commissions = app(ReportDocument::class)->build('commissions', $this->branch->id, today()->startOfMonth(), today());
+        $this->assertEquals(550, $commissions['rows'][0]['profit']);
+        $this->assertEquals(110, $commissions['rows'][0]['commission']);
+        $this->assertEquals(110, $commissions['rows'][0]['due']);
 
-        $this->get(route('reports.index', ['tab' => 'referrers']))->assertOk()->assertSee('Karim Contractor');
+        $this->get(route('reports.index', ['tab' => 'commissions']))->assertOk()->assertSee('Karim Contractor');
         $this->get(route('referrers.index'))->assertOk()->assertSee('Karim Contractor');
     }
 
@@ -340,5 +350,75 @@ class TilesAndReferenceTest extends TestCase
             ->assertOk()
             ->assertSee('500.91 sqft')
             ->assertSee('28 Carton + 3 Piece');
+    }
+
+    public function test_tiles_are_bought_by_sqft_and_stock_goes_up_in_pieces(): void
+    {
+        $product = $this->tiles(0);
+        $this->actingAsRole('manager', $this->branch);
+
+        Livewire::test(PurchaseForm::class)
+            ->call('pickUnit', $product->units->firstWhere('is_base', false)->id)
+            ->assertSet('items.0.pieces', '10')
+            ->assertSet('items.0.quantity', '17.7')
+            ->assertSet('items.0.unit_cost', '84.75')
+            ->set('items.0.quantity', '500')
+            ->assertSet('items.0.pieces', '283')
+            ->assertSee('28 Carton + 3 Piece')
+            ->set('items.0.unit_cost', '80')
+            ->set('items.0.new_selling_price', '125')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $item = Purchase::query()->with('items')->sole()->items->first();
+        $this->assertEquals(283, (float) $item->base_quantity);
+        $this->assertEquals(500.91, (float) $item->measure_quantity);
+        $this->assertEquals(80, (float) $item->measure_rate);
+        $this->assertEquals(40072.80, (float) $item->line_total);
+        $this->assertEquals(283, app(StockService::class)->quantity($this->branch, $product));
+
+        $product->refresh()->load('units');
+        $this->assertEquals(125, (float) $product->measure_price);
+        $this->assertEquals(221.25, (float) $product->units->firstWhere('is_base', true)->selling_price);
+        $this->assertEquals(2212.50, (float) $product->units->firstWhere('name', 'Carton')->selling_price);
+    }
+
+    public function test_quick_add_popup_can_set_up_tiles_by_sqft_with_carton(): void
+    {
+        $this->actingAsRole('manager', $this->branch);
+        Category::factory()->create();
+        Unit::factory()->create(['name' => 'Piece']);
+
+        Livewire::test(QuickProductForm::class)
+            ->call('openForm', 'Floor tiles 24x24')
+            ->set('category_id', Category::query()->value('id'))
+            ->set('is_measured', true)
+            ->set('measure_unit', 'sqft')
+            ->set('measure_per_unit', '4')
+            ->set('measure_price', '95')
+            ->set('pack_name', 'Carton')
+            ->set('pack_quantity', '4')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $product = Product::query()->with('units')->where('name', 'Floor tiles 24x24')->sole();
+        $this->assertTrue($product->isMeasured());
+        $this->assertEquals(380, (float) $product->units->firstWhere('is_base', true)->selling_price);
+        $this->assertEquals(1520, (float) $product->units->firstWhere('name', 'Carton')->selling_price);
+    }
+
+    public function test_branch_name_is_on_the_pos_and_the_receipt(): void
+    {
+        $product = $this->tiles();
+        $this->branch->update(['name' => 'Mirpur Branch']);
+        $this->startSelling();
+
+        Livewire::test(PointOfSale::class)
+            ->assertSee('Mirpur Branch')
+            ->call('pickUnit', $product->units->firstWhere('is_base', true)->id)
+            ->call('openPayment')->call('payExact', 0)->call('complete');
+
+        $this->get(route('sales.receipt', Sale::query()->sole()))->assertOk()->assertSee('Mirpur Branch');
+        $this->get(route('sales.show', Sale::query()->sole()))->assertOk()->assertSee('Mirpur Branch');
     }
 }

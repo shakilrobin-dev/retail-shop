@@ -292,21 +292,20 @@ class ReportDocument
             return [
                 'name' => $row->referrer_id ? $row->name.($row->phone ? ' ('.$row->phone.')' : '') : __('Without reference'),
                 'invoices' => (int) $row->invoices, 'sales' => $net, 'cost' => (float) $row->cost, 'profit' => $profit,
-                'margin' => $net > 0 ? $profit / $net * 100 : 0, 'commission' => (float) $row->commission,
-                'after' => $profit - (float) $row->commission,
+                'margin' => $net > 0 ? $profit / $net * 100 : 0,
             ];
         });
 
         $document['columns'] = $this->columns([
             ['name', __('Reference')], ['invoices', __('Invoices'), 'int'], ['sales', __('Sales'), 'money'], ['cost', __('Cost of goods'), 'money'],
-            ['profit', __('Gross profit'), 'money'], ['margin', __('Margin'), 'percent'], ['commission', __('Commission'), 'money'], ['after', __('Profit after commission'), 'money'],
+            ['profit', __('Gross profit'), 'money'], ['margin', __('Margin'), 'percent'],
         ]);
         $document['rows'] = $rows->all();
         $sales = (float) $rows->sum('sales');
         $profit = (float) $rows->sum('profit');
         $document['totals'] = [
             'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'cost' => (float) $rows->sum('cost'),
-            'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0, 'commission' => (float) $rows->sum('commission'), 'after' => (float) $rows->sum('after'),
+            'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0,
         ];
         $document['notes'][] = __('Sales are without VAT. Returns are not deducted here; see the profit & loss for returns.');
 
@@ -317,12 +316,16 @@ class ReportDocument
     {
         $rows = $this->reports->commissions($branchId, $from, $to);
         $document['columns'] = $this->columns([
-            ['name', __('Reference')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'],
-            ['earned', __('Earned in period'), 'money'], ['paid', __('Paid in period'), 'money'], ['due', __('Due now'), 'money'],
+            ['name', __('Reference')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'], ['profit', __('Profit from sales'), 'money'],
+            ['commission', __('Commission worked out'), 'money'], ['paid', __('Paid in period'), 'money'], ['due', __('Due now'), 'money'],
         ]);
         $document['rows'] = $rows->all();
-        $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'earned' => (float) $rows->sum('earned'), 'paid' => (float) $rows->sum('paid'), 'due' => (float) $rows->sum('due')];
-        $document['notes'][] = __('Commission is earned when the sale is made and counted as an expense (commission given) when it is paid.');
+        $document['totals'] = [
+            'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'profit' => (float) $rows->sum('profit'),
+            'commission' => (float) $rows->sum('commission'), 'paid' => (float) $rows->sum('paid'), 'due' => (float) $rows->sum('due'),
+        ];
+        $document['notes'][] = __('Commission is worked out on each person\'s total profit for a month or date range, and counted as an expense (commission given) when it is paid.');
+        $document['notes'][] = __('"Commission worked out" counts periods that end inside this report\'s dates.');
         $document['notes'][] = __('"Due now" is all unpaid commission up to today, not only this period.');
 
         return $document;

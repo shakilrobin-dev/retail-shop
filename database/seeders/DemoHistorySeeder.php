@@ -20,6 +20,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\Purchase;
+use App\Models\Referrer;
 use App\Models\RepairJob;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -64,6 +65,8 @@ class DemoHistorySeeder extends Seeder
         $this->products($products);
         $customers = $this->customers();
         $suppliers = $this->suppliers();
+        $referrers = collect([['Karim Mistri', '01911000000', 10], ['Engr. Habib', '01911000001', 5], ['Sobuj Contractor', '01911000002', null]])
+            ->map(fn (array $row) => Referrer::query()->firstOrCreate(['phone' => $row[1]], ['name' => $row[0], 'commission_percent' => $row[2]]));
 
         $units = ProductUnit::query()->with('product')->where('is_base', true)
             ->whereHas('product', fn ($query) => $query->where('is_active', true))->get();
@@ -95,20 +98,31 @@ class DemoHistorySeeder extends Seeder
                 $sale = Sale::query()->create([
                     'branch_id' => $branch->id, 'invoice_no' => $numbers->next($branch, 'invoice'), 'status' => SaleStatus::Completed,
                     'customer_id' => mt_rand(1, 10) <= 4 ? $customers->random()->id : null, 'user_id' => $admin->id,
+                    'referrer_id' => mt_rand(1, 10) <= 3 ? $referrers->random()->id : null,
                     'cash_shift_id' => $shift->id, 'sold_at' => $at, 'subtotal' => 0, 'total' => 0, 'paid_amount' => 0,
                     'created_at' => $at, 'updated_at' => $at,
                 ]);
 
                 foreach ($lines as $unit) {
-                    $quantity = mt_rand(1, 10) <= 8 ? 1 : mt_rand(2, 3);
-                    $lineTotal = round($quantity * (float) $unit->selling_price, 2);
+                    $measured = $unit->product->isMeasured();
+                    $quantity = $measured ? mt_rand(8, 40) : (mt_rand(1, 10) <= 8 ? 1 : mt_rand(2, 3));
+
+                    if ($stock->quantity($branch, $unit->product) < $quantity) {
+                        $stock->move($branch, $unit->product, 200, StockMovementType::Opening, null, null, __('Opening stock'));
+                    }
+                    $measureQuantity = $measured ? $unit->product->measureForPieces($quantity) : null;
+                    $lineTotal = $measured
+                        ? round($measureQuantity * (float) $unit->product->measure_price, 2)
+                        : round($quantity * (float) $unit->selling_price, 2);
                     $total += $lineTotal;
 
                     $sale->items()->create([
                         'product_id' => $unit->product_id, 'product_unit_id' => $unit->id, 'product_name' => $unit->product->name,
                         'unit_name' => $unit->name, 'quantity' => $quantity, 'unit_quantity' => 1, 'base_quantity' => $quantity,
-                        'unit_price' => $unit->selling_price, 'unit_cost' => $unit->product->cost_price, 'line_total' => $lineTotal,
-                        'warranty_days' => $unit->product->warranty_days,
+                        'unit_price' => $measured ? round($lineTotal / $quantity, 2) : $unit->selling_price, 'unit_cost' => $unit->product->cost_price,
+                        'measure_unit' => $measured ? $unit->product->measure_unit : null, 'measure_quantity' => $measureQuantity,
+                        'measure_rate' => $measured ? $unit->product->measure_price : null,
+                        'line_total' => $lineTotal, 'warranty_days' => $unit->product->warranty_days,
                     ]);
 
                     $movement = $stock->move($branch, $unit->product, -$quantity, StockMovementType::Sale, $sale);
@@ -156,20 +170,19 @@ class DemoHistorySeeder extends Seeder
         $category = fn (string $name) => Category::query()->where('name', $name)->value('id') ?? Category::query()->value('id');
         $brand = fn (string $name) => Brand::query()->firstOrCreate(['name' => $name])->id;
         $items = [
-            ['25W Super Fast Charger', 'Wall chargers', 'Samsung', 650, 1050, 180], ['33W Dual Port Charger', 'Wall chargers', 'Xiaomi', 520, 850, 180],
-            ['Car Charger 2-Port', 'Car chargers', 'Baseus', 280, 550, 90], ['15W Magnetic Wireless Charger', 'Wireless chargers', 'Anker', 900, 1450, 180],
-            ['Type-C to Type-C Cable 2m', 'Type-C', 'Anker', 220, 420, 30], ['Braided Type-C Cable 1m', 'Type-C', 'Ugreen', 160, 320, 30],
-            ['Micro USB Cable 1m', 'Micro USB', 'Remax', 60, 150, 30], ['iPhone 13 Silicone Case', 'Covers & Cases', null, 120, 350, null],
-            ['Redmi Note 13 Back Cover', 'Covers & Cases', null, 70, 200, null], ['Samsung A25 Flip Cover', 'Covers & Cases', null, 150, 400, null],
-            ['Privacy Glass iPhone 14', 'Screen Protectors', null, 60, 250, null], ['Camera Lens Protector', 'Screen Protectors', null, 30, 120, null],
-            ['TWS Earbuds Pro', 'Earphones & Headphones', 'Realme', 1100, 1750, 180], ['Neckband Bluetooth Earphone', 'Earphones & Headphones', 'Oraimo', 650, 1100, 90],
-            ['Gaming Headphone', 'Earphones & Headphones', 'Havit', 950, 1600, 180], ['20000mAh Power Bank', 'Power Banks', 'Anker', 1900, 2800, 365],
-            ['5000mAh Mini Power Bank', 'Power Banks', 'Xiaomi', 750, 1150, 180], ['Redmi 13C Display', 'Displays', 'Xiaomi', 1400, 2300, 30],
-            ['Samsung A05 Display', 'Displays', 'Samsung', 1600, 2600, 30], ['iPhone 11 Battery', 'Batteries', null, 1100, 2200, 90],
-            ['Samsung A12 Battery', 'Batteries', 'Samsung', 550, 1100, 90], ['Type-C Charging Board', 'Charging Ports', null, 120, 450, null],
-            ['Phone Holder Stand', 'Accessories', null, 90, 250, null], ['OTG Adapter Type-C', 'Accessories', 'Ugreen', 60, 180, null],
-            ['32GB Memory Card', 'Electronics', 'SanDisk', 320, 550, 365], ['64GB Pendrive', 'Electronics', 'SanDisk', 420, 700, 365],
-            ['Smart Watch Strap', 'Accessories', null, 80, 250, null], ['Ring Light 10 inch', 'Electronics', null, 650, 1100, 30],
+            ['Wash Basin Mixer Tap', 'Taps & Showers', 'Hatim', 1400, 1950, null], ['Hand Shower Set', 'Taps & Showers', 'Hatim', 650, 950, null],
+            ['Overhead Shower 8 inch', 'Taps & Showers', 'Stella', 900, 1350, null], ['Commode Seat Cover', 'Commode & Basin', null, 450, 750, null],
+            ['Low-Down Commode', 'Commode & Basin', 'Stella', 4200, 5600, null], ['PVC Elbow 1 inch', 'Pipes & Fittings', 'RFL', 12, 20, null],
+            ['PVC Tee 1 inch', 'Pipes & Fittings', 'RFL', 15, 25, null], ['GI Pipe 1/2 inch (20 ft)', 'Pipes & Fittings', null, 950, 1200, null],
+            ['Water Tank Ball Valve', 'Pipes & Fittings', null, 220, 350, null], ['Socket 2 Pin', 'Switches & Sockets', 'Walton', 55, 85, null],
+            ['Socket 3 Pin Universal', 'Switches & Sockets', 'Walton', 90, 140, null], ['Ceiling Fan 56 inch', 'Lights & Fans', 'Walton', 3100, 3900, 730],
+            ['LED Tube Light 20W', 'Lights & Fans', 'Transtec', 280, 420, 365], ['Circuit Breaker 63A', 'Circuit Breakers', 'Schneider', 650, 900, 365],
+            ['Distribution Board 8 Way', 'Circuit Breakers', 'Schneider', 1200, 1650, null], ['Concrete Nail 2 inch Packet', 'Nails & Screws', null, 60, 95, null],
+            ['Wood Screw 1.5 inch Packet', 'Nails & Screws', null, 70, 110, null], ['Anchor Bolt 12mm', 'Nuts & Bolts', null, 25, 40, null],
+            ['Hammer 1 kg', 'Tools', 'Stanley', 380, 550, null], ['Measuring Tape 5m', 'Tools', 'Stanley', 220, 350, null],
+            ['Trowel 9 inch', 'Tools', null, 150, 240, null], ['Spirit Level 24 inch', 'Tools', 'Stanley', 450, 650, null],
+            ['Tiles Grout 1 kg', 'Tiles', 'Mapei', 90, 140, null], ['Tiles Adhesive 20 kg', 'Tiles', 'Mapei', 650, 850, null],
+            ['Angle Bar 1.5 inch (20 ft)', 'Angle & Flat Bar', null, 1300, 1550, null], ['Flat Bar 1 inch (20 ft)', 'Angle & Flat Bar', null, 700, 850, null],
         ];
 
         $branch = Branch::query()->orderBy('id')->first();

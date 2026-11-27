@@ -6,13 +6,14 @@ use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Referrer;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Services\ProductService;
 use Illuminate\Database\Seeder;
 
 /**
- * Sample products for trying the system. Not run by default:
+ * Sample construction-material products for trying the system. Not run by default:
  *   php artisan db:seed --class=DemoDataSeeder
  */
 class DemoDataSeeder extends Seeder
@@ -23,32 +24,42 @@ class DemoDataSeeder extends Seeder
     public function run(ProductService $products): void
     {
         $branch = Branch::query()->orderBy('id')->firstOrFail();
-        $piece = Unit::query()->where('short_name', 'pcs')->firstOrFail();
+        $unit = fn (string $short) => Unit::query()->where('short_name', $short)->firstOrFail();
         $category = fn (string $name) => Category::query()->where('name', $name)->firstOrFail()->id;
         $brand = fn (string $name) => Brand::query()->firstOrCreate(['name' => $name])->id;
 
-        Supplier::query()->firstOrCreate(['name' => 'Dhaka Mobile Wholesale'], ['phone' => '01711000000', 'company' => 'Stadium Market']);
+        Supplier::query()->firstOrCreate(['name' => 'Dhaka Building Materials'], ['phone' => '01711000000', 'company' => 'Babubazar']);
         Customer::query()->firstOrCreate(['phone' => '01811000000'], ['name' => 'Rahim Uddin']);
+        Referrer::query()->firstOrCreate(['phone' => '01911000000'], ['name' => 'Karim Mistri', 'commission_percent' => 10]);
 
         $items = [
-            // name, name_bn, category, brand, models, cost, price, stock, barcode, warranty, pack [name, qty, price, barcode]
-            ['20W Fast Charger Type-C', '২০ ওয়াট ফাস্ট চার্জার', 'Wall chargers', 'Anker', null, 450, 750, 25, '6901234500011', 180, null],
-            ['USB Type-C Cable 1m', 'টাইপ-সি ক্যাবল ১ মিটার', 'Type-C', 'Baseus', null, 90, 180, 60, '6901234500028', 30, null],
-            ['Lightning Cable 1m', 'লাইটনিং ক্যাবল ১ মিটার', 'Lightning', 'Baseus', 'iPhone', 150, 300, 30, '6901234500035', 30, null],
-            ['Samsung A15 Back Cover', 'স্যামসাং A15 ব্যাক কভার', 'Covers & Cases', null, 'Samsung A15', 60, 150, 20, null, null, null],
-            ['Tempered Glass 9D', 'টেম্পার্ড গ্লাস ৯ডি', 'Screen Protectors', null, 'All models', 25, 100, 100, null, null, null],
-            ['Wired Earphone', 'তারযুক্ত ইয়ারফোন', 'Earphones & Headphones', 'Realme', null, 120, 250, 15, '6901234500042', 7, null],
-            ['10000mAh Power Bank', '১০০০০ এমএএইচ পাওয়ার ব্যাংক', 'Power Banks', 'Xiaomi', null, 1150, 1650, 8, '6901234500059', 180, null],
-            ['A15 Display (OLED)', 'A15 ডিসপ্লে', 'Displays', 'Samsung', 'Samsung A15', 2200, 3200, 3, null, 30, null],
-            ['Redmi 12 Battery', 'রেডমি ১২ ব্যাটারি', 'Batteries', 'Xiaomi', 'Redmi 12', 650, 1100, 5, null, 90, null],
-            ['SIM Ejector Pin', 'সিম পিন', 'Small Parts', null, null, 1, 5, 200, null, null, ['Box', 50, 200, '6901234500066']],
-            ['Charging Port Type-C', 'চার্জিং পোর্ট টাইপ-সি', 'Charging Ports', null, 'Universal', 40, 150, 4, null, null, ['Pack', 10, 1200, null]],
+            // name, name_bn, category, brand, base unit, cost per base unit, price per base unit, stock, barcode, pack [name, qty, price], measure [unit, per piece, rate]
+            ['MS Rod 10mm 500W', 'এমএস রড ১০মিমি', 'MS Rod', 'BSRM', 'kg', 88, 95, 3000, null, ['Ton', 1000, 94000], null],
+            ['MS Rod 12mm 500W', 'এমএস রড ১২মিমি', 'MS Rod', 'BSRM', 'kg', 88, 95, 3000, null, ['Ton', 1000, 94000], null],
+            ['Binding Wire', 'বাইন্ডিং তার', 'Binding Wire', null, 'kg', 120, 150, 200, null, null, null],
+            ['Portland Cement 50kg', 'পোর্টল্যান্ড সিমেন্ট ৫০ কেজি', 'Cement', 'Shah Cement', 'bag', 480, 530, 300, null, null, null],
+            ['Composite Cement 50kg', 'কম্পোজিট সিমেন্ট ৫০ কেজি', 'Cement', 'Seven Rings', 'bag', 465, 515, 250, null, null, null],
+            ['Floor Tiles 24x24 Glossy', 'ফ্লোর টাইলস ২৪x২৪', 'Floor Tiles', 'RAK', 'pcs', 300, 380, 400, '8901000000017', ['Carton', 4, 1520], ['sqft', 4, 95]],
+            ['Wall Tiles 12x20 Matt', 'ওয়াল টাইলস ১২x২০', 'Wall Tiles', 'DBL', 'pcs', 105, 125.25, 600, '8901000000024', ['Carton', 10, 1252.50], ['sqft', 1.67, 75]],
+            ['Mirror Wall Tiles 1.77', 'মিরর ওয়াল টাইলস', 'Wall Tiles', 'Akij', 'pcs', 150, 212.40, 500, '8901000000031', ['Carton', 10, 2124], ['sqft', 1.77, 120]],
+            ['Stair Tiles 12x48', 'সিঁড়ির টাইলস ১২x৪৮', 'Stair Tiles', 'RAK', 'pcs', 420, 520, 120, null, ['Carton', 3, 1560], ['sqft', 4, 130]],
+            ['Commode One-Piece', 'কমোড ওয়ান-পিস', 'Commode & Basin', 'RAK', 'pcs', 7500, 9500, 6, null, null, null],
+            ['Wash Basin with Pedestal', 'বেসিন (পেডেস্টাল সহ)', 'Commode & Basin', 'Stella', 'pcs', 2600, 3400, 8, null, null, null],
+            ['Bib Cock Tap', 'বিব কক ট্যাপ', 'Taps & Showers', 'Hatim', 'pcs', 450, 650, 40, null, null, null],
+            ['PVC Pipe 1 inch (20 ft)', 'পিভিসি পাইপ ১ ইঞ্চি', 'Pipes & Fittings', 'RFL', 'pcs', 380, 450, 60, null, null, null],
+            ['Electric Cable 1.5 rm', 'ইলেকট্রিক ক্যাবল ১.৫ আরএম', 'Cables & Wires', 'BRB', 'm', 20, 24, 1000, null, ['Coil', 100, 2300], null],
+            ['Switch 1 Gang', 'সুইচ ১ গ্যাং', 'Switches & Sockets', 'Walton', 'pcs', 45, 70, 200, null, ['Box', 10, 650], null],
+            ['LED Bulb 12W', 'এলইডি বাল্ব ১২ ওয়াট', 'Lights & Fans', 'Transtec', 'pcs', 150, 220, 80, null, null, null],
+            ['Circuit Breaker 32A', 'সার্কিট ব্রেকার ৩২এ', 'Circuit Breakers', 'Schneider', 'pcs', 280, 400, 30, null, null, null],
+            ['Nut Bolt 10mm x 2 inch', 'নাট বোল্ট ১০মিমি', 'Nuts & Bolts', null, 'pcs', 6, 10, 1000, null, ['Box', 100, 900], null],
+            ['Wire Nails 3 inch', 'তারকাটা ৩ ইঞ্চি', 'Nails & Screws', null, 'kg', 140, 170, 100, null, null, null],
         ];
 
-        foreach ($items as [$name, $nameBn, $categoryName, $brandName, $models, $cost, $price, $stock, $barcode, $warranty, $pack]) {
+        foreach ($items as [$name, $nameBn, $categoryName, $brandName, $unitShort, $cost, $price, $stock, $barcode, $pack, $measure]) {
+            $baseUnit = $unit($unitShort);
             $units = [[
-                'name' => $piece->name,
-                'name_bn' => $piece->name_bn,
+                'name' => $baseUnit->name,
+                'name_bn' => $baseUnit->name_bn,
                 'quantity' => 1,
                 'selling_price' => $price,
                 'is_base' => true,
@@ -62,7 +73,7 @@ class DemoDataSeeder extends Seeder
                     'quantity' => $pack[1],
                     'selling_price' => $pack[2],
                     'is_base' => false,
-                    'barcodes' => $pack[3] ? [['code' => $pack[3]]] : [],
+                    'barcodes' => [],
                 ];
             }
 
@@ -71,11 +82,12 @@ class DemoDataSeeder extends Seeder
                 'name_bn' => $nameBn,
                 'category_id' => $category($categoryName),
                 'brand_id' => $brandName ? $brand($brandName) : null,
-                'unit_id' => $piece->id,
-                'compatible_models' => $models,
+                'unit_id' => $baseUnit->id,
+                'measure_unit' => $measure[0] ?? null,
+                'measure_per_unit' => $measure[1] ?? null,
+                'measure_price' => $measure[2] ?? null,
                 'cost_price' => $cost,
-                'reorder_level' => max(2, (int) round($stock / 5)),
-                'warranty_days' => $warranty,
+                'reorder_level' => max(2, (int) round($stock / 10)),
             ], $units, $branch, $stock);
         }
     }

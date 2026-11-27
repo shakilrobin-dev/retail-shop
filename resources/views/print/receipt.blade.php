@@ -41,6 +41,7 @@
         <hr>
         <table>
             <tr><td>{{ __('Invoice') }}: <span class="bold">{{ $sale->invoice_no }}</span></td></tr>
+            <tr><td>{{ __('Branch') }}: <span class="bold">{{ $sale->branch->localName() }}</span></td></tr>
             <tr><td>{{ __('Date') }}: {{ shop_digits($sale->sold_at->format('d/m/Y h:i A')) }}</td></tr>
             <tr><td>{{ __('Cashier') }}: {{ $sale->user?->name }}</td></tr>
             @if ($sale->customer)<tr><td>{{ __('Customer') }}: {{ $sale->customer->name }} ({{ $sale->customer->phone }})</td></tr>@endif

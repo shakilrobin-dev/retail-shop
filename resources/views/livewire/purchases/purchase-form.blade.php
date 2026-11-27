@@ -1,5 +1,7 @@
 <form wire:submit="save" class="space-y-4">
-    <x-page-header class="mb-0" :title="__('New purchase')" :subtitle="__('Scan products from the supplier invoice, check costs, then save.')" :back="route('purchases.index')" :backLabel="__('Purchases')" />
+    <x-page-header class="mb-0" :title="__('New purchase')" :subtitle="__('Scan products from the supplier invoice, check costs, then save.')" :back="route('purchases.index')" :backLabel="__('Purchases')">
+        <x-branch-badge :branch="app(\App\Services\CurrentBranch::class)->get()" />
+    </x-page-header>
     <div class="card grid gap-3 p-5 md:grid-cols-4">
         <div>
             <label class="form-label">{{ __('Supplier') }}</label>
@@ -45,27 +47,43 @@
                 </thead>
                 <tbody>
                     @forelse ($items as $index => $item)
+                        @php $measure = $item['measure'] ?? null; @endphp
                         <tr wire:key="item-{{ $index }}-{{ $item['product_id'] }}">
-                            <td class="font-medium"><span class="inline-flex items-center gap-1.5">{{ $item['name'] }} <x-product-info-button :product-id="$item['product_id']" /></span></td>
+                            <td class="font-medium">
+                                <span class="inline-flex items-center gap-1.5">{{ $item['name'] }} <x-product-info-button :product-id="$item['product_id']" /></span>
+                                @if ($measure && (float) $item['pieces'] > 0)
+                                    <div class="mt-0.5 text-xs font-medium text-primary-700 dark:text-primary-400">{{ $this->packBreakdown($item, (float) $item['pieces']) }} · {{ shop_digits(round((float) $item['pieces'] * $measure['per'], 3) + 0) }} {{ $measure['unit'] }}</div>
+                                @endif
+                            </td>
                             <td>
+                                @if ($measure)
+                                    <label class="flex items-center gap-1 text-xs text-muted-foreground-1">
+                                        <input wire:model.live.debounce.500ms="items.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-20 text-center">
+                                        {{ $item['units'][$item['product_unit_id']] ?? __('pcs') }}
+                                    </label>
+                                @else
                                 <select wire:model.live="items.{{ $index }}.product_unit_id" class="form-input">
                                     @foreach ($item['units'] as $unitId => $unitName)
                                         <option value="{{ $unitId }}">{{ $unitName }}@if (($item['unit_quantities'][$unitId] ?? 1) > 1) ({{ $item['unit_quantities'][$unitId] + 0 }})@endif</option>
                                     @endforeach
                                 </select>
+                                @endif
                             </td>
                             <td>
-                                <input wire:model.live.debounce.400ms="items.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input">
+                                <input wire:model.live.debounce.600ms="items.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input">
+                                @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">{{ $measure['unit'] }}</div>@endif
                                 @error("items.$index.quantity") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
                             <td>
                                 <input wire:model.live.debounce.400ms="items.{{ $index }}.unit_cost" type="number" step="0.01" min="0" class="form-input">
+                                @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">/ {{ $measure['unit'] }}</div>@endif
                                 @error("items.$index.unit_cost") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
                             <td>
                                 <input wire:model="items.{{ $index }}.new_selling_price" type="number" step="0.01" min="0" placeholder="{{ $item['selling_price'] }}" class="form-input">
+                                @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">/ {{ $measure['unit'] }}</div>@endif
                             </td>
-                            <td class="text-right tabular-nums">{{ money((float) $item['quantity'] * (float) $item['unit_cost']) }}</td>
+                            <td class="text-right tabular-nums">{{ money($this->lineTotal($item)) }}</td>
                             <td class="text-right"><button type="button" wire:click="removeItem({{ $index }})" data-confirm="{{ __('Remove this product from the purchase?') }}" class="btn-secondary btn-sm">✕</button></td>
                         </tr>
                     @empty

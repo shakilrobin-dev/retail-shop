@@ -47,13 +47,30 @@ class QuickProductForm extends Component
 
     public string $opening_stock = '0';
 
+    /** Sold by measurement, e.g. tiles by sqft. */
+    public bool $is_measured = false;
+
+    public string $measure_unit = 'sqft';
+
+    public string $measure_per_unit = '';
+
+    /** Selling rate per measurement (replaces the retail price). */
+    public string $measure_price = '';
+
+    /** Optional pack, e.g. Carton of 10 pieces. */
+    public string $pack_name = '';
+
+    public string $pack_quantity = '';
+
+    public string $pack_price = '';
+
     #[On('open-quick-product')]
     public function openForm(string $term = '', bool $withStock = true): void
     {
         $this->authorize('products.manage');
 
         $this->resetValidation();
-        $this->reset('name', 'name_bn', 'barcode', 'cost_price', 'selling_price', 'wholesale_price', 'opening_stock');
+        $this->reset('name', 'name_bn', 'barcode', 'cost_price', 'selling_price', 'wholesale_price', 'opening_stock', 'is_measured', 'measure_unit', 'measure_per_unit', 'measure_price', 'pack_name', 'pack_quantity', 'pack_price');
         $this->unit_id ??= Unit::query()->orderBy('id')->value('id');
         $this->withStock = $withStock;
 
@@ -91,10 +108,22 @@ class QuickProductForm extends Component
             'unit_id' => ['required', 'exists:units,id'],
             'barcode' => ['nullable', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
-            'selling_price' => ['required', 'numeric', 'min:0'],
+            'selling_price' => [$this->is_measured ? 'nullable' : 'required', 'numeric', 'min:0'],
             'wholesale_price' => ['nullable', 'numeric', 'min:0'],
             'opening_stock' => ['nullable', 'numeric', 'min:0'],
+            'measure_unit' => ['exclude_unless:is_measured,true', 'required', 'string', 'max:20'],
+            'measure_per_unit' => ['exclude_unless:is_measured,true', 'required', 'numeric', 'gt:0'],
+            'measure_price' => ['exclude_unless:is_measured,true', 'required', 'numeric', 'min:0'],
+            'pack_name' => ['nullable', 'string', 'max:50'],
+            'pack_quantity' => ['nullable', 'numeric', 'gt:1'],
+            'pack_price' => [$this->pack_quantity !== '' && ! $this->is_measured ? 'required' : 'nullable', 'numeric', 'min:0'],
         ], [], [
+            'measure_unit' => __('measurement'),
+            'measure_per_unit' => __('measurement per piece'),
+            'measure_price' => __('rate per measurement'),
+            'pack_name' => __('pack name'),
+            'pack_quantity' => __('pieces in pack'),
+            'pack_price' => __('pack price'),
             'category_id' => __('category'),
             'unit_id' => __('unit'),
             'cost_price' => __('buying price'),
@@ -111,25 +140,42 @@ class QuickProductForm extends Component
         }
 
         $unit = Unit::query()->findOrFail($this->unit_id);
+        $piecePrice = $this->is_measured
+            ? round((float) $this->measure_price * (float) $this->measure_per_unit, 2)
+            : (float) $this->selling_price;
+        $units = [[
+            'name' => $unit->name,
+            'name_bn' => $unit->name_bn,
+            'quantity' => 1,
+            'selling_price' => $piecePrice,
+            'wholesale_price' => $this->wholesale_price,
+            'is_base' => true,
+            'barcodes' => $code !== '' ? [['code' => $code]] : [],
+        ]];
+
+        if ($this->pack_quantity !== '') {
+            $units[] = [
+                'name' => trim($this->pack_name) ?: 'Carton',
+                'quantity' => (float) $this->pack_quantity,
+                'selling_price' => $this->is_measured ? round($piecePrice * (float) $this->pack_quantity, 2) : (float) $this->pack_price,
+                'is_base' => false,
+                'barcodes' => [],
+            ];
+        }
 
         $product = $products->save(null, [
             'name' => trim($this->name),
             'name_bn' => $this->name_bn ?: null,
             'category_id' => $this->category_id,
             'unit_id' => $unit->id,
+            'measure_unit' => $this->is_measured ? trim($this->measure_unit) : null,
+            'measure_per_unit' => $this->is_measured ? $this->measure_per_unit : null,
+            'measure_price' => $this->is_measured ? $this->measure_price : null,
             'cost_price' => $canViewCost && $this->cost_price !== '' ? $this->cost_price : 0,
             'vat_rate' => app(Settings::class)->get('vat_default_rate') ?? 0,
             'reorder_level' => 0,
             'is_active' => true,
-        ], [[
-            'name' => $unit->name,
-            'name_bn' => $unit->name_bn,
-            'quantity' => 1,
-            'selling_price' => $this->selling_price,
-            'wholesale_price' => $this->wholesale_price,
-            'is_base' => true,
-            'barcodes' => $code !== '' ? [['code' => $code]] : [],
-        ]], $currentBranch->get(), $this->withStock ? (float) $this->opening_stock : 0);
+        ], $units, $currentBranch->get(), $this->withStock ? (float) $this->opening_stock : 0);
 
         $this->open = false;
         $this->dispatch('toast', message: __('Product created.'));

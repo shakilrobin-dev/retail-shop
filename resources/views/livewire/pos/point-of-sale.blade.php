@@ -41,7 +41,7 @@
         </div>
     @else
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-            <span class="flex items-center gap-2"><span class="size-2 rounded-full bg-emerald-500"></span> {{ __('Register is open') }} · {{ __('Open since') }} {{ shop_digits($shift->opened_at->format('h:i A')) }} · {{ $shift->user?->name }}</span>
+            <span class="flex flex-wrap items-center gap-2"><x-branch-badge :branch="$branch" class="bg-white! py-0.5! dark:bg-transparent!" /><span class="size-2 rounded-full bg-emerald-500"></span> {{ __('Register is open') }} · {{ __('Open since') }} {{ shop_digits($shift->opened_at->format('h:i A')) }} · {{ $shift->user?->name }}</span>
             <span class="flex items-center gap-3">
                 @can('cash-shifts.manage')<a href="{{ route('cash-register') }}" wire:navigate class="font-medium hover:underline">{{ __('Cash register') }} →</a>@endcan
                 <button type="button" x-show="full" x-cloak x-on:click="togglePosFull()" class="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-white/60 px-2 py-0.5 text-xs font-medium hover:bg-white dark:bg-transparent">
@@ -53,6 +53,12 @@
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {{-- Left: scan + cart --}}
             <div class="space-y-3 xl:col-span-2">
+                @if ($loadedQuotation)
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
+                        <span><x-icon name="document" class="inline size-4" /> {{ __('Selling quotation :no', ['no' => $loadedQuotation->quotation_no]) }}@if ($loadedQuotation->customerLabel()) · {{ $loadedQuotation->customerLabel() }}@endif</span>
+                        <button type="button" wire:click="clearCart" data-confirm="{{ __('Clear the cart?') }}" class="text-xs font-medium hover:underline">{{ __('Cancel') }}</button>
+                    </div>
+                @endif
                 <x-product-search :results="$results" :message="$scanMessage" :term="$productSearch" :missing="$missingProductTerm" quick-create />
                 @error('cart') <p class="form-error text-sm">{{ $message }}</p> @enderror
 
@@ -254,26 +260,6 @@
                             </div>
                             <button type="button" wire:click="clearReferrer" class="shrink-0 text-xs text-muted-foreground-1 hover:underline">{{ __('Remove') }}</button>
                         </div>
-                        @if ($canManageCommission)
-                            <div class="no-print mt-2 space-y-1.5 border-t border-card-line pt-2">
-                                <div class="flex items-center justify-between gap-2 text-xs">
-                                    <span class="text-muted-foreground-1">{{ __('Commission') }}</span>
-                                    <div class="flex gap-1">
-                                        <select wire:model.live="commissionType" class="form-input h-8 w-32 py-0 text-xs">
-                                            @foreach (\App\Enums\CommissionType::cases() as $type)
-                                                <option value="{{ $type->value }}">{{ $type->label() }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input wire:model.live.debounce.400ms="commissionValue" type="number" step="0.01" min="0" placeholder="0" class="form-input h-8 w-20 py-0 text-right text-xs">
-                                    </div>
-                                </div>
-                                @error('commissionValue') <p class="form-error">{{ $message }}</p> @enderror
-                                <div class="flex justify-between text-xs">
-                                    <span class="text-muted-foreground-1">{{ __('Commission on this invoice') }}</span>
-                                    <span class="font-semibold tabular-nums">{{ money($commissionPreview) }}</span>
-                                </div>
-                            </div>
-                        @endif
                     @else
                         <label class="form-label">{{ __('Reference (optional)') }}</label>
                         <input wire:model.live.debounce.300ms="referrerSearch" type="search" placeholder="{{ __('Name or phone') }}" class="form-input">

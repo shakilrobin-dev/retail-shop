@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\SaleStatus;
 use Database\Factories\ReferrerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,6 +41,16 @@ class Referrer extends Model
     }
 
     /**
+     * Commission worked out for a month or date range.
+     *
+     * @return HasMany<CommissionSettlement, $this>
+     */
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(CommissionSettlement::class);
+    }
+
+    /**
      * Commission payments (saved as expenses).
      *
      * @return HasMany<Expense, $this>
@@ -52,11 +61,11 @@ class Referrer extends Model
     }
 
     /**
-     * Commission earned on completed sales, all time.
+     * Commission given for all worked-out periods.
      */
     public function commissionEarned(): float
     {
-        return round((float) $this->sales()->where('status', SaleStatus::Completed)->sum('commission_amount'), 2);
+        return round((float) $this->settlements()->sum('amount'), 2);
     }
 
     /**

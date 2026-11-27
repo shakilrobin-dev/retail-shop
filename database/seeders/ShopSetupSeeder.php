@@ -44,6 +44,7 @@ class ShopSetupSeeder extends Seeder
             ['Bag', 'বস্তা', 'bag', false],
             ['Feet', 'ফুট', 'ft', true],
             ['Box', 'বক্স', 'box', false],
+            ['Coil', 'কয়েল', 'coil', false],
         ];
         foreach ($units as [$name, $nameBn, $short, $allowsDecimal]) {
             Unit::query()->firstOrCreate(['short_name' => $short], [
@@ -83,29 +84,33 @@ class ShopSetupSeeder extends Seeder
         }
 
         $categories = [
-            ['Accessories', 'এক্সেসরিজ', [
-                ['Chargers', 'চার্জার', [
-                    ['Wall chargers', 'ওয়াল চার্জার', []],
-                    ['Car chargers', 'কার চার্জার', []],
-                    ['Wireless chargers', 'ওয়্যারলেস চার্জার', []],
-                ]],
-                ['Cables', 'ক্যাবল', [
-                    ['Type-C', 'টাইপ-সি', []],
-                    ['Lightning', 'লাইটনিং', []],
-                    ['Micro USB', 'মাইক্রো ইউএসবি', []],
-                ]],
-                ['Covers & Cases', 'কভার ও কেস', []],
-                ['Screen Protectors', 'স্ক্রিন প্রটেক্টর', []],
-                ['Earphones & Headphones', 'ইয়ারফোন ও হেডফোন', []],
-                ['Power Banks', 'পাওয়ার ব্যাংক', []],
+            ['Rod & Steel', 'রড ও স্টিল', [
+                ['MS Rod', 'এমএস রড', []],
+                ['Binding Wire', 'বাইন্ডিং তার', []],
+                ['Angle & Flat Bar', 'এঙ্গেল ও ফ্ল্যাট বার', []],
             ]],
-            ['Spare Parts', 'স্পেয়ার পার্টস', [
-                ['Displays', 'ডিসপ্লে', []],
-                ['Batteries', 'ব্যাটারি', []],
-                ['Charging Ports', 'চার্জিং পোর্ট', []],
-                ['Small Parts', 'ছোট পার্টস', []],
+            ['Cement', 'সিমেন্ট', []],
+            ['Tiles', 'টাইলস', [
+                ['Floor Tiles', 'ফ্লোর টাইলস', []],
+                ['Wall Tiles', 'ওয়াল টাইলস', []],
+                ['Stair Tiles', 'সিঁড়ির টাইলস', []],
             ]],
-            ['Electronics', 'ইলেকট্রনিক্স', []],
+            ['Sanitary', 'স্যানিটারি', [
+                ['Commode & Basin', 'কমোড ও বেসিন', []],
+                ['Taps & Showers', 'ট্যাপ ও শাওয়ার', []],
+                ['Pipes & Fittings', 'পাইপ ও ফিটিংস', []],
+            ]],
+            ['Electrical', 'ইলেকট্রিক্যাল', [
+                ['Cables & Wires', 'ক্যাবল ও তার', []],
+                ['Switches & Sockets', 'সুইচ ও সকেট', []],
+                ['Lights & Fans', 'লাইট ও ফ্যান', []],
+                ['Circuit Breakers', 'সার্কিট ব্রেকার', []],
+            ]],
+            ['Hardware', 'হার্ডওয়্যার', [
+                ['Nuts & Bolts', 'নাট ও বোল্ট', []],
+                ['Nails & Screws', 'পেরেক ও স্ক্রু', []],
+                ['Tools', 'যন্ত্রপাতি', []],
+            ]],
         ];
 
         $this->seedCategories($categories);

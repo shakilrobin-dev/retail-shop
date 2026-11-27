@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\CommissionType;
 use App\Enums\DiscountType;
 use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethodType;
@@ -160,7 +159,7 @@ class SaleService
      *
      * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
      * @param  list<array{payment_method_id: int, amount: float|string, transaction_ref?: string|null}>  $payments
-     * @param  array{referrer_id: int, commission_type?: CommissionType|null, commission_value?: float|string|null}|null  $reference  reference person and their commission
+     * @param  int|null  $referrerId  reference person who brought the customer (commission is worked out later)
      */
     public function complete(
         Branch $branch,
@@ -171,7 +170,7 @@ class SaleService
         ?int $customerId = null,
         ?string $note = null,
         ?string $dueDate = null,
-        ?array $reference = null,
+        ?int $referrerId = null,
     ): Sale {
         if ($cart === []) {
             throw ValidationException::withMessages(['cart' => __('The cart is empty.')]);
@@ -183,12 +182,11 @@ class SaleService
             throw ValidationException::withMessages(['cart' => __('Open the cash register before selling.')]);
         }
 
-        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift, $dueDate, $reference): Sale {
+        $sale = DB::transaction(function () use ($branch, $cart, $payments, $discountType, $discountValue, $customerId, $note, $shift, $dueDate, $referrerId): Sale {
             $totals = $this->calculate($branch, $cart, $discountType, $discountValue);
             $this->checkPrices($branch, $totals);
 
             [$paymentRows, $paid, $change, $due] = $this->preparePayments($payments, $totals['total'], $this->creditAllowed($branch));
-            $commission = $this->commission($totals, $reference);
 
             if ($due > 0) {
                 $this->checkCredit($customerId, $due);
@@ -199,10 +197,7 @@ class SaleService
                 'invoice_no' => $this->numbers->next($branch, 'invoice'),
                 'status' => SaleStatus::Completed,
                 'customer_id' => $customerId,
-                'referrer_id' => $commission['referrer_id'],
-                'commission_type' => $commission['type'],
-                'commission_value' => $commission['value'],
-                'commission_amount' => $commission['amount'],
+                'referrer_id' => $referrerId,
                 'user_id' => Auth::id(),
                 'cash_shift_id' => $shift->id,
                 'sold_at' => now(),
@@ -470,51 +465,6 @@ class SaleService
     /**
      * @param  array{lines: list<array<string, mixed>>}  $totals
      */
-    /**
-     * Commission for the reference person: a % of this invoice's profit, or a fixed amount.
-     * Profit = sales without VAT − cost of the goods (same as the reports).
-     *
-     * @param  array<string, mixed>  $totals  result of calculate()
-     * @param  array{referrer_id: int, commission_type?: CommissionType|null, commission_value?: float|string|null}|null  $reference
-     * @return array{referrer_id: int|null, type: CommissionType|null, value: float, amount: float}
-     */
-    public function commission(array $totals, ?array $reference): array
-    {
-        if (! $reference || empty($reference['referrer_id'])) {
-            return ['referrer_id' => null, 'type' => null, 'value' => 0.0, 'amount' => 0.0];
-        }
-
-        $type = $reference['commission_type'] ?? null;
-        $value = max(0, round((float) ($reference['commission_value'] ?? 0), 2));
-
-        if (! $type || $value <= 0) {
-            return ['referrer_id' => (int) $reference['referrer_id'], 'type' => null, 'value' => 0.0, 'amount' => 0.0];
-        }
-
-        if ($type === CommissionType::ProfitPercent && $value > 100) {
-            throw ValidationException::withMessages(['commissionValue' => __('Commission cannot be more than 100% of the profit.')]);
-        }
-
-        $amount = match ($type) {
-            CommissionType::ProfitPercent => round(max(0, $this->profit($totals)) * $value / 100, 2),
-            CommissionType::Amount => $value,
-        };
-
-        return ['referrer_id' => (int) $reference['referrer_id'], 'type' => $type, 'value' => $value, 'amount' => $amount];
-    }
-
-    /**
-     * Profit of a calculated cart: sales without VAT − cost of goods at today's average cost.
-     *
-     * @param  array<string, mixed>  $totals  result of calculate()
-     */
-    public function profit(array $totals): float
-    {
-        $cost = collect($totals['lines'])->sum(fn (array $line): float => $line['quantity'] * round((float) $line['unit']->product->cost_price * (float) $line['unit']->quantity, 2));
-
-        return round($totals['total'] - $totals['vat_amount'] - $cost, 2);
-    }
-
     private function checkPrices(Branch $branch, array $totals): void
     {
         foreach ($totals['lines'] as $index => $line) {

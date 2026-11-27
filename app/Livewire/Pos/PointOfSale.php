@@ -2,16 +2,17 @@
 
 namespace App\Livewire\Pos;
 
-use App\Enums\CommissionType;
 use App\Enums\DiscountType;
 use App\Enums\PaymentMethodType;
 use App\Enums\SaleStatus;
+use App\Livewire\Concerns\ManagesCartLines;
 use App\Livewire\Concerns\SearchesProducts;
 use App\Livewire\Concerns\ShowsStockErrors;
 use App\Models\CashShift;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\ProductUnit;
+use App\Models\Quotation;
 use App\Models\Referrer;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -21,7 +22,6 @@ use App\Services\CurrentBranch;
 use App\Services\PaymentService;
 use App\Services\SaleService;
 use App\Services\Settings;
-use App\Services\StockService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -30,15 +30,7 @@ use Livewire\Component;
 
 class PointOfSale extends Component
 {
-    use SearchesProducts, ShowsStockErrors;
-
-    /**
-     * A line of a product sold by measurement (tiles by sqft) also has "measure" and "pieces":
-     * then "quantity" is the measurement (e.g. 500 sqft), "pieces" the whole pieces given and "unit_price" the rate per measurement.
-     *
-     * @var list<array{product_unit_id: int, product_id: int, name: string, units: array<int, array{name: string, price: float, quantity: float}>, quantity: string, unit_price: string, discount_amount: string, stock: float, measure?: array{unit: string, per: float, rate: string}|null, pieces?: string}>
-     */
-    public array $cart = [];
+    use ManagesCartLines, SearchesProducts, ShowsStockErrors;
 
     public ?int $customerId = null;
 
@@ -50,10 +42,6 @@ class PointOfSale extends Component
     public string $newReferrerName = '';
 
     public string $newReferrerPhone = '';
-
-    public string $commissionType = 'profit_percent';
-
-    public string $commissionValue = '';
 
     public string $customerSearch = '';
 
@@ -79,223 +67,51 @@ class PointOfSale extends Component
 
     public string $openingCash = '0';
 
+    /** Quotation being sold (opened with ?quotation=ID). */
+    public ?int $quotationId = null;
+
     public function mount(): void
     {
         $this->authorize('pos.sell');
+
+        if (request()->integer('quotation')) {
+            $this->loadQuotation(request()->integer('quotation'));
+        }
+    }
+
+    /**
+     * Put a quotation's lines, prices, discount and customer in the cart.
+     */
+    public function loadQuotation(int $quotationId): void
+    {
+        $quotation = Quotation::query()->with('items')
+            ->where('branch_id', app(CurrentBranch::class)->get()?->id)
+            ->whereNull('sale_id')
+            ->findOrFail($quotationId);
+
+        $this->clearCart();
+
+        foreach ($quotation->items->reverse() as $item) {
+            $this->addSavedLine($item->product_unit_id, (float) $item->quantity, (float) $item->unit_price, $item->measure_rate !== null ? (float) $item->measure_rate : null, (float) $item->discount_amount);
+        }
+
+        $this->customerId = $quotation->customer_id;
+        $this->discountType = $quotation->discount_type->value ?? 'amount';
+        $this->discountValue = (string) ($quotation->discount_value + 0);
+        $this->holdNote = $quotation->customerLabel() ?? '';
+        $this->quotationId = $quotation->id;
     }
 
     public function pickUnit(int $productUnitId): void
     {
-        $unit = ProductUnit::query()->with('product.units')->findOrFail($productUnitId);
         $this->completedSaleId = null;
-
-        if ($unit->product->isMeasured()) {
-            $this->pickMeasured($unit);
-
-            return;
-        }
-
-        foreach ($this->cart as $index => $line) {
-            if ($line['product_unit_id'] === $unit->id) {
-                $this->cart[$index]['quantity'] = (string) ((float) $line['quantity'] + 1);
-                $this->moveLineToTop($index);
-
-                return;
-            }
-        }
-
-        $product = $unit->product;
-        $branch = app(CurrentBranch::class)->get();
-
-        array_unshift($this->cart, [
-            'product_unit_id' => $unit->id,
-            'product_id' => $product->id,
-            'name' => $product->localName(),
-            'units' => $product->units->mapWithKeys(fn (ProductUnit $u): array => [$u->id => [
-                'name' => $u->localName(),
-                'price' => (string) $u->selling_price,
-                'quantity' => (float) $u->quantity,
-            ]])->all(),
-            'quantity' => '1',
-            'unit_price' => (string) $unit->selling_price,
-            'discount_amount' => '0',
-            'stock' => app(StockService::class)->quantity($branch, $product),
-        ]);
-    }
-
-    /**
-     * A product sold by measurement goes on one line per product, counted in pieces of its base unit.
-     * Picking a carton adds the pieces of a carton.
-     */
-    private function pickMeasured(ProductUnit $unit): void
-    {
-        $product = $unit->product;
-        $addPieces = (float) $unit->quantity;
-
-        foreach ($this->cart as $index => $line) {
-            if ($line['product_id'] === $product->id && ! empty($line['measure'])) {
-                $this->setPieces($index, (float) $line['pieces'] + $addPieces);
-                $this->moveLineToTop($index);
-
-                return;
-            }
-        }
-
-        $baseUnit = $product->units->firstWhere('is_base', true) ?? $unit;
-        $rate = $product->measure_price !== null
-            ? (float) $product->measure_price
-            : round((float) $baseUnit->selling_price / (float) $product->measure_per_unit, 2);
-
-        array_unshift($this->cart, [
-            'product_unit_id' => $baseUnit->id,
-            'product_id' => $product->id,
-            'name' => $product->localName(),
-            'units' => $product->units->mapWithKeys(fn (ProductUnit $u): array => [$u->id => [
-                'name' => $u->localName(),
-                'price' => (string) $u->selling_price,
-                'quantity' => (float) $u->quantity,
-            ]])->all(),
-            'measure' => ['unit' => (string) $product->measure_unit, 'per' => (float) $product->measure_per_unit, 'rate' => (string) $rate],
-            'pieces' => (string) $addPieces,
-            'quantity' => (string) round($addPieces * (float) $product->measure_per_unit, 3),
-            'unit_price' => (string) $rate,
-            'discount_amount' => '0',
-            'stock' => app(StockService::class)->quantity(app(CurrentBranch::class)->get(), $product),
-        ]);
-    }
-
-    /**
-     * Set the whole pieces of a measured line; the measurement follows (283 pcs = 500.91 sqft).
-     */
-    private function setPieces(int $index, float $pieces): void
-    {
-        $pieces = max(0, (int) ceil(round($pieces, 6)));
-        $this->cart[$index]['pieces'] = (string) $pieces;
-        $this->cart[$index]['quantity'] = (string) round($pieces * $this->cart[$index]['measure']['per'], 3);
-    }
-
-    /**
-     * Whole pieces needed to cover a measurement, e.g. 500 sqft ÷ 1.77 = 283 pieces.
-     */
-    private function piecesFor(array $line, float $measure): int
-    {
-        return $measure > 0 ? (int) ceil(round($measure / $line['measure']['per'], 6)) : 0;
-    }
-
-    /**
-     * Pieces shown as cartons + pieces, e.g. "28 Carton + 3 Piece".
-     *
-     * @param  array<string, mixed>  $line
-     */
-    public function packBreakdown(array $line, float $pieces): string
-    {
-        $units = collect($line['units']);
-        $base = $units->firstWhere('quantity', 1.0);
-        $baseName = $base['name'] ?? '';
-        $pack = $units->filter(fn (array $unit): bool => $unit['quantity'] > 1)->sortByDesc('quantity')->first();
-
-        if (! $pack || $pieces < $pack['quantity']) {
-            return shop_digits($pieces + 0).' '.$baseName;
-        }
-
-        $packs = (int) floor($pieces / $pack['quantity']);
-        $rest = round($pieces - $packs * $pack['quantity'], 3);
-        $text = shop_digits($packs).' '.$pack['name'];
-
-        return $rest > 0 ? $text.' + '.shop_digits($rest + 0).' '.$baseName : $text;
-    }
-
-    /**
-     * Unit (piece/box) changed on a cart line: use that unit's price.
-     */
-    public function updatedCart(mixed $value, string $key): void
-    {
-        [$index, $field] = explode('.', $key) + [1 => null];
-
-        if (isset($this->cart[$index]) && ! empty($this->cart[$index]['measure'])) {
-            $this->updatedMeasuredLine((int) $index, (string) $field, $value);
-
-            return;
-        }
-
-        if ($field === 'product_unit_id' && isset($this->cart[$index])) {
-            $unitId = (int) $value;
-            $this->cart[$index]['product_unit_id'] = $unitId;
-            $this->cart[$index]['unit_price'] = (string) ($this->cart[$index]['units'][$unitId]['price'] ?? $this->cart[$index]['unit_price']);
-        }
-
-        if ($field === 'unit_price' && ! $this->canEditPrice()) {
-            $unitId = $this->cart[$index]['product_unit_id'];
-            $this->cart[$index]['unit_price'] = (string) $this->cart[$index]['units'][$unitId]['price'];
-        }
-    }
-
-    /**
-     * Measurement typed → work out whole pieces. Pieces typed → work out the measurement.
-     */
-    private function updatedMeasuredLine(int $index, string $field, mixed $value): void
-    {
-        $line = $this->cart[$index];
-
-        if ($field === 'quantity') {
-            $this->cart[$index]['pieces'] = (string) $this->piecesFor($line, (float) $value);
-        }
-
-        if ($field === 'pieces') {
-            $this->setPieces($index, (float) $value);
-        }
-
-        if ($field === 'unit_price' && ! $this->canEditPrice()) {
-            $this->cart[$index]['unit_price'] = $line['measure']['rate'];
-        }
-    }
-
-    public function increment(int $index): void
-    {
-        if (isset($this->cart[$index]) && ! empty($this->cart[$index]['measure'])) {
-            $this->setPieces($index, (float) $this->cart[$index]['pieces'] + 1);
-
-            return;
-        }
-
-        if (isset($this->cart[$index])) {
-            $this->cart[$index]['quantity'] = (string) ((float) $this->cart[$index]['quantity'] + 1);
-        }
-    }
-
-    public function decrement(int $index): void
-    {
-        if (isset($this->cart[$index]) && ! empty($this->cart[$index]['measure'])) {
-            if ((float) $this->cart[$index]['pieces'] > 1) {
-                $this->setPieces($index, (float) $this->cart[$index]['pieces'] - 1);
-            }
-
-            return;
-        }
-
-        if (isset($this->cart[$index]) && (float) $this->cart[$index]['quantity'] > 1) {
-            $this->cart[$index]['quantity'] = (string) ((float) $this->cart[$index]['quantity'] - 1);
-        }
-    }
-
-    public function removeLine(int $index): void
-    {
-        unset($this->cart[$index]);
-        $this->cart = array_values($this->cart);
+        $this->addToCart($productUnitId);
     }
 
     public function clearCart(): void
     {
-        $this->reset('cart', 'customerId', 'customerSearch', 'discountType', 'discountValue', 'payments', 'note', 'holdNote', 'showPayment', 'dueDate');
+        $this->reset('cart', 'customerId', 'customerSearch', 'discountType', 'discountValue', 'payments', 'note', 'holdNote', 'showPayment', 'dueDate', 'quotationId');
         $this->clearReferrer();
-    }
-
-    private function moveLineToTop(int $index): void
-    {
-        $line = $this->cart[$index];
-        unset($this->cart[$index]);
-        array_unshift($this->cart, $line);
-        $this->cart = array_values($this->cart);
     }
 
     // ----- Customer -----
@@ -325,9 +141,7 @@ class PointOfSale extends Component
         $referrer = Referrer::query()->findOrFail($referrerId);
         $this->referrerId = $referrer->id;
         $this->referrerSearch = '';
-        $this->commissionType = CommissionType::ProfitPercent->value;
-        $this->commissionValue = $referrer->commission_percent !== null ? (string) ($referrer->commission_percent + 0) : '';
-        $this->resetValidation(['newReferrerName', 'newReferrerPhone', 'commissionValue']);
+        $this->resetValidation(['newReferrerName', 'newReferrerPhone']);
     }
 
     public function createReferrer(): void
@@ -348,7 +162,7 @@ class PointOfSale extends Component
 
     public function clearReferrer(): void
     {
-        $this->reset('referrerId', 'referrerSearch', 'newReferrerName', 'newReferrerPhone', 'commissionType', 'commissionValue');
+        $this->reset('referrerId', 'referrerSearch', 'newReferrerName', 'newReferrerPhone');
     }
 
     /**
@@ -360,58 +174,6 @@ class PointOfSale extends Component
         $isPhone = preg_match('/^[0-9+\-\s]+$/', $value) === 1;
         $this->newReferrerPhone = $isPhone ? $value : '';
         $this->newReferrerName = $isPhone ? '' : $value;
-    }
-
-    public function canManageCommission(): bool
-    {
-        /** @var User $user */
-        $user = Auth::user();
-
-        return $user->can('commissions.manage');
-    }
-
-    /**
-     * Reference and commission for the sale. Staff who may not set commission get the person's default %.
-     *
-     * @return array{referrer_id: int, commission_type: CommissionType|null, commission_value: float}|null
-     */
-    private function reference(): ?array
-    {
-        if (! $this->referrerId) {
-            return null;
-        }
-
-        if ($this->canManageCommission()) {
-            return [
-                'referrer_id' => $this->referrerId,
-                'commission_type' => CommissionType::tryFrom($this->commissionType),
-                'commission_value' => (float) $this->commissionValue,
-            ];
-        }
-
-        $percent = Referrer::query()->whereKey($this->referrerId)->value('commission_percent');
-
-        return ['referrer_id' => $this->referrerId, 'commission_type' => CommissionType::ProfitPercent, 'commission_value' => (float) $percent];
-    }
-
-    /**
-     * Commission the reference person will get on the current cart.
-     */
-    public function commissionPreview(): float
-    {
-        $reference = $this->reference();
-
-        if (! $reference || $this->cart === []) {
-            return 0.0;
-        }
-
-        try {
-            $totals = app(SaleService::class)->calculate(app(CurrentBranch::class)->get(), $this->cartForService(), DiscountType::tryFrom($this->discountType), (float) $this->discountValue);
-
-            return app(SaleService::class)->commission($totals, $reference)['amount'];
-        } catch (ValidationException) {
-            return 0.0;
-        }
     }
 
     // ----- Hold -----
@@ -447,17 +209,7 @@ class PointOfSale extends Component
         }
 
         foreach (array_reverse($data['cart']) as $row) {
-            $this->pickUnit($row['product_unit_id']);
-
-            if (! empty($this->cart[0]['measure'])) {
-                $this->setPieces(0, (float) $row['quantity']);
-                $this->cart[0]['unit_price'] = (string) ($row['measure_rate'] ?? $this->cart[0]['unit_price']);
-            } else {
-                $this->cart[0]['quantity'] = (string) $row['quantity'];
-                $this->cart[0]['unit_price'] = (string) $row['unit_price'];
-            }
-
-            $this->cart[0]['discount_amount'] = (string) $row['discount_amount'];
+            $this->addSavedLine($row['product_unit_id'], (float) $row['quantity'], (float) $row['unit_price'], $row['measure_rate'], (float) $row['discount_amount']);
         }
     }
 
@@ -520,9 +272,7 @@ class PointOfSale extends Component
             'cart.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'dueDate' => ['nullable', 'date', 'after_or_equal:today'],
             'referrerId' => ['nullable', 'exists:referrers,id'],
-            'commissionType' => ['required', 'in:'.implode(',', array_column(CommissionType::cases(), 'value'))],
-            'commissionValue' => ['nullable', 'numeric', 'min:0'],
-        ], [], ['cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price'), 'dueDate' => __('due date'), 'commissionValue' => __('commission')]);
+        ], [], ['cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price'), 'dueDate' => __('due date')]);
 
         $sale = $sales->complete(
             app(CurrentBranch::class)->get(),
@@ -537,8 +287,12 @@ class PointOfSale extends Component
             $this->customerId,
             $this->note,
             $this->dueDate ?: null,
-            $this->reference(),
+            $this->referrerId,
         );
+
+        if ($this->quotationId) {
+            Quotation::query()->whereKey($this->quotationId)->whereNull('sale_id')->update(['sale_id' => $sale->id]);
+        }
 
         $this->clearCart();
         $this->completedSaleId = $sale->id;
@@ -597,31 +351,6 @@ class PointOfSale extends Component
     }
 
     /**
-     * Measured lines go to the service as whole pieces with their rate per measurement.
-     *
-     * @return list<array{product_unit_id: int, quantity: string, unit_price: string, discount_amount: string, measure_rate?: string}>
-     */
-    private function cartForService(): array
-    {
-        return array_map(function (array $line): array {
-            $row = [
-                'product_unit_id' => (int) $line['product_unit_id'],
-                'quantity' => $line['quantity'],
-                'unit_price' => $line['unit_price'],
-                'discount_amount' => $line['discount_amount'] === '' ? '0' : $line['discount_amount'],
-            ];
-
-            if (! empty($line['measure'])) {
-                $row['quantity'] = (string) $line['pieces'];
-                $row['unit_price'] = (string) round((float) $line['unit_price'] * $line['measure']['per'], 2);
-                $row['measure_rate'] = $line['unit_price'] === '' ? '0' : $line['unit_price'];
-            }
-
-            return $row;
-        }, $this->cart);
-    }
-
-    /**
      * @return array{subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function totals(): array
@@ -676,8 +405,6 @@ class PointOfSale extends Component
             'referrerResults' => mb_strlen(trim($this->referrerSearch)) >= 2
                 ? Referrer::query()->where('is_active', true)->where(fn ($query) => $query->where('name', 'like', '%'.trim($this->referrerSearch).'%')->orWhere('phone', 'like', '%'.trim($this->referrerSearch).'%'))->orderBy('name')->limit(5)->get()
                 : collect(),
-            'canManageCommission' => $this->canManageCommission(),
-            'commissionPreview' => $this->commissionPreview(),
             'customerResults' => mb_strlen($this->customerSearch) >= 3
                 ? Customer::query()->where('phone', 'like', "%{$this->customerSearch}%")->orWhere('name', 'like', "%{$this->customerSearch}%")->limit(5)->get()
                 : collect(),
@@ -690,6 +417,8 @@ class PointOfSale extends Component
             'drawerEnabled' => $settings->bool('cash_drawer_enabled', $branch?->id),
             'lastShift' => $branch ? CashShift::query()->where('branch_id', $branch->id)->latest('closed_at')->first() : null,
             'quickItems' => $this->quickItems(),
+            'branch' => $branch,
+            'loadedQuotation' => $this->quotationId ? Quotation::query()->find($this->quotationId) : null,
             'canViewCost' => $canViewCost,
             'unitCosts' => $canViewCost ? $this->unitCosts() : [],
         ])->title(__('POS / Sale'));
