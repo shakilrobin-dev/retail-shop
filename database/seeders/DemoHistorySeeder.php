@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Enums\CashShiftStatus;
 use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethodType;
-use App\Enums\RepairStatus;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementType;
 use App\Models\Branch;
@@ -21,7 +20,6 @@ use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\Purchase;
 use App\Models\Referrer;
-use App\Models\RepairJob;
 use App\Models\Sale;
 use App\Models\StockMovement;
 use App\Models\Supplier;
@@ -39,7 +37,7 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Realistic 30-day history for demos: more products, customers, daily sales,
- * purchases, repairs and expenses. Adds data only (never deletes).
+ * purchases and expenses. Adds data only (never deletes).
  *
  *   php artisan db:seed --class=DemoHistorySeeder
  */
@@ -68,15 +66,17 @@ class DemoHistorySeeder extends Seeder
         $referrers = collect([['Karim Mistri', '01911000000', 10], ['Engr. Habib', '01911000001', 5], ['Sobuj Contractor', '01911000002', null]])
             ->map(fn (array $row) => Referrer::query()->firstOrCreate(['phone' => $row[1]], ['name' => $row[0], 'commission_percent' => $row[2]]));
 
-        $units = ProductUnit::query()->with('product')->where('is_base', true)
+        $units = ProductUnit::query()->with('product.unit')->where('is_base', true)
             ->whereHas('product', fn ($query) => $query->where('is_active', true))->get();
         $methods = PaymentMethod::query()->where('is_active', true)->get();
         $cash = $methods->firstWhere('type', PaymentMethodType::Cash);
 
         // Make sure there is stock to sell.
         foreach ($units as $unit) {
-            if ($stock->quantity($branch, $unit->product) < 40) {
-                $stock->move($branch, $unit->product, 60, StockMovementType::Opening, null, null, __('Opening stock'));
+            $needed = DemoDataSeeder::demoQuantity($unit, purchase: true);
+
+            if ($stock->quantity($branch, $unit->product) < $needed) {
+                $stock->move($branch, $unit->product, $needed, StockMovementType::Opening, null, null, __('Opening stock'));
             }
         }
 
@@ -104,26 +104,20 @@ class DemoHistorySeeder extends Seeder
                 ]);
 
                 foreach ($lines as $unit) {
-                    $measured = $unit->product->isMeasured();
-                    $quantity = $measured ? mt_rand(8, 40) : (mt_rand(1, 10) <= 8 ? 1 : mt_rand(2, 3));
+                    $quantity = DemoDataSeeder::demoQuantity($unit);
 
                     if ($stock->quantity($branch, $unit->product) < $quantity) {
-                        $stock->move($branch, $unit->product, 200, StockMovementType::Opening, null, null, __('Opening stock'));
+                        $stock->move($branch, $unit->product, $quantity * 3, StockMovementType::Opening, null, null, __('Opening stock'));
                     }
-                    $measureQuantity = $measured ? $unit->product->measureForPieces($quantity) : null;
-                    $lineTotal = $measured
-                        ? round($measureQuantity * (float) $unit->product->measure_price, 2)
-                        : round($quantity * (float) $unit->selling_price, 2);
-                    $total += $lineTotal;
+
+                    $line = DemoDataSeeder::demoLine($unit, $quantity);
+                    $total += $line['line_total'];
 
                     $sale->items()->create([
                         'product_id' => $unit->product_id, 'product_unit_id' => $unit->id, 'product_name' => $unit->product->name,
                         'unit_name' => $unit->name, 'quantity' => $quantity, 'unit_quantity' => 1, 'base_quantity' => $quantity,
-                        'unit_price' => $measured ? round($lineTotal / $quantity, 2) : $unit->selling_price, 'unit_cost' => $unit->product->cost_price,
-                        'measure_unit' => $measured ? $unit->product->measure_unit : null, 'measure_quantity' => $measureQuantity,
-                        'measure_rate' => $measured ? $unit->product->measure_price : null,
-                        'line_total' => $lineTotal, 'warranty_days' => $unit->product->warranty_days,
-                    ]);
+                        'unit_cost' => $unit->product->cost_price, 'warranty_days' => $unit->product->warranty_days,
+                    ] + $line);
 
                     $movement = $stock->move($branch, $unit->product, -$quantity, StockMovementType::Sale, $sale);
                     StockMovement::query()->whereKey($movement->id)->update(['created_at' => $at]);
@@ -156,7 +150,6 @@ class DemoHistorySeeder extends Seeder
             }
         }
 
-        $this->repairs($branch, $customers, $methods, $numbers, $units);
         $this->expenses($branch, $cash);
 
         Model::reguard();
@@ -224,7 +217,7 @@ class DemoHistorySeeder extends Seeder
      */
     private function suppliers()
     {
-        foreach ([['Dhaka Mobile Wholesale', 'Stadium Market'], ['Gulistan Accessories', 'Gulistan'], ['Tech Parts BD', 'Motijheel'], ['Elephant Road Electronics', 'Elephant Road']] as [$name, $company]) {
+        foreach ([['BSRM Dealer Point', 'Tejgaon'], ['Shah Cement Distributor', 'Narayanganj'], ['RAK Tiles Showroom', 'Banglamotor'], ['Nawabpur Electric House', 'Nawabpur'], ['Babubazar Sanitary', 'Babubazar']] as [$name, $company]) {
             Supplier::query()->firstOrCreate(['name' => $name], ['company' => $company, 'phone' => '0181'.mt_rand(1000000, 9999999)]);
         }
 
@@ -242,12 +235,14 @@ class DemoHistorySeeder extends Seeder
         $total = 0.0;
 
         foreach ($units as $unit) {
-            $quantity = mt_rand(10, 40);
+            $quantity = DemoDataSeeder::demoQuantity($unit, purchase: true);
             $cost = (float) $unit->product->cost_price;
-            $total += $quantity * $cost;
+            $line = DemoDataSeeder::demoLine($unit, $quantity, atCost: true);
+            $total += $line['line_total'];
             $purchase->items()->create([
                 'product_id' => $unit->product_id, 'product_unit_id' => $unit->id, 'quantity' => $quantity, 'unit_quantity' => 1,
-                'base_quantity' => $quantity, 'unit_cost' => $cost, 'line_total' => $quantity * $cost,
+                'base_quantity' => $quantity, 'unit_cost' => $line['unit_price'], 'measure_unit' => $line['measure_unit'],
+                'measure_quantity' => $line['measure_quantity'], 'measure_rate' => $line['measure_rate'], 'line_total' => $line['line_total'],
             ]);
             $movement = $stock->move($branch, $unit->product, $quantity, StockMovementType::Purchase, $purchase, $cost);
             StockMovement::query()->whereKey($movement->id)->update(['created_at' => $at]);
@@ -258,46 +253,6 @@ class DemoHistorySeeder extends Seeder
             'branch_id' => $branch->id, 'payable_type' => 'purchase', 'payable_id' => $purchase->id, 'payment_method_id' => $cash->id,
             'direction' => PaymentDirection::Out, 'amount' => $total, 'user_id' => Auth::id(), 'paid_at' => $at, 'created_at' => $at, 'updated_at' => $at,
         ]);
-    }
-
-    private function repairs(Branch $branch, $customers, $methods, NumberGenerator $numbers, $units): void
-    {
-        $devices = [['Samsung', 'A15', 'Display broken'], ['Xiaomi', 'Redmi Note 12', 'Not charging'], ['iPhone', '11', 'Battery drains fast'],
-            ['Realme', 'C55', 'Speaker not working'], ['Oppo', 'A78', 'Water damage'], ['Vivo', 'Y17s', 'Touch not working'],
-            ['Samsung', 'A05', 'Charging port loose'], ['Infinix', 'Hot 40', 'Software problem, stuck on logo'], ['iPhone', 'XR', 'Face ID not working'],
-            ['Tecno', 'Spark 20', 'Back glass broken'], ['Xiaomi', 'Redmi 13C', 'Display lines'], ['Samsung', 'A25', 'Camera blurry']];
-        $statuses = [RepairStatus::Received, RepairStatus::Received, RepairStatus::Diagnosing, RepairStatus::WaitingForParts, RepairStatus::Repairing,
-            RepairStatus::Repairing, RepairStatus::Ready, RepairStatus::Ready, RepairStatus::Delivered, RepairStatus::Delivered, RepairStatus::Delivered, RepairStatus::Cancelled];
-        $cash = $methods->firstWhere('type', PaymentMethodType::Cash);
-
-        foreach ($devices as $index => [$brand, $model, $problem]) {
-            $status = $statuses[$index];
-            $received = now()->subDays(mt_rand(1, 20))->setTime(mt_rand(10, 19), mt_rand(0, 59));
-            $charge = [300, 500, 800, 1200, 1500][mt_rand(0, 4)];
-            $delivered = $status === RepairStatus::Delivered ? $received->copy()->addDays(mt_rand(1, 3)) : null;
-
-            $job = RepairJob::query()->create([
-                'branch_id' => $branch->id, 'job_no' => $numbers->next($branch, 'repair'), 'status' => $status,
-                'customer_id' => $customers->random()->id, 'device_type' => 'phone', 'device_brand' => $brand, 'device_model' => $model,
-                'imei_serial' => '35'.mt_rand(1000000000000, 9999999999999), 'accessories' => mt_rand(0, 1) ? ['charger'] : [],
-                'problem' => $problem, 'estimated_cost' => $charge, 'estimated_delivery_at' => $received->copy()->addDays(mt_rand(1, 4))->setTime(18, 0),
-                'service_charge' => $charge, 'total' => $charge, 'paid_amount' => $delivered ? $charge : 0, 'warranty_days' => 7,
-                'warranty_until' => $delivered?->copy()->addDays(7), 'delivered_at' => $delivered, 'received_by' => Auth::id(),
-                'created_at' => $received, 'updated_at' => $delivered ?? $received,
-            ]);
-            $job->statusHistories()->create(['status' => RepairStatus::Received, 'user_id' => Auth::id(), 'created_at' => $received]);
-
-            if ($status !== RepairStatus::Received) {
-                $job->statusHistories()->create(['status' => $status, 'user_id' => Auth::id(), 'created_at' => $delivered ?? $received->copy()->addHours(5)]);
-            }
-
-            if ($delivered) {
-                Payment::query()->create([
-                    'branch_id' => $branch->id, 'payable_type' => 'repair_job', 'payable_id' => $job->id, 'payment_method_id' => $cash->id,
-                    'direction' => PaymentDirection::In, 'amount' => $charge, 'user_id' => Auth::id(), 'paid_at' => $delivered, 'created_at' => $delivered, 'updated_at' => $delivered,
-                ]);
-            }
-        }
     }
 
     private function expenses(Branch $branch, PaymentMethod $cash): void

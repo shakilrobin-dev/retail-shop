@@ -2,16 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\CommissionSettlement;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Purchase;
-use App\Models\RepairJob;
+use App\Models\Quotation;
 use App\Models\Sale;
 use App\Models\User;
 use App\Services\ReportDocument;
+use Database\Seeders\ConstructionDemoSeeder;
 use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\DemoDataSeeder;
-use Database\Seeders\DemoHistorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -25,11 +25,14 @@ class FullDataPagesTest extends TestCase
 
     public function test_all_pages_render_with_a_month_of_data(): void
     {
-        $this->seed([DatabaseSeeder::class, DemoDataSeeder::class, DemoHistorySeeder::class]);
+        $this->seed([DatabaseSeeder::class, ConstructionDemoSeeder::class]);
         $admin = User::query()->where('username', 'admin')->sole();
         $this->actingAs($admin);
 
         $this->assertGreaterThan(50, Sale::query()->count());
+        $this->assertSame(4, Quotation::query()->count());
+        $this->assertGreaterThan(0, CommissionSettlement::query()->count());
+        $this->assertTrue(Sale::query()->whereNotNull('referrer_id')->exists());
 
         $pages = [
             route('dashboard'), route('pos'), route('sales.index'), route('sales.index', ['status' => '']),
@@ -39,9 +42,10 @@ class FullDataPagesTest extends TestCase
             route('purchases.index'), route('purchases.create'), route('suppliers.index'), route('expenses.index'),
             route('settings.general'), route('settings.users'), route('settings.branches'), route('settings.activity'),
             route('sales.show', Sale::query()->latest('id')->first()), route('purchases.show', Purchase::query()->first()),
-            route('repairs.show', RepairJob::query()->first()), route('customers.show', Customer::query()->first()),
+            route('customers.show', Customer::query()->first()),
             route('products.edit', Product::query()->first()),
             route('quotations.index'), route('quotations.create'), route('referrers.index'),
+            route('quotations.edit', Quotation::query()->whereNull('sale_id')->first()), route('quotations.print', Quotation::query()->first()),
         ];
 
         foreach (array_keys(ReportDocument::REPORTS) as $tab) {

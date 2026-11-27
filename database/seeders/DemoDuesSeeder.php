@@ -36,14 +36,14 @@ class DemoDuesSeeder extends Seeder
 {
     /** Regular buyers who take goods on due, with their credit limit. */
     private const CUSTOMERS = [
-        ['Karim Electronics (Mirpur)', '01711-200301', 'Shop 4, Mirpur 10 Market', 50000],
-        ['Hasan Mobile Repair', '01819-200302', 'Shop 18, Eastern Plaza', 30000],
-        ['Nusrat Jahan', '01911-200303', 'House 12, Road 5, Dhanmondi', 10000],
-        ['Bismillah Telecom', '01552-200304', 'Gulistan Underground Market', 40000],
-        ['Rafiq Uddin (Electrician)', '01677-200305', 'Mohammadpur', 15000],
-        ['Shapla Fashion & Gadget', '01799-200306', 'New Market, Block C', 25000],
-        ['Tanvir Hossain', '01313-200307', 'Banani DOHS', null],
-        ['Green Line Office Supplies', '01844-200308', 'Motijheel C/A', 60000],
+        ['Rupayan Builders (site: Mirpur 11)', '01711-200301', 'Plot 7, Road 3, Mirpur 11', 500000],
+        ['Hasan Construction', '01819-200302', 'Shewrapara, Mirpur', 300000],
+        ['Nusrat Jahan (house build)', '01911-200303', 'House 12, Road 5, Uttara', 150000],
+        ['Bismillah Developers', '01552-200304', 'Pallabi, Mirpur 12', 400000],
+        ['Rafiq Uddin (Electrician)', '01677-200305', 'Mohammadpur', 50000],
+        ['Shapla Interiors', '01799-200306', 'Banani Road 11', 200000],
+        ['Tanvir Hossain (renovation)', '01313-200307', 'Banani DOHS', null],
+        ['Green Line Properties', '01844-200308', 'Bashundhara R/A, Block C', 600000],
     ];
 
     /**
@@ -63,7 +63,7 @@ class DemoDuesSeeder extends Seeder
         $admin = User::query()->whereHas('roles', fn ($query) => $query->where('name', 'admin'))->firstOrFail();
         Auth::login($admin);
 
-        $units = ProductUnit::query()->with('product')->where('is_base', true)
+        $units = ProductUnit::query()->with('product.unit')->where('is_base', true)
             ->whereHas('product', fn ($query) => $query->where('is_active', true))->get();
 
         if ($units->isEmpty()) {
@@ -77,8 +77,10 @@ class DemoDuesSeeder extends Seeder
         $dueDays = (int) $settings->get('credit_due_days', $branch->id);
 
         foreach ($units as $unit) {
-            if ($stock->quantity($branch, $unit->product) < 30) {
-                $stock->move($branch, $unit->product, 50, StockMovementType::Opening, null, null, __('Opening stock'));
+            $needed = DemoDataSeeder::demoQuantity($unit, purchase: true);
+
+            if ($stock->quantity($branch, $unit->product) < $needed) {
+                $stock->move($branch, $unit->product, $needed, StockMovementType::Opening, null, null, __('Opening stock'));
             }
         }
 
@@ -129,16 +131,20 @@ class DemoDuesSeeder extends Seeder
         $total = 0.0;
 
         foreach ($units->random(mt_rand(1, min(5, $units->count()))) as $unit) {
-            $quantity = mt_rand(1, 10) <= 5 ? mt_rand(1, 2) : mt_rand(3, 10);
-            $lineTotal = round($quantity * (float) $unit->selling_price, 2);
-            $total += $lineTotal;
+            $quantity = DemoDataSeeder::demoQuantity($unit);
+
+            if ($stock->quantity($branch, $unit->product) < $quantity) {
+                $stock->move($branch, $unit->product, $quantity * 3, StockMovementType::Opening, null, null, __('Opening stock'));
+            }
+
+            $line = DemoDataSeeder::demoLine($unit, $quantity);
+            $total += $line['line_total'];
 
             $sale->items()->create([
                 'product_id' => $unit->product_id, 'product_unit_id' => $unit->id, 'product_name' => $unit->product->name,
                 'unit_name' => $unit->name, 'quantity' => $quantity, 'unit_quantity' => 1, 'base_quantity' => $quantity,
-                'unit_price' => $unit->selling_price, 'unit_cost' => $unit->product->cost_price, 'line_total' => $lineTotal,
-                'warranty_days' => $unit->product->warranty_days,
-            ]);
+                'unit_cost' => $unit->product->cost_price, 'warranty_days' => $unit->product->warranty_days,
+            ] + $line);
 
             $movement = $stock->move($branch, $unit->product, -$quantity, StockMovementType::Sale, $sale);
             StockMovement::query()->whereKey($movement->id)->update(['created_at' => $at]);

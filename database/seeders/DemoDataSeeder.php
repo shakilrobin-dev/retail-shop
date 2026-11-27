@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\ProductUnit;
 use App\Models\Referrer;
 use App\Models\Supplier;
 use App\Models\Unit;
@@ -90,5 +91,51 @@ class DemoDataSeeder extends Seeder
                 'reorder_level' => max(2, (int) round($stock / 10)),
             ], $units, $branch, $stock);
         }
+    }
+
+    /**
+     * A believable quantity of base units for a demo sale (or purchase) line:
+     * rods by the hundred kg, cement by the bag, tiles by the dozen pieces, small parts by the box.
+     */
+    public static function demoQuantity(ProductUnit $unit, bool $purchase = false): int
+    {
+        $product = $unit->product;
+        $cost = (float) $product->cost_price;
+        $short = $product->unit?->short_name;
+
+        [$min, $max] = match (true) {
+            $product->isMeasured() => [12, 90],
+            $short === 'kg' && $cost < 100 => [100, 600],
+            $short === 'kg' => [5, 25],
+            $short === 'bag' => [5, 40],
+            $short === 'm' => [20, 100],
+            $cost < 30 => [10, 60],
+            $cost < 500 => [1, 6],
+            default => [1, 2],
+        };
+
+        return $purchase ? mt_rand($max, $max * 4) : mt_rand($min, $max);
+    }
+
+    /**
+     * Price fields of a demo line. Tiles are billed by the sqft of the whole pieces.
+     *
+     * @return array{unit_price: float, measure_unit: string|null, measure_quantity: float|null, measure_rate: float|null, line_total: float}
+     */
+    public static function demoLine(ProductUnit $unit, int $quantity, bool $atCost = false): array
+    {
+        $product = $unit->product;
+
+        if ($product->isMeasured()) {
+            $measure = $product->measureForPieces($quantity);
+            $rate = $atCost ? round((float) $product->cost_price / (float) $product->measure_per_unit, 2) : (float) $product->measure_price;
+            $total = round($measure * $rate, 2);
+
+            return ['unit_price' => round($total / $quantity, 2), 'measure_unit' => $product->measure_unit, 'measure_quantity' => $measure, 'measure_rate' => $rate, 'line_total' => $total];
+        }
+
+        $price = $atCost ? (float) $product->cost_price : (float) $unit->selling_price;
+
+        return ['unit_price' => $price, 'measure_unit' => null, 'measure_quantity' => null, 'measure_rate' => null, 'line_total' => round($quantity * $price, 2)];
     }
 }
