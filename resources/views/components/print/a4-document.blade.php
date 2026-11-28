@@ -21,11 +21,12 @@
         body { font-family: {!! app()->getLocale() === 'bn' ? "'Hind Siliguri', " : '' !!}Arial, sans-serif; color: #111; font-size: 12px; line-height: 1.35; }
         .sheet { width: 190mm; margin: 0 auto; border-collapse: collapse; }
         .sheet > thead > tr > td, .sheet > tbody > tr > td { padding: 0; vertical-align: top; }
-        .doc-head { display: flex; justify-content: space-between; align-items: center; gap: 8mm; }
-        .doc-brand { display: flex; align-items: center; gap: 4mm; }
-        .doc-logo { max-height: 18mm; max-width: 40mm; object-fit: contain; }
-        .doc-shop { font-size: 20px; font-weight: bold; line-height: 1.15; }
-        .doc-contact { text-align: right; font-size: 11px; }
+        .doc-head { display: grid; grid-template-columns: 40mm 1fr 40mm; align-items: center; gap: 4mm; }
+        .doc-logo { display: block; max-height: 22mm; max-width: 40mm; object-fit: contain; }
+        .doc-center { text-align: center; }
+        .doc-shop { font-size: 22px; font-weight: bold; line-height: 1.15; }
+        .doc-tagline { font-size: 11.5px; color: #555; margin-top: 0.5mm; }
+        .doc-contact { font-size: 11px; margin-top: 1mm; }
         .doc-rule { border-top: 2px solid #111; border-bottom: 1px solid #94a3b8; height: 3px; margin: 3mm 0 2.5mm; }
         .doc-bar { display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; padding-bottom: 3mm; margin-bottom: 3mm; border-bottom: 1px solid #cbd5e1; }
         .doc-title { font-size: 16px; font-weight: bold; letter-spacing: {{ app()->getLocale() === 'bn' ? '0' : '2px' }}; }
@@ -69,19 +70,25 @@
             <tr>
                 <td>
                     <div class="doc-head">
-                        <div class="doc-brand">
+                        <div>
                             @if ($letterhead['logo_url'])<img src="{{ $letterhead['logo_url'] }}" alt="" class="doc-logo">@endif
-                            <div>
-                                <div class="doc-shop">{{ $letterhead['name'] }}</div>
-                                @if ($letterhead['tagline'])<div class="muted">{{ $letterhead['tagline'] }}</div>@endif
+                        </div>
+                        <div class="doc-center">
+                            <div class="doc-shop">{{ $letterhead['name'] }}</div>
+                            @if ($letterhead['tagline'])<div class="doc-tagline">{{ $letterhead['tagline'] }}</div>@endif
+                            <div class="doc-contact">
+                                @if ($branchName)<div class="bold">{{ __('Branch') }}: {{ $branchName }}</div>@endif
+                                @if ($letterhead['address'])<div>{{ $letterhead['address'] }}</div>@endif
+                                @if ($letterhead['phone'] || $letterhead['bin'])
+                                    <div>
+                                        @if ($letterhead['phone']){{ __('Phone') }}: {{ $letterhead['phone'] }}@endif
+                                        @if ($letterhead['phone'] && $letterhead['bin'])&nbsp;|&nbsp;@endif
+                                        @if ($letterhead['bin']){{ __('BIN') }}: {{ $letterhead['bin'] }}@endif
+                                    </div>
+                                @endif
                             </div>
                         </div>
-                        <div class="doc-contact">
-                            @if ($branchName)<div class="bold">{{ __('Branch') }}: {{ $branchName }}</div>@endif
-                            @if ($letterhead['address'])<div>{{ $letterhead['address'] }}</div>@endif
-                            @if ($letterhead['phone'])<div>{{ __('Phone') }}: {{ $letterhead['phone'] }}</div>@endif
-                            @if ($letterhead['bin'])<div>{{ __('BIN') }}: {{ $letterhead['bin'] }}</div>@endif
-                        </div>
+                        <div></div>
                     </div>
                     <div class="doc-rule"></div>
                     <div class="doc-bar">
