@@ -3,9 +3,11 @@
     <x-page-header :title="__('Excel import')" :subtitle="__('Add categories, products and stock in bulk from an Excel file.')" />
 
     @php
-        $typeLabels = ['categories' => __('Categories & sub-categories'), 'products' => __('Products'), 'stock' => __('Stock')];
+        $typeLabels = ['categories' => __('Categories & sub-categories'), 'brands' => __('Brands'), 'units' => __('Units'), 'products' => __('Products'), 'stock' => __('Stock')];
         $typeHelp = [
             'categories' => __('Adds main categories and sub-categories. Ones that already exist are kept as they are.'),
+            'brands' => __('Adds brands. Brands that already exist are skipped.'),
+            'units' => __('Adds base units (how stock is counted: piece, kg, bag, ft...). Units that already exist are skipped.'),
             'products' => __('Adds new products with prices, pack/carton, tiles measurement and opening stock. If a product already exists (same SKU, barcode or name), its prices and details are updated.'),
             'stock' => __('Adds stock to products that already exist, in the branch you are logged in to. Find products by SKU, barcode or name.'),
         ];
@@ -27,8 +29,8 @@
                 @if ($done['error'] > 0) {{ __(':count rows with errors were skipped.', ['count' => shop_digits($done['error'])]) }} @endif
             </p>
             <div class="mt-2 flex flex-wrap gap-3">
-                @if ($done['type'] === 'categories')
-                    <a href="{{ route('catalog.setup') }}" wire:navigate class="font-medium underline">{{ __('See categories') }}</a>
+                @if (in_array($done['type'], ['categories', 'brands', 'units'], true))
+                    <a href="{{ route('catalog.setup', ['tab' => $done['type']]) }}" wire:navigate class="font-medium underline">{{ __('See :what', ['what' => $typeLabels[$done['type']]]) }}</a>
                 @elseif ($done['type'] === 'products')
                     <a href="{{ route('products.index') }}" wire:navigate class="font-medium underline">{{ __('See products') }}</a>
                 @else
@@ -116,7 +118,7 @@
                 <table class="data-table">
                     <thead><tr>
                         <th class="w-16">{{ __('Row') }}</th>
-                        <th>{{ $type === 'categories' ? __('Category') : __('Product') }}</th>
+                        <th>{{ ['categories' => __('Category'), 'brands' => __('Brand'), 'units' => __('Unit')][$type] ?? __('Product') }}</th>
                         <th class="w-28">{{ __('Status') }}</th>
                         <th>{{ __('What will happen') }}</th>
                     </tr></thead>

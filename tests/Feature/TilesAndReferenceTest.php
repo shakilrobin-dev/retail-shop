@@ -104,8 +104,9 @@ class TilesAndReferenceTest extends TestCase
             ->assertSet('cart.0.unit_price', '120')
             ->set('cart.0.quantity', '500')
             ->assertSet('cart.0.pieces', '283')
-            ->assertSee('28 Carton + 3 Piece')
-            ->assertSee('500.91');
+            ->assertSee('Give: 28 Carton + 3 Piece')
+            ->assertSee('Whole pieces: billed 500.91 sqft')
+            ->assertSee('500.91 sqft × ৳ 120.00');
 
         $this->assertEquals(60109.20, $component->instance()->totals()['total']);
 

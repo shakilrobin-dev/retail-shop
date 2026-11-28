@@ -1,8 +1,8 @@
 <div>
     <x-flash />
     <x-page-header :title="__('Categories & brands')" :subtitle="__('Organise products in a category tree, e.g. Accessories › Chargers › Fast chargers.')">
+        <a href="{{ route('import.index', ['type' => $tab]) }}" class="btn-secondary" wire:navigate><x-icon name="table" class="size-4" /> {{ __('Import from Excel') }}</a>
         @if ($tab === 'categories')
-            <a href="{{ route('import.index', ['type' => 'categories']) }}" class="btn-secondary" wire:navigate><x-icon name="table" class="size-4" /> {{ __('Import from Excel') }}</a>
             <button type="button" wire:click="newCategory" class="btn-primary"><x-icon name="plus" class="size-4" /> {{ __('New main category') }}</button>
         @endif
     </x-page-header>

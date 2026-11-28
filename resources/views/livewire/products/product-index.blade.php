@@ -121,6 +121,7 @@
                     @empty
                         <x-empty :colspan="8" icon="cube" :title="__('No products found.')" :text="__('Try another search, or add your first product.')">
                             <a href="{{ route('products.create') }}" class="btn-primary" wire:navigate><x-icon name="plus" class="size-4" /> {{ __('New product') }}</a>
+                            <a href="{{ route('import.index', ['type' => 'products']) }}" class="btn-secondary" wire:navigate><x-icon name="table" class="size-4" /> {{ __('Import from Excel') }}</a>
                         </x-empty>
                     @endforelse
                 </tbody>

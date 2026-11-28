@@ -60,7 +60,7 @@ class Dashboard extends Component
             [__('Set your shop name and logo'), route('settings.general', ['tab' => 'shop']), $settings->get('shop_name') !== config('shop.defaults.shop_name'), 'settings.manage'],
             [__('Add branch address and phone (shown on receipts)'), route('settings.branches'), (bool) app(CurrentBranch::class)->get()?->address, 'branches.manage'],
             [__('Open the cash register for the first time'), route('cash-register'), CashShift::query()->exists(), 'cash-shifts.manage'],
-            [__('Add products with barcodes'), route('products.create'), Product::query()->exists(), 'products.manage'],
+            [__('Add products (one by one, or many at once from Excel)'), route('import.index', ['type' => 'products']), Product::query()->exists(), 'products.manage'],
             [__('Add staff users'), route('settings.users'), User::query()->count() > 1, 'users.manage'],
             [__('Choose receipt printing (ON / OFF / Ask)'), route('settings.general', ['tab' => 'receipt']), Setting::query()->where('key', 'receipt_print_mode')->exists(), 'settings.manage'],
         ];

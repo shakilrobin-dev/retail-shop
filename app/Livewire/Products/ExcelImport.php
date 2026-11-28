@@ -5,11 +5,13 @@ namespace App\Livewire\Products;
 use App\Exceptions\InsufficientStockException;
 use App\Models\User;
 use App\Services\CurrentBranch;
+use App\Services\Imports\BrandImport;
 use App\Services\Imports\CategoryImport;
 use App\Services\Imports\ImportSheet;
 use App\Services\Imports\ImportWorkbook;
 use App\Services\Imports\ProductImport;
 use App\Services\Imports\StockImport;
+use App\Services\Imports\UnitImport;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +35,8 @@ class ExcelImport extends Component
     /** Import type => [sheet class, permission]. */
     private const TYPES = [
         'categories' => [CategoryImport::class, 'products.manage'],
+        'brands' => [BrandImport::class, 'products.manage'],
+        'units' => [UnitImport::class, 'products.manage'],
         'products' => [ProductImport::class, 'products.manage'],
         'stock' => [StockImport::class, 'stock.adjust'],
     ];

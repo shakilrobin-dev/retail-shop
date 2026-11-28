@@ -57,19 +57,13 @@
                         <tr wire:key="qline-{{ $line['product_unit_id'] }}-{{ $index }}">
                             <td>
                                 <div class="flex items-center gap-1.5 font-medium">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></div>
-                                @if ($measure && $soldQty > 0)
-                                    <div class="mt-0.5 text-xs font-medium text-primary-700 dark:text-primary-400">{{ $this->packBreakdown($line, $soldQty) }} · {{ shop_digits($billedMeasure + 0) }} {{ $measure['unit'] }}</div>
-                                @endif
                                 @error("cart.$index") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
+                            @if ($measure)
+                                <x-cart.measured-quantity :index="$index" :line="$line" :pieces="$soldQty" :billed="$billedMeasure" :breakdown="$this->packBreakdown($line, $soldQty)" />
+                            @else
                             <td>
-                                @if ($measure)
-                                            <div class="text-sm font-semibold text-foreground">{{ $measure['unit'] }}</div>
-                                            <label class="mt-1 flex items-center gap-1 text-xs text-muted-foreground-1">
-                                                <input wire:model.live.debounce.500ms="cart.{{ $index }}.pieces" type="number" step="1" min="0" class="form-input w-16 px-1 py-0.5 text-center text-xs" title="{{ __('Pieces') }}">
-                                                {{ $line['units'][$line['product_unit_id']]['name'] ?? __('pcs') }}
-                                            </label>
-                                @elseif (count($line['units']) > 1)
+                                @if (count($line['units']) > 1)
                                     <select wire:model.live="cart.{{ $index }}.product_unit_id" class="form-input py-1">
                                         @foreach ($line['units'] as $unitId => $unit)
                                             <option value="{{ $unitId }}">{{ $unit['name'] }}@if ($unit['quantity'] > 1) ({{ $unit['quantity'] + 0 }})@endif</option>
@@ -82,19 +76,22 @@
                             <td>
                                 <div class="flex items-center justify-center gap-1">
                                     <button type="button" wire:click="decrement({{ $index }})" class="btn-secondary btn-sm">−</button>
-                                    <input wire:model.live.debounce.600ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" @class(['form-input px-1 py-1 text-center', 'w-14' => ! $measure, 'w-20' => $measure])>
+                                    <input wire:model.live.debounce.600ms="cart.{{ $index }}.quantity" type="number" step="any" min="0" class="form-input w-14 px-1 py-1 text-center">
                                     <button type="button" wire:click="increment({{ $index }})" class="btn-secondary btn-sm">+</button>
                                 </div>
-                                @if ($measure)<div class="mt-0.5 text-center text-[11px] text-muted-foreground">{{ $measure['unit'] }}</div>@endif
                                 @error("cart.$index.quantity") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
+                            @endif
                             <td>
                                 <input wire:model.live.debounce.500ms="cart.{{ $index }}.unit_price" type="number" step="0.01" min="0" class="form-input min-w-20 py-1">
-                                @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">/ {{ $measure['unit'] }}</div>@endif
+                                @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">{{ __('per :unit', ['unit' => $measure['unit']]) }}</div>@endif
                                 @error("cart.$index.unit_price") <p class="form-error">{{ $message }}</p> @enderror
                             </td>
                             <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input min-w-14 py-1"></td>
-                            <td class="text-right font-medium tabular-nums">{{ money($lineTotal) }}</td>
+                            <td class="text-right font-medium tabular-nums">
+                                {{ money($lineTotal) }}
+                                @if ($measure && $soldQty > 0)<div class="whitespace-nowrap text-[11px] font-normal text-muted-foreground">{{ shop_digits($billedMeasure + 0) }} {{ $measure['unit'] }} × {{ money($line['unit_price'] === '' ? 0 : $line['unit_price']) }}</div>@endif
+                            </td>
                             <td><button type="button" wire:click="removeLine({{ $index }})" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                         </tr>
                     @empty

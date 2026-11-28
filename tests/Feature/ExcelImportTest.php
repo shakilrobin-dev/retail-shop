@@ -6,6 +6,7 @@ use App\Enums\AdjustmentReason;
 use App\Enums\StockMovementType;
 use App\Livewire\Products\ExcelImport;
 use App\Models\Branch;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockAdjustment;
@@ -58,7 +59,7 @@ class ExcelImportTest extends TestCase
 
         $this->get(route('import.index'))->assertOk()->assertSee('Download sample Excel');
 
-        foreach (['categories', 'products', 'stock'] as $type) {
+        foreach (['categories', 'brands', 'units', 'products', 'stock'] as $type) {
             Livewire::test(ExcelImport::class)
                 ->set('type', $type)
                 ->call('downloadSample')
@@ -106,6 +107,44 @@ class ExcelImportTest extends TestCase
         $this->assertDatabaseHas('categories', ['name' => 'Wall Tiles', 'name_bn' => 'ওয়াল টাইলস', 'parent_id' => $tiles->id]);
         $this->assertSame(1, Category::query()->where('name', 'Paint')->whereNull('parent_id')->count());
         $this->assertDatabaseMissing('categories', ['name' => 'Orphan']);
+    }
+
+    public function test_brands_are_imported_once(): void
+    {
+        $this->actingAsRole('admin', $this->branch);
+        Brand::query()->create(['name' => 'BSRM']);
+
+        Livewire::test(ExcelImport::class)
+            ->set('type', 'brands')
+            ->set('file', $this->excel('Brands', ['Brand name *'], [['bsrm'], ['RAK'], ['Rak'], [null], ['Walton']]))
+            ->assertSet('counts', ['new' => 2, 'update' => 0, 'skip' => 2, 'error' => 0])
+            ->call('import')
+            ->assertHasNoErrors();
+
+        $this->assertSame(['BSRM', 'RAK', 'Walton'], Brand::query()->orderBy('name')->pluck('name')->all());
+    }
+
+    public function test_units_are_imported_with_decimals_setting(): void
+    {
+        $this->actingAsRole('admin', $this->branch);
+
+        Livewire::test(ExcelImport::class)
+            ->set('type', 'units')
+            ->set('file', $this->excel('Units', ['Unit name *', 'Name (Bangla)', 'Short name *', 'Allows decimal'], [
+                ['Litre', 'লিটার', 'ltr', 'Yes'],
+                ['Bundle', null, 'bdl', null],
+                ['Piece', 'পিস', 'PCS', 'No'],
+                ['Gallon', null, 'gal', 'maybe'],
+            ]))
+            ->assertSet('counts', ['new' => 2, 'update' => 0, 'skip' => 1, 'error' => 1])
+            ->assertSee('Allows decimal must be Yes or No.')
+            ->call('import')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(Unit::query()->where('short_name', 'ltr')->sole()->allows_decimal);
+        $this->assertFalse(Unit::query()->where('short_name', 'bdl')->sole()->allows_decimal);
+        $this->assertSame(1, Unit::query()->where('short_name', 'pcs')->count());
+        $this->assertDatabaseMissing('units', ['short_name' => 'gal']);
     }
 
     public function test_products_are_added_and_existing_ones_updated(): void

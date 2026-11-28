@@ -1303,5 +1303,21 @@
     "What will happen": "কী হবে",
     "No rows here.": "এখানে কোনো সারি নেই।",
     "Showing the first :shown rows. All :total rows will be imported.": "প্রথম :shown টি সারি দেখানো হচ্ছে। সব :total টি সারি ইমপোর্ট হবে।",
-    "Import from Excel": "Excel থেকে ইমপোর্ট"
+    "Import from Excel": "Excel থেকে ইমপোর্ট",
+    "How many :unit the customer needs": "গ্রাহকের কত :unit দরকার",
+    "One piece less": "এক পিস কম",
+    "One piece more": "এক পিস বেশি",
+    "Pieces to give": "কত পিস দিতে হবে",
+    "Whole pieces: billed :billed :unit": "পূর্ণ পিস হিসেবে বিল: :billed :unit",
+    "per :unit": "প্রতি :unit",
+    "New brand": "নতুন ব্র্যান্ড",
+    "Allows decimal must be Yes or No.": "দশমিক চলবে কিনা তা Yes বা No লিখুন।",
+    "Same short name as row :row.": "সারি :row এর একই সংক্ষিপ্ত নাম।",
+    "Allows decimals (e.g. 2.5)": "দশমিক চলবে (যেমন ২.৫)",
+    "Whole numbers only": "শুধু পূর্ণ সংখ্যা",
+    "Adds brands. Brands that already exist are skipped.": "ব্র্যান্ড যোগ করে। আগে থেকে থাকা ব্র্যান্ড বাদ যাবে।",
+    "Adds base units (how stock is counted: piece, kg, bag, ft...). Units that already exist are skipped.": "বেস ইউনিট যোগ করে (স্টক যেভাবে গণনা হয়: পিস, কেজি, ব্যাগ, ফুট...)। আগে থেকে থাকা ইউনিট বাদ যাবে।",
+    "See :what": ":what দেখুন",
+    "Units": "ইউনিট",
+    "Add products (one by one, or many at once from Excel)": "পণ্য যোগ করুন (একটি একটি করে, বা Excel থেকে একসাথে অনেক)"
 }
