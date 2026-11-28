@@ -69,7 +69,7 @@
                         </tr>
                     @endif
                     @if ($item->discount_amount > 0)
-                        <tr><td colspan="3" class="muted">{{ __('Discount') }}: −{{ shop_digits(number_format((float) $item->discount_amount, 2)) }}</td></tr>
+                        <tr><td colspan="3" class="muted">{{ __('Discount') }}@if ($item->discount_percents) {{ \App\Services\DiscountChain::label($item->discount_percents) }}@endif: −{{ shop_digits(number_format((float) $item->discount_amount, 2)) }}</td></tr>
                     @endif
                     @if ($item->warranty_days)
                         <tr><td colspan="3" class="muted">{{ __('Warranty') }}: {{ shop_digits($item->warranty_days) }} {{ __('days') }} ({{ __('till') }} {{ shop_digits($sale->sold_at->copy()->addDays($item->warranty_days)->format('d/m/Y')) }})</td></tr>

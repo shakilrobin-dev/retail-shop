@@ -1330,5 +1330,16 @@
     "Select shown": "দেখানো সব বাছুন",
     ":count selected": ":count টি বাছাই",
     "Showing 200 of :count. Type to narrow down.": ":count টির মধ্যে ২০০টি দেখানো হচ্ছে। লিখে খুঁজুন।",
-    "Apply": "প্রয়োগ করুন"
+    "Apply": "প্রয়োগ করুন",
+    "Write the discount as percentages separated by commas, e.g. 20,10,5.": "ডিসকাউন্ট শতাংশে কমা দিয়ে লিখুন, যেমন ২০,১০,৫।",
+    "Bill discount applies to ticked items. Tick or untick all.": "বিলের ডিসকাউন্ট টিক দেওয়া পণ্যে প্রযোজ্য। সব টিক দিন বা তুলে নিন।",
+    "Bill discount on all items": "সব পণ্যে বিলের ডিসকাউন্ট",
+    "Item discount in %. Several, one after another: 20,10,5": "পণ্যের ডিসকাউন্ট %-এ। একাধিক হলে একটির পর একটি: ২০,১০,৫",
+    "Disc. %": "ছাড় %",
+    "Apply the bill discount to this item": "এই পণ্যে বিলের ডিসকাউন্ট দিন",
+    "Apply the bill discount to :item": ":item এ বিলের ডিসকাউন্ট দিন",
+    "Discount % for :item": ":item এর ছাড় %",
+    "e.g. 20,10,5": "যেমন ২০,১০,৫",
+    "On ticked items (:amount)": "টিক দেওয়া পণ্যে (:amount)",
+    "No bill discount": "বিলের ডিসকাউন্ট নেই"
 }

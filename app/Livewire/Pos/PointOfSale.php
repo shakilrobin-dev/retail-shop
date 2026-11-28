@@ -92,7 +92,7 @@ class PointOfSale extends Component
         $this->clearCart();
 
         foreach ($quotation->items->reverse() as $item) {
-            $this->addSavedLine($item->product_unit_id, (float) $item->quantity, (float) $item->unit_price, $item->measure_rate !== null ? (float) $item->measure_rate : null, (float) $item->discount_amount);
+            $this->addSavedLine($item->product_unit_id, (float) $item->quantity, (float) $item->unit_price, $item->measure_rate !== null ? (float) $item->measure_rate : null, (string) $item->discount_percents, (bool) $item->bill_discount, (float) $item->discount_amount);
         }
 
         $this->customerId = $quotation->customer_id;
@@ -215,7 +215,7 @@ class PointOfSale extends Component
         }
 
         foreach (array_reverse($data['cart']) as $row) {
-            $this->addSavedLine($row['product_unit_id'], (float) $row['quantity'], (float) $row['unit_price'], $row['measure_rate'], (float) $row['discount_amount']);
+            $this->addSavedLine($row['product_unit_id'], (float) $row['quantity'], (float) $row['unit_price'], $row['measure_rate'], $row['discount'], $row['bill_discount']);
         }
     }
 
@@ -227,6 +227,7 @@ class PointOfSale extends Component
             return;
         }
 
+        $this->validateLineDiscounts();
         $this->showPayment = true;
 
         if ($this->payments === []) {
@@ -268,6 +269,7 @@ class PointOfSale extends Component
     public function complete(SaleService $sales): void
     {
         $this->authorize('pos.sell');
+        $this->validateLineDiscounts();
         $this->checkDiscountAllowed();
 
         $this->validate([
@@ -275,7 +277,6 @@ class PointOfSale extends Component
             'payments.*.payment_method_id' => ['required', 'exists:payment_methods,id'],
             'cart.*.quantity' => ['required', 'numeric', 'gt:0'],
             'cart.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'cart.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'dueDate' => ['nullable', 'date', 'after_or_equal:today'],
             'referrerId' => ['nullable', 'exists:referrers,id'],
         ], [], ['cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price'), 'dueDate' => __('due date')]);
@@ -337,7 +338,7 @@ class PointOfSale extends Component
         /** @var User $user */
         $user = Auth::user();
         $totals = $this->totals();
-        $lineDiscounts = collect($this->cart)->sum(fn (array $line): float => (float) $line['discount_amount']);
+        $lineDiscounts = collect($this->cart)->sum(fn (array $line): float => $this->lineAmounts($line)['discount']);
         $discount = $totals['discount_amount'] + $lineDiscounts;
 
         if ($discount <= 0 || $user->hasRole('admin')) {
@@ -357,12 +358,12 @@ class PointOfSale extends Component
     }
 
     /**
-     * @return array{subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
+     * @return array{subtotal: float, discountable: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function totals(): array
     {
         if ($this->cart === []) {
-            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
+            return ['subtotal' => 0, 'discountable' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
         }
 
         try {
@@ -373,7 +374,7 @@ class PointOfSale extends Component
                 (float) $this->discountValue,
             );
         } catch (ValidationException) {
-            return ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
+            return ['subtotal' => 0, 'discountable' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
         }
 
         unset($totals['lines']);

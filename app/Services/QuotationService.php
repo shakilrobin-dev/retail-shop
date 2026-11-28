@@ -24,7 +24,7 @@ class QuotationService
 
     /**
      * @param  array{customer_name?: string|null, customer_phone?: string|null, customer_address?: string|null, quotation_date: string, valid_until?: string|null, note?: string|null}  $header
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount?: string|null, discount_amount?: float|string, bill_discount?: bool, measure_rate?: float|string|null}>  $cart
      */
     public function save(Branch $branch, ?Quotation $quotation, array $header, array $cart, ?DiscountType $discountType = null, float $discountValue = 0): Quotation
     {
@@ -79,6 +79,8 @@ class QuotationService
                     'measure_quantity' => $line['measure']['quantity'] ?? null,
                     'measure_rate' => $line['measure']['rate'] ?? null,
                     'discount_amount' => $line['discount_amount'],
+                    'discount_percents' => $line['discount_percents'],
+                    'bill_discount' => $line['bill_discount'],
                     'line_total' => $line['line_total'],
                 ]);
             }

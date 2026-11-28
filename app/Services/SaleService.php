@@ -41,8 +41,12 @@ class SaleService
      * A line with "measure_rate" is a product sold by measurement (e.g. tiles by sqft):
      * its quantity is whole base units (pieces) and it is billed as pieces × measurement per piece × rate.
      *
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
-     * @return array{lines: list<array<string, mixed>>, subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
+     * A line's "discount" is consecutive percentages ("20,10,5" = −20%, then −10%, then −5%); an older
+     * "discount_amount" in money is still accepted. The bill discount is shared only among lines whose
+     * "bill_discount" is true (the default), in proportion to their amount.
+     *
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount?: string|null, discount_amount?: float|string, bill_discount?: bool, measure_rate?: float|string|null}>  $cart
+     * @return array{lines: list<array<string, mixed>>, subtotal: float, discountable: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function calculate(Branch $branch, array $cart, ?DiscountType $discountType = null, float $discountValue = 0): array
     {
@@ -53,7 +57,7 @@ class SaleService
         $lines = [];
         $subtotal = 0.0;
 
-        foreach ($cart as $row) {
+        foreach ($cart as $index => $row) {
             $unit = $units->get((int) $row['product_unit_id']);
 
             if (! $unit) {
@@ -73,7 +77,20 @@ class SaleService
                 $measure = ['unit' => $unit->product->measure_unit, 'quantity' => $measureQuantity, 'rate' => $measureRate];
             }
 
-            $lineDiscount = min(round((float) ($row['discount_amount'] ?? 0), 2), $gross);
+            $percents = null;
+
+            if (array_key_exists('discount', $row)) {
+                if (! DiscountChain::isValid($row['discount'])) {
+                    throw ValidationException::withMessages(["cart.{$index}.discount" => __('Write the discount as percentages separated by commas, e.g. 20,10,5.')]);
+                }
+
+                $percents = DiscountChain::normalize($row['discount']);
+                $lineDiscount = DiscountChain::amount($gross, $percents);
+            } else {
+                $lineDiscount = round((float) ($row['discount_amount'] ?? 0), 2);
+            }
+
+            $lineDiscount = min($lineDiscount, $gross);
             $lineTotal = round($gross - $lineDiscount, 2);
             $subtotal += $lineTotal;
 
@@ -82,6 +99,8 @@ class SaleService
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $lineDiscount,
+                'discount_percents' => $percents,
+                'bill_discount' => filter_var($row['bill_discount'] ?? true, FILTER_VALIDATE_BOOLEAN),
                 'line_total' => $lineTotal,
                 'vat_rate' => $vatEnabled ? (float) $unit->product->vat_rate : 0.0,
                 'measure' => $measure,
@@ -89,18 +108,33 @@ class SaleService
         }
 
         $subtotal = round($subtotal, 2);
+        $discountable = round((float) collect($lines)->where('bill_discount', true)->sum('line_total'), 2);
         $billDiscount = match ($discountType) {
-            DiscountType::Percent => round($subtotal * min(100, max(0, $discountValue)) / 100, 2),
-            DiscountType::Amount => round(min($subtotal, max(0, $discountValue)), 2),
+            DiscountType::Percent => round($discountable * min(100, max(0, $discountValue)) / 100, 2),
+            DiscountType::Amount => round(min($discountable, max(0, $discountValue)), 2),
             default => 0.0,
         };
 
-        /** VAT is worked out on each line after its share of the bill discount. */
-        $vatTotal = 0.0;
-        $afterDiscountRatio = $subtotal > 0 ? ($subtotal - $billDiscount) / $subtotal : 1;
+        /** Each ticked line gets its share of the bill discount; the last one takes the rounding difference. */
+        $shared = 0.0;
+        $lastTicked = collect($lines)->filter(fn (array $line): bool => $line['bill_discount'] && $line['line_total'] > 0)->keys()->last();
 
         foreach ($lines as $index => $line) {
-            $taxable = $line['line_total'] * $afterDiscountRatio;
+            $share = 0.0;
+
+            if ($billDiscount > 0 && $line['bill_discount'] && $line['line_total'] > 0) {
+                $share = $index === $lastTicked ? round($billDiscount - $shared, 2) : round($billDiscount * $line['line_total'] / $discountable, 2);
+                $shared += $share;
+            }
+
+            $lines[$index]['bill_discount_amount'] = $share;
+        }
+
+        /** VAT is worked out on each line after its share of the bill discount. */
+        $vatTotal = 0.0;
+
+        foreach ($lines as $index => $line) {
+            $taxable = $line['line_total'] - $line['bill_discount_amount'];
             $rate = $line['vat_rate'] / 100;
             $vat = $vatInclusive ? $taxable - ($taxable / (1 + $rate)) : $taxable * $rate;
             $lines[$index]['vat_amount'] = round($vat, 2);
@@ -114,6 +148,7 @@ class SaleService
         return [
             'lines' => $lines,
             'subtotal' => $subtotal,
+            'discountable' => $discountable,
             'discount_amount' => $billDiscount,
             'vat_amount' => $vatTotal,
             'rounding_amount' => round($total - $exact, 2),
@@ -157,7 +192,7 @@ class SaleService
     /**
      * Complete a sale: save it, take stock out and record payments.
      *
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string, measure_rate?: float|string|null}>  $cart
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount?: string|null, discount_amount?: float|string, bill_discount?: bool, measure_rate?: float|string|null}>  $cart
      * @param  list<array{payment_method_id: int, amount: float|string, transaction_ref?: string|null}>  $payments
      * @param  int|null  $referrerId  reference person who brought the customer (commission is worked out later)
      */
@@ -235,6 +270,9 @@ class SaleService
                     'measure_rate' => $line['measure']['rate'] ?? null,
                     'unit_cost' => round((float) $unit->product->cost_price * (float) $unit->quantity, 2),
                     'discount_amount' => $line['discount_amount'],
+                    'discount_percents' => $line['discount_percents'],
+                    'bill_discount' => $line['bill_discount'],
+                    'bill_discount_amount' => $line['bill_discount_amount'],
                     'vat_rate' => $line['vat_rate'],
                     'vat_amount' => $line['vat_amount'],
                     'line_total' => $line['line_total'],
@@ -259,7 +297,7 @@ class SaleService
     /**
      * Put the cart aside (customer went to pick something else).
      *
-     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount_amount?: float|string}>  $cart
+     * @param  list<array{product_unit_id: int, quantity: float|string, unit_price: float|string, discount?: string|null, discount_amount?: float|string, bill_discount?: bool}>  $cart
      */
     public function hold(Branch $branch, array $cart, ?string $holdNote = null, ?int $customerId = null, ?int $referrerId = null): Sale
     {
@@ -292,6 +330,8 @@ class SaleService
                     'measure_quantity' => $line['measure']['quantity'] ?? null,
                     'measure_rate' => $line['measure']['rate'] ?? null,
                     'discount_amount' => $line['discount_amount'],
+                    'discount_percents' => $line['discount_percents'],
+                    'bill_discount' => $line['bill_discount'],
                     'line_total' => $line['line_total'],
                 ]);
             }
@@ -303,7 +343,7 @@ class SaleService
     /**
      * Take a held sale back into the cart. The held record is removed.
      *
-     * @return array{cart: list<array{product_unit_id: int, quantity: float, unit_price: float, discount_amount: float, measure_rate: float|null}>, customer_id: int|null, referrer_id: int|null}
+     * @return array{cart: list<array{product_unit_id: int, quantity: float, unit_price: float, discount: string, bill_discount: bool, measure_rate: float|null}>, customer_id: int|null, referrer_id: int|null}
      */
     public function resume(Sale $sale): array
     {
@@ -316,7 +356,8 @@ class SaleService
                 'product_unit_id' => $item->product_unit_id,
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
-                'discount_amount' => (float) $item->discount_amount,
+                'discount' => (string) $item->discount_percents,
+                'bill_discount' => (bool) $item->bill_discount,
                 'measure_rate' => $item->measure_rate !== null ? (float) $item->measure_rate : null,
             ])->all();
 
@@ -393,7 +434,11 @@ class SaleService
         return DB::transaction(function () use ($sale, $items, $refundMethod, $reason): SaleReturn {
             $sale->load(['items.product', 'branch']);
             $branch = $sale->branch;
-            $linesTotal = (float) $sale->items->sum('line_total');
+            /** Each line's amount after its own share of the bill discount; VAT and rounding are spread by that. */
+            $net = fn (SaleItem $item): float => (float) $item->line_total - (float) $item->bill_discount_amount;
+            $netTotal = (float) $sale->items->sum($net);
+            $hasShares = (float) $sale->items->sum('bill_discount_amount') > 0;
+            $linesTotal = $hasShares ? $netTotal : (float) $sale->items->sum('line_total');
             $paidRatio = $linesTotal > 0 ? (float) $sale->total / $linesTotal : 1;
 
             $saleReturn = SaleReturn::query()->create([
@@ -423,7 +468,8 @@ class SaleService
                     throw ValidationException::withMessages(["returns.{$itemId}.quantity" => __('Cannot return more than :qty.', ['qty' => $returnable + 0])]);
                 }
 
-                $amount = round(((float) $item->line_total / (float) $item->quantity) * $quantity * $paidRatio, 2);
+                $lineAmount = $hasShares ? $net($item) : (float) $item->line_total;
+                $amount = round(($lineAmount / (float) $item->quantity) * $quantity * $paidRatio, 2);
                 $total += $amount;
 
                 $saleReturn->items()->create([

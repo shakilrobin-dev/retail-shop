@@ -38,7 +38,7 @@
                         @if ($item->measure_quantity !== null)
                             <div class="small muted">{{ $item->product?->stockBreakdown((float) $item->base_quantity) }}</div>
                         @endif
-                        @if ($item->discount_amount > 0)<div class="small muted">{{ __('Discount') }}: −{{ money($item->discount_amount) }}</div>@endif
+                        @if ($item->discount_amount > 0)<div class="small muted">{{ __('Discount') }}@if ($item->discount_percents) {{ \App\Services\DiscountChain::label($item->discount_percents) }}@endif: −{{ money($item->discount_amount) }}</div>@endif
                     </td>
                     @if ($item->measure_quantity !== null)
                         <td class="right">{{ shop_digits($item->measure_quantity + 0) }} {{ $item->measure_unit }}</td>

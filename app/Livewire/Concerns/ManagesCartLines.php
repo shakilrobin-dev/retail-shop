@@ -4,7 +4,9 @@ namespace App\Livewire\Concerns;
 
 use App\Models\ProductUnit;
 use App\Services\CurrentBranch;
+use App\Services\DiscountChain;
 use App\Services\StockService;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The list of products on a sale or quotation: units (piece/box), quantities, prices
@@ -15,8 +17,9 @@ trait ManagesCartLines
     /**
      * A line of a product sold by measurement (tiles by sqft) also has "measure" and "pieces":
      * then "quantity" is the measurement (e.g. 500 sqft), "pieces" the whole pieces given and "unit_price" the rate per measurement.
+     * "discount" is consecutive percentages ("20,10,5"); "bill_discount" says if the bill discount applies to the line.
      *
-     * @var list<array{product_unit_id: int, product_id: int, name: string, units: array<int, array{name: string, price: float, quantity: float}>, quantity: string, unit_price: string, discount_amount: string, stock: float, measure?: array{unit: string, per: float, rate: string}|null, pieces?: string}>
+     * @var list<array{product_unit_id: int, product_id: int, name: string, units: array<int, array{name: string, price: float, quantity: float}>, quantity: string, unit_price: string, discount: string, bill_discount: bool, stock: float, measure?: array{unit: string, per: float, rate: string}|null, pieces?: string}>
      */
     public array $cart = [];
 
@@ -61,7 +64,8 @@ trait ManagesCartLines
             ]])->all(),
             'quantity' => '1',
             'unit_price' => (string) $unit->selling_price,
-            'discount_amount' => '0',
+            'discount' => '',
+            'bill_discount' => true,
             'stock' => app(StockService::class)->quantity($branch, $product),
         ]);
     }
@@ -102,7 +106,8 @@ trait ManagesCartLines
             'pieces' => (string) $addPieces,
             'quantity' => (string) round($addPieces * (float) $product->measure_per_unit, 3),
             'unit_price' => (string) $rate,
-            'discount_amount' => '0',
+            'discount' => '',
+            'bill_discount' => true,
             'stock' => app(StockService::class)->quantity(app(CurrentBranch::class)->get(), $product),
         ]);
     }
@@ -268,7 +273,7 @@ trait ManagesCartLines
     /**
      * Put a saved line back on the list (a held sale or a quotation).
      */
-    protected function addSavedLine(int $productUnitId, float $quantity, float $unitPrice, ?float $measureRate, float $discount): void
+    protected function addSavedLine(int $productUnitId, float $quantity, float $unitPrice, ?float $measureRate, string $discount = '', bool $billDiscount = true, float $oldDiscountAmount = 0): void
     {
         $this->addToCart($productUnitId);
 
@@ -281,13 +286,60 @@ trait ManagesCartLines
             $this->cart[0]['unit_price'] = (string) $unitPrice;
         }
 
-        $this->cart[0]['discount_amount'] = (string) $discount;
+        /** Lines saved before discounts were percentages: turn the amount into one percentage. */
+        if ($discount === '' && $oldDiscountAmount > 0) {
+            $gross = $this->lineAmounts($this->cart[0])['gross'];
+            $discount = $gross > 0 ? (string) round($oldDiscountAmount / $gross * 100, 2) : '';
+        }
+
+        $this->cart[0]['discount'] = $discount;
+        $this->cart[0]['bill_discount'] = $billDiscount;
+    }
+
+    /**
+     * Gross amount, item discount and amount after it, as shown on the line.
+     *
+     * @param  array<string, mixed>  $line
+     * @return array{gross: float, discount: float, total: float}
+     */
+    public function lineAmounts(array $line): array
+    {
+        $gross = ! empty($line['measure'])
+            ? round(round((float) $line['pieces'] * $line['measure']['per'], 3) * (float) $line['unit_price'], 2)
+            : round((float) $line['quantity'] * (float) $line['unit_price'], 2);
+        $discount = min($gross, DiscountChain::amount($gross, $line['discount'] ?? ''));
+
+        return ['gross' => $gross, 'discount' => $discount, 'total' => round($gross - $discount, 2)];
+    }
+
+    /**
+     * Tick or untick "apply bill discount" on every line.
+     */
+    public function setBillDiscountForAll(bool $apply): void
+    {
+        foreach (array_keys($this->cart) as $index) {
+            $this->cart[$index]['bill_discount'] = $apply;
+        }
+    }
+
+    /**
+     * Every line's discount must be percentages like 20,10,5.
+     *
+     * @throws ValidationException
+     */
+    protected function validateLineDiscounts(): void
+    {
+        foreach ($this->cart as $index => $line) {
+            if (! DiscountChain::isValid($line['discount'] ?? '')) {
+                throw ValidationException::withMessages(["cart.{$index}.discount" => __('Write the discount as percentages separated by commas, e.g. 20,10,5.')]);
+            }
+        }
     }
 
     /**
      * Measured lines go to the service as whole pieces with their rate per measurement.
      *
-     * @return list<array{product_unit_id: int, quantity: string, unit_price: string, discount_amount: string, measure_rate?: string}>
+     * @return list<array{product_unit_id: int, quantity: string, unit_price: string, discount: string, bill_discount: bool, measure_rate?: string}>
      */
     private function cartForService(): array
     {
@@ -296,7 +348,8 @@ trait ManagesCartLines
                 'product_unit_id' => (int) $line['product_unit_id'],
                 'quantity' => $line['quantity'],
                 'unit_price' => $line['unit_price'],
-                'discount_amount' => $line['discount_amount'] === '' ? '0' : $line['discount_amount'],
+                'discount' => DiscountChain::isValid($line['discount'] ?? '') ? (string) ($line['discount'] ?? '') : '',
+                'bill_discount' => (bool) ($line['bill_discount'] ?? true),
             ];
 
             if (! empty($line['measure'])) {

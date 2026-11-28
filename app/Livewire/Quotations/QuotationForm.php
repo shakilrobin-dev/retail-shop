@@ -56,7 +56,7 @@ class QuotationForm extends Component
             $this->note = (string) $quotation->note;
 
             foreach ($quotation->items->reverse() as $item) {
-                $this->addSavedLine($item->product_unit_id, (float) $item->quantity, (float) $item->unit_price, $item->measure_rate !== null ? (float) $item->measure_rate : null, (float) $item->discount_amount);
+                $this->addSavedLine($item->product_unit_id, (float) $item->quantity, (float) $item->unit_price, $item->measure_rate !== null ? (float) $item->measure_rate : null, (string) $item->discount_percents, (bool) $item->bill_discount, (float) $item->discount_amount);
             }
 
             return;
@@ -86,11 +86,11 @@ class QuotationForm extends Component
     }
 
     /**
-     * @return array{subtotal: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
+     * @return array{subtotal: float, discountable: float, discount_amount: float, vat_amount: float, rounding_amount: float, total: float}
      */
     public function totals(): array
     {
-        $empty = ['subtotal' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
+        $empty = ['subtotal' => 0, 'discountable' => 0, 'discount_amount' => 0, 'vat_amount' => 0, 'rounding_amount' => 0, 'total' => 0];
 
         if ($this->cart === []) {
             return $empty;
@@ -110,6 +110,7 @@ class QuotationForm extends Component
     public function save(QuotationService $quotations, CurrentBranch $currentBranch): void
     {
         $this->authorize('pos.sell');
+        $this->validateLineDiscounts();
 
         $this->validate([
             'customerName' => ['nullable', 'string', 'max:255'],
@@ -122,7 +123,6 @@ class QuotationForm extends Component
             'cart' => ['required', 'array', 'min:1'],
             'cart.*.quantity' => ['required', 'numeric', 'gt:0'],
             'cart.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'cart.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
         ], [], ['cart' => __('products'), 'cart.*.quantity' => __('quantity'), 'cart.*.unit_price' => __('price'), 'validUntil' => __('valid until')]);
 
         $quotation = $quotations->save(

@@ -115,7 +115,8 @@
                             @if ($item->warranty_days)<div class="text-xs text-muted-foreground">{{ __('Warranty till :date', ['date' => shop_digits($sale->sold_at->copy()->addDays($item->warranty_days)->format('d M Y'))]) }}</div>@endif
                         </td>
                         <td class="text-right">{{ shop_digits($item->quantity + 0) }}</td>
-                        <td class="text-right tabular-nums">{{ money($item->unit_price) }}@if ($item->discount_amount > 0)<div class="text-xs text-muted-foreground">− {{ money($item->discount_amount) }}</div>@endif</td>
+                        <td class="text-right tabular-nums">{{ money($item->unit_price) }}@if ($item->discount_amount > 0)<div class="text-xs text-muted-foreground">@if ($item->discount_percents){{ \App\Services\DiscountChain::label($item->discount_percents) }} · @endif− {{ money($item->discount_amount) }}</div>@endif
+                            @if (! $item->bill_discount && $sale->discount_amount > 0)<div class="text-[11px] text-amber-700">{{ __('No bill discount') }}</div>@endif</td>
                         <td class="text-right tabular-nums">{{ money($item->line_total) }}</td>
                         <td class="text-right">{{ $item->returned_quantity > 0 ? shop_digits($item->returned_quantity + 0) : '—' }}</td>
                         @if ($showReturn)

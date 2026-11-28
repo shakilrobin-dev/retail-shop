@@ -73,12 +73,18 @@
                 <div class="card min-h-64 overflow-x-auto">
                     <table class="data-table">
                         <thead>
+                            @php $allTicked = $cart !== [] && collect($cart)->every(fn ($line) => $line['bill_discount'] ?? true); @endphp
                             <tr>
+                                <th class="w-8 px-2!">
+                                    <input type="checkbox" class="rounded border-layer-line" @checked($allTicked) @disabled($cart === [])
+                                        wire:click="setBillDiscountForAll({{ $allTicked ? 'false' : 'true' }})"
+                                        title="{{ __('Bill discount applies to ticked items. Tick or untick all.') }}" aria-label="{{ __('Bill discount on all items') }}">
+                                </th>
                                 <th>{{ __('Product') }}</th>
                                 <th class="w-28">{{ __('Unit') }}</th>
                                 <th class="w-28 text-center">{{ __('Qty') }}</th>
                                 <th class="w-28">{{ __('Price') }}</th>
-                                @can('pos.discount')<th class="w-24">{{ __('Disc.') }}</th>@endcan
+                                @can('pos.discount')<th class="w-24" title="{{ __('Item discount in %. Several, one after another: 20,10,5') }}">{{ __('Disc. %') }}</th>@endcan
                                 <th class="w-24 whitespace-nowrap text-right">{{ __('Total') }}</th>
                                 @if ($canViewCost)
                                     <th x-show="showProfit" x-cloak class="no-print whitespace-nowrap bg-amber-50 px-2! text-right dark:bg-amber-950/30">{{ __('Profit') }}<div class="text-[10px] font-normal normal-case">{{ __('Buying price') }}</div></th>
@@ -94,13 +100,18 @@
                                     $soldQty = $measure ? (float) $line['pieces'] : (float) $line['quantity'];
                                     $needed = $soldQty * $unitQty;
                                     $billedMeasure = $measure ? round($soldQty * $measure['per'], 3) : 0;
-                                    $gross = $measure ? round($billedMeasure * (float) $line['unit_price'], 2) : (float) $line['quantity'] * (float) $line['unit_price'];
-                                    $lineTotal = max(0, $gross - (float) $line['discount_amount']);
+                                    $amounts = $this->lineAmounts($line);
+                                    $lineTotal = $amounts['total'];
+                                    $discountValid = \App\Services\DiscountChain::isValid($line['discount'] ?? '');
                                     $unitCost = $unitCosts[$line['product_unit_id']] ?? 0;
                                     $lineCost = $soldQty * $unitCost;
                                     $lineProfit = $lineTotal - $lineCost;
                                 @endphp
-                                <tr wire:key="cart-{{ $line['product_unit_id'] }}-{{ $index }}">
+                                <tr wire:key="cart-{{ $line['product_unit_id'] }}-{{ $index }}" @class(['bg-muted/40' => ! ($line['bill_discount'] ?? true)])>
+                                    <td class="px-2!">
+                                        <input type="checkbox" wire:model.live="cart.{{ $index }}.bill_discount" class="rounded border-layer-line"
+                                            title="{{ __('Apply the bill discount to this item') }}" aria-label="{{ __('Apply the bill discount to :item', ['item' => $line['name']]) }}">
+                                    </td>
                                     <td>
                                         <div class="flex items-center gap-1.5 font-medium">{{ $line['name'] }} <x-product-info-button :product-id="$line['product_id']" /></div>
                                         <div @class(['text-xs', 'text-red-600' => $needed > $line['stock'], 'text-muted-foreground' => $needed <= $line['stock']])>
@@ -139,10 +150,21 @@
                                         @if ($measure)<div class="mt-0.5 text-[11px] text-muted-foreground">{{ __('per :unit', ['unit' => $measure['unit']]) }}</div>@endif
                                     </td>
                                     @can('pos.discount')
-                                        <td><input wire:model.live.debounce.500ms="cart.{{ $index }}.discount_amount" type="number" step="0.01" min="0" class="form-input min-w-14 py-1"></td>
+                                        <td>
+                                            <input wire:model.live.debounce.600ms="cart.{{ $index }}.discount" type="text" inputmode="decimal" placeholder="%"
+                                                @class(['form-input w-20 py-1 text-right', 'border-red-500 ring-1 ring-red-200' => ! $discountValid])
+                                                title="{{ __('Item discount in %. Several, one after another: 20,10,5') }}" aria-label="{{ __('Discount % for :item', ['item' => $line['name']]) }}">
+                                            @if (! $discountValid)
+                                                <div class="mt-0.5 text-[11px] text-red-600">{{ __('e.g. 20,10,5') }}</div>
+                                            @elseif ($amounts['discount'] > 0)
+                                                <div class="mt-0.5 whitespace-nowrap text-[11px] text-emerald-700 dark:text-emerald-400">− {{ money($amounts['discount']) }}</div>
+                                            @endif
+                                            @error("cart.$index.discount") <p class="form-error">{{ $message }}</p> @enderror
+                                        </td>
                                     @endcan
                                     <td class="text-right font-medium tabular-nums">
                                         {{ money($lineTotal) }}
+                                        @if ($amounts['discount'] > 0)<div class="text-[11px] font-normal text-muted-foreground line-through">{{ money($amounts['gross']) }}</div>@endif
                                         @if ($measure && $soldQty > 0)<div class="whitespace-nowrap text-[11px] font-normal text-muted-foreground">{{ shop_digits($billedMeasure + 0) }} {{ $measure['unit'] }} × {{ money($line['unit_price'] === '' ? 0 : $line['unit_price']) }}</div>@endif
                                     </td>
                                     @if ($canViewCost)
@@ -154,7 +176,7 @@
                                     <td><button type="button" wire:click="removeLine({{ $index }})" data-confirm="{{ __('Remove this item from the cart?') }}" class="text-muted-foreground hover:text-red-600" title="{{ __('Remove') }}">✕</button></td>
                                 </tr>
                             @empty
-                                <x-empty :colspan="$canViewCost ? 8 : 7" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
+                                <x-empty :colspan="$canViewCost ? 9 : 8" icon="cart" :title="__('Scan a product to start the sale.')" :text="__('Use the barcode scanner, type a name, or tap a quick item below.')" />
                             @endforelse
                         </tbody>
                     </table>
@@ -292,8 +314,11 @@
                                 <input wire:model.live.debounce.400ms="discountValue" type="number" step="0.01" min="0" class="form-input w-24 py-1 text-right">
                             </div>
                         </div>
-                        @if ($totals['discount_amount'] > 0)
-                            <div class="flex justify-between text-muted-foreground-1"><span></span><span class="tabular-nums">− {{ money($totals['discount_amount']) }}</span></div>
+                        @if ($totals['discount_amount'] > 0 || ($cart !== [] && $totals['discountable'] < $totals['subtotal']))
+                            <div class="flex justify-between gap-2 text-muted-foreground-1">
+                                <span class="text-xs">@if ($totals['discountable'] < $totals['subtotal']){{ __('On ticked items (:amount)', ['amount' => money($totals['discountable'])]) }}@endif</span>
+                                <span class="tabular-nums">− {{ money($totals['discount_amount']) }}</span>
+                            </div>
                         @endif
                         @error('discountValue') <p class="form-error">{{ $message }}</p> @enderror
                     @endcan
