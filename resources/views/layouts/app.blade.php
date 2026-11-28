@@ -40,6 +40,7 @@
             [__('Stock'), 'archive', 'stock.index', 'stock.adjust', 'stock.index|stock.movements|stock.adjust', 0],
             [__('Transfers'), 'transfer', 'stock.transfers.index', 'stock.transfer', 'stock.transfers.*', $incomingTransfers],
             [__('Barcode labels'), 'tag', 'labels.index', 'products.manage', 'labels.*', 0],
+            [__('Excel import'), 'table', 'import.index', 'products.manage', 'import.*', 0],
         ]],
         [__('Purchasing'), [
             [__('Purchases'), 'truck', 'purchases.index', 'purchases.manage', 'purchases.*', 0],

@@ -5,6 +5,7 @@
         <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
         <a href="{{ route('stock.movements') }}" class="btn-secondary" wire:navigate><x-icon name="history" class="size-4" /> {{ __('Stock history') }}</a>
         @can('stock.transfer')<a href="{{ route('stock.transfers.index') }}" class="btn-secondary" wire:navigate><x-icon name="transfer" class="size-4" /> {{ __('Transfers') }}</a>@endcan
+        <a href="{{ route('import.index', ['type' => 'stock']) }}" class="btn-secondary" wire:navigate><x-icon name="table" class="size-4" /> {{ __('Import from Excel') }}</a>
         <a href="{{ route('stock.adjust') }}" class="btn-primary" wire:navigate><x-icon name="clipboard" class="size-4" /> {{ __('Adjust / count stock') }}</a>
     </x-page-header>
 

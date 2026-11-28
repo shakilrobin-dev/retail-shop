@@ -16,6 +16,7 @@ use App\Livewire\Expenses\ExpenseIndex;
 use App\Livewire\Pos\CashRegister;
 use App\Livewire\Pos\PointOfSale;
 use App\Livewire\Products\CatalogSetup;
+use App\Livewire\Products\ExcelImport;
 use App\Livewire\Products\LabelPrint;
 use App\Livewire\Products\ProductForm;
 use App\Livewire\Products\ProductIndex;
@@ -98,6 +99,8 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/backup', BackupManager::class)->middleware('can:settings.manage')->name('backup');
         Route::livewire('/audit-log', ActivityLog::class)->middleware('can:users.manage')->name('activity');
     });
+
+    Route::livewire('/import', ExcelImport::class)->name('import.index');
 
     Route::livewire('/cash-register', CashRegister::class)->middleware('can:cash-shifts.manage')->name('cash-register');
 

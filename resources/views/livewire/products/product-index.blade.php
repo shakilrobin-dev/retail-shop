@@ -3,6 +3,7 @@
     <x-flash />
     <x-page-header :title="__('Products')" :subtitle="__('Everything you sell. Stock is shown for the current branch.')">
         <button type="button" wire:click="export" class="btn-secondary"><x-icon name="receipt" class="size-4" /> {{ __('Export') }}</button>
+        <a href="{{ route('import.index', ['type' => 'products']) }}" class="btn-secondary" wire:navigate><x-icon name="table" class="size-4" /> {{ __('Import from Excel') }}</a>
         <a href="{{ route('catalog.setup') }}" class="btn-secondary" wire:navigate><x-icon name="folder" class="size-4" /> {{ __('Categories') }}</a>
         <a href="{{ route('products.create') }}" class="btn-primary" wire:navigate><x-icon name="plus" class="size-4" /> {{ __('New product') }}</a>
     </x-page-header>
