@@ -98,11 +98,13 @@ class ReportService
     /**
      * @return Collection<int, object{day: string, invoices: int, sales: float, profit: float}>
      */
-    public function daily(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function daily(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
-        return SaleItem::query()
+        $filters ??= new ReportFilters;
+
+        return $filters->onProducts(SaleItem::query(), 'sale_items.product_id')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to)->select('id'))
+            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
             ->selectRaw('DATE(sales.sold_at) as day, COUNT(DISTINCT sales.id) as invoices, SUM(sale_items.line_total) as sales, SUM(sale_items.line_total - sale_items.unit_cost * sale_items.quantity) as profit')
             ->groupBy('day')
             ->orderBy('day')
@@ -114,10 +116,12 @@ class ReportService
      *
      * @return Collection<int, SaleItem>
      */
-    public function topProducts(?int $branchId, CarbonInterface $from, CarbonInterface $to, int $limit = 50): Collection
+    public function topProducts(?int $branchId, CarbonInterface $from, CarbonInterface $to, int $limit = 50, ?ReportFilters $filters = null): Collection
     {
-        return SaleItem::query()
-            ->whereIn('sale_id', $this->completedSales($branchId, $from, $to)->select('id'))
+        $filters ??= new ReportFilters;
+
+        return $filters->onProducts(SaleItem::query(), 'product_id')
+            ->whereIn('sale_id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
             ->selectRaw('product_id, MAX(product_name) as name, SUM(base_quantity) as quantity, SUM(line_total) as revenue, SUM(line_total - unit_cost * quantity) as profit')
             ->groupBy('product_id')
             ->orderByDesc('revenue')
@@ -130,11 +134,12 @@ class ReportService
      *
      * @return Collection<int, array{name: string, quantity: float, revenue: float, profit: float}>
      */
-    public function byCategory(?int $branchId, CarbonInterface $from, CarbonInterface $to, bool $mainOnly = false): Collection
+    public function byCategory(?int $branchId, CarbonInterface $from, CarbonInterface $to, bool $mainOnly = false, ?ReportFilters $filters = null): Collection
     {
-        $rows = SaleItem::query()
+        $filters ??= new ReportFilters;
+        $rows = $filters->onProducts(SaleItem::query(), 'sale_items.product_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
-            ->whereIn('sale_items.sale_id', $this->completedSales($branchId, $from, $to)->select('id'))
+            ->whereIn('sale_items.sale_id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
             ->selectRaw('products.category_id as category_id, SUM(sale_items.base_quantity) as quantity, SUM(sale_items.line_total) as revenue, SUM(sale_items.line_total - sale_items.unit_cost * sale_items.quantity) as profit')
             ->groupBy('products.category_id')
             ->get();
@@ -158,9 +163,12 @@ class ReportService
      *
      * @return Collection<int, object>
      */
-    public function byPaymentMethod(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function byPaymentMethod(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
-        return Payment::query()
+        $filters ??= new ReportFilters;
+        $query = $filters->on($filters->on(Payment::query(), 'payment_methods', 'payments.payment_method_id'), 'staff', 'payments.user_id');
+
+        return $query
             ->join('payment_methods', 'payment_methods.id', '=', 'payments.payment_method_id')
             ->when($branchId, fn (Builder $query) => $query->where('payments.branch_id', $branchId))
             ->whereBetween('payments.paid_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
@@ -175,11 +183,24 @@ class ReportService
     /**
      * @return Collection<int, object>
      */
-    public function byStaff(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function byStaff(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
+        $filters ??= new ReportFilters;
+
+        if ($filters->hasItemFilters()) {
+            return $filters->onProducts(SaleItem::query(), 'sale_items.product_id')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->leftJoin('users', 'users.id', '=', 'sales.user_id')
+                ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
+                ->selectRaw('users.name as name, COUNT(DISTINCT sales.id) as invoices, SUM(sale_items.line_total) as sales, SUM(sale_items.discount_amount) as discounts')
+                ->groupBy('users.id', 'users.name')
+                ->orderByDesc('sales')
+                ->get();
+        }
+
         return Sale::query()
             ->leftJoin('users', 'users.id', '=', 'sales.user_id')
-            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to)->select('id'))
+            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
             ->selectRaw('users.name as name, COUNT(*) as invoices, SUM(sales.total) as sales, SUM(sales.discount_amount) as discounts')
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('sales')
@@ -192,14 +213,29 @@ class ReportService
      *
      * @return Collection<int, object{referrer_id: int|null, name: string|null, phone: string|null, invoices: int, sales: float, vat: float, cost: float}>
      */
-    public function byReferrer(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function byReferrer(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
+        $filters ??= new ReportFilters;
+
+        if ($filters->hasItemFilters()) {
+            return $filters->onProducts(SaleItem::query(), 'sale_items.product_id')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->leftJoin('referrers', 'referrers.id', '=', 'sales.referrer_id')
+                ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
+                ->selectRaw('sales.referrer_id as referrer_id, referrers.name as name, referrers.phone as phone, COUNT(DISTINCT sales.id) as invoices,
+                    SUM(sale_items.line_total) as sales, 0 as vat, SUM(sale_items.unit_cost * sale_items.quantity) as cost')
+                ->groupBy('sales.referrer_id', 'referrers.name', 'referrers.phone')
+                ->orderByRaw('sales.referrer_id IS NULL')
+                ->orderByDesc('sales')
+                ->get();
+        }
+
         $cost = SaleItem::query()->selectRaw('sale_id, SUM(unit_cost * quantity) as cost')->groupBy('sale_id');
 
         return Sale::query()
             ->leftJoin('referrers', 'referrers.id', '=', 'sales.referrer_id')
             ->leftJoinSub($cost, 'item_costs', 'item_costs.sale_id', '=', 'sales.id')
-            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to)->select('id'))
+            ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
             ->selectRaw('sales.referrer_id as referrer_id, referrers.name as name, referrers.phone as phone, COUNT(*) as invoices,
                 SUM(sales.total) as sales, SUM(sales.vat_amount) as vat, SUM(COALESCE(item_costs.cost, 0)) as cost')
             ->groupBy('sales.referrer_id', 'referrers.name', 'referrers.phone')
@@ -214,8 +250,9 @@ class ReportService
      *
      * @return Collection<int, array{name: string, phone: string|null, invoices: int, profit: float, commission: float, paid: float, due: float}>
      */
-    public function commissions(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function commissions(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
+        $filters ??= new ReportFilters;
         $cost = SaleItem::query()->selectRaw('sale_id, SUM(unit_cost * quantity) as cost')->groupBy('sale_id');
         $salesInPeriod = Sale::query()
             ->leftJoinSub($cost, 'item_costs', 'item_costs.sale_id', '=', 'sales.id')
@@ -238,7 +275,7 @@ class ReportService
             ->merge($commissionAllTime->keys()->filter(fn ($id): bool => $due((int) $id) != 0))
             ->unique();
 
-        return Referrer::query()->whereIn('id', $ids)->orderBy('name')->get()->map(fn (Referrer $referrer): array => [
+        return $filters->on(Referrer::query(), 'referrers', 'id')->whereIn('id', $ids)->orderBy('name')->get()->map(fn (Referrer $referrer): array => [
             'name' => $referrer->name,
             'phone' => $referrer->phone,
             'invoices' => (int) ($salesInPeriod[$referrer->id]->invoices ?? 0),
@@ -254,8 +291,9 @@ class ReportService
      *
      * @return Collection<int, Product>
      */
-    public function deadStock(?int $branchId, int $days): Collection
+    public function deadStock(?int $branchId, int $days, ?ReportFilters $filters = null): Collection
     {
+        $filters ??= new ReportFilters;
         $since = now()->subDays($days);
 
         $soldRecently = SaleItem::query()
@@ -265,7 +303,7 @@ class ReportService
             ->when($branchId, fn ($query) => $query->where('sales.branch_id', $branchId))
             ->select('sale_items.product_id');
 
-        return Product::query()
+        return $filters->onProducts(Product::query(), 'products.id')
             ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
             ->when($branchId, fn ($query) => $query->where('product_stocks.branch_id', $branchId))
             ->where('product_stocks.quantity', '>', 0)
@@ -280,12 +318,33 @@ class ReportService
     /**
      * @return Builder<Sale>
      */
-    private function completedSales(?int $branchId, CarbonInterface $from, CarbonInterface $to): Builder
+    private function completedSales(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Builder
     {
-        return Sale::query()
+        $query = Sale::query()
             ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
             ->where('status', SaleStatus::Completed)
             ->whereBetween('sold_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
+
+        return $filters ? $this->filterInvoices($query, $filters) : $query;
+    }
+
+    /**
+     * Invoices of the chosen reference people, customers and staff that include the chosen products.
+     *
+     * @param  Builder<Sale>  $query
+     * @return Builder<Sale>
+     */
+    private function filterInvoices(Builder $query, ReportFilters $filters): Builder
+    {
+        $filters->on($query, 'referrers', 'sales.referrer_id');
+        $filters->on($query, 'customers', 'sales.customer_id');
+        $filters->on($query, 'staff', 'sales.user_id');
+
+        if ($filters->hasItemFilters()) {
+            $query->whereIn('sales.id', $filters->onProducts(SaleItem::query()->select('sale_id'), 'product_id'));
+        }
+
+        return $query;
     }
 
     /**
@@ -293,9 +352,9 @@ class ReportService
      *
      * @return Collection<int, Sale>
      */
-    public function salesRegister(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function salesRegister(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
-        return Sale::query()
+        return $this->filterInvoices(Sale::query(), $filters ?? new ReportFilters)
             ->with(['customer', 'user', 'payments.paymentMethod'])
             ->withCount('items')
             ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
@@ -310,9 +369,9 @@ class ReportService
      *
      * @return Collection<int, object>
      */
-    public function stockValuation(?int $branchId): Collection
+    public function stockValuation(?int $branchId, ?ReportFilters $filters = null): Collection
     {
-        return Product::query()
+        return ($filters ?? new ReportFilters)->onProducts(Product::query(), 'products.id')
             ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
             ->leftJoin('product_units', fn ($join) => $join->on('product_units.product_id', '=', 'products.id')->where('product_units.is_base', true))
             ->when($branchId, fn ($query) => $query->where('product_stocks.branch_id', $branchId))
@@ -332,9 +391,11 @@ class ReportService
      *
      * @return Collection<int, Expense>
      */
-    public function expenseList(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function expenseList(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
-        return Expense::query()
+        $filters ??= new ReportFilters;
+
+        return $filters->on($filters->on(Expense::query(), 'expense_categories', 'expense_category_id'), 'staff', 'user_id')
             ->with(['category', 'user', 'payments.paymentMethod'])
             ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
             ->whereDate('expense_date', '>=', $from->toDateString())
@@ -348,9 +409,11 @@ class ReportService
      *
      * @return Collection<int, Sale>
      */
-    public function customerDues(?int $branchId, ?int $customerId = null, bool $withItems = false): Collection
+    public function customerDues(?int $branchId, ?int $customerId = null, bool $withItems = false, ?ReportFilters $filters = null): Collection
     {
-        return Sale::query()
+        $filters ??= new ReportFilters;
+
+        return $filters->on($filters->on(Sale::query(), 'customers', 'sales.customer_id'), 'referrers', 'sales.referrer_id')
             ->with(array_merge(['customer'], $withItems ? ['items'] : []))
             ->join('customers', 'customers.id', '=', 'sales.customer_id')
             ->select('sales.*')
@@ -369,9 +432,12 @@ class ReportService
      *
      * @return Collection<int, CustomerPayment>
      */
-    public function dueCollections(?int $branchId, CarbonInterface $from, CarbonInterface $to): Collection
+    public function dueCollections(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
-        return CustomerPayment::query()
+        $filters ??= new ReportFilters;
+        $query = $filters->on($filters->on(CustomerPayment::query(), 'customers', 'customer_id'), 'staff', 'user_id');
+
+        return $filters->on($query, 'payment_methods', 'payment_method_id')
             ->with(['customer', 'paymentMethod', 'user', 'allocations.payable'])
             ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
             ->whereBetween('paid_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])

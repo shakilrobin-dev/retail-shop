@@ -4,10 +4,18 @@ namespace App\Livewire\Reports;
 
 use App\Enums\SaleStatus;
 use App\Models\Branch;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Customer;
+use App\Models\ExpenseCategory;
+use App\Models\PaymentMethod;
+use App\Models\Product;
+use App\Models\Referrer;
 use App\Models\User;
+use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\ReportDocument;
+use App\Services\ReportFilters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -40,13 +48,27 @@ class ReportIndex extends Component
     #[Url]
     public string $dueDetail = 'summary';
 
-    /** Customer due report for one customer (a due statement). */
+    /** Customer due report for one customer (old links); moved into the customer filter on load. */
     #[Url]
     public ?int $customer = null;
+
+    /**
+     * Chosen filters: key (see ReportFilters::KEYS) => list of ids. Empty = all.
+     *
+     * @var array<string, list<int|string>>
+     */
+    #[Url]
+    public array $filters = [];
 
     public function mount(): void
     {
         $this->authorize('reports.view');
+
+        if ($this->customer) {
+            $this->filters['customers'] = [$this->customer];
+            $this->customer = null;
+        }
+
         $this->from = $this->from ?: today()->startOfMonth()->toDateString();
         $this->to = $this->to ?: today()->toDateString();
     }
@@ -65,6 +87,11 @@ class ReportIndex extends Component
 
         $this->from = $from->toDateString();
         $this->to = $to->toDateString();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->filters = [];
     }
 
     public function branchId(): ?int
@@ -86,26 +113,67 @@ class ReportIndex extends Component
 
         $branchId = $this->branchId();
         $tab = array_key_exists($this->tab, ReportDocument::REPORTS) ? $this->tab : 'summary';
+        $usedFilters = ReportDocument::FILTERS[$tab];
+        $chosen = ReportFilters::from($this->filters, $usedFilters);
         $document = app(ReportDocument::class)->build($tab, $branchId, $from, $to, [
             'main_categories' => $this->mainCategories,
             'dead_days' => $this->deadDays,
             'due_detail' => $this->dueDetail,
-            'customer_id' => $this->customer,
+            'filters' => $chosen->ids,
         ]);
 
         /** @var User $user */
         $user = Auth::user();
 
-        $exportParams = ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0, 'detail' => $this->dueDetail, 'customer' => $this->customer];
+        $exportParams = ['tab' => $tab, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'scope' => $this->scope, 'deadDays' => $this->deadDays, 'main' => $this->mainCategories ? 1 : 0, 'detail' => $this->dueDetail, 'f' => $chosen->ids];
 
         return view('livewire.reports.report-index', [
             'document' => $document,
             'activeTab' => $tab,
-            'dueCustomers' => $tab === 'customer-dues'
-                ? Customer::query()->whereHas('sales', fn ($query) => $query->where('status', SaleStatus::Completed)->where('due_amount', '>', 0))->orderBy('name')->get(['id', 'name', 'phone'])
-                : collect(),
+            'filterOptions' => $this->filterOptions($tab, $chosen),
+            'activeFilterCount' => count($chosen->ids),
             'canSeeAll' => $user->canAccessAllBranches() && Branch::query()->count() > 1,
             'exportUrls' => collect(['pdf', 'xlsx', 'csv'])->mapWithKeys(fn (string $format) => [$format => route('reports.export', $exportParams + ['format' => $format])])->all(),
         ])->title(__('Reports'));
+    }
+
+    /**
+     * Choices for each filter the report uses. Sub-categories and products follow the chosen categories and brands.
+     *
+     * @return array<string, array{label: string, options: list<array{id: int, label: string, hint: string|null}>}>
+     */
+    private function filterOptions(string $tab, ReportFilters $chosen): array
+    {
+        $tree = app(CategoryTree::class);
+        $labels = [
+            'categories' => __('Category'), 'subcategories' => __('Sub-category'), 'brands' => __('Brand'), 'products' => __('Product'),
+            'referrers' => __('Reference'), 'customers' => __('Customer'), 'staff' => __('Staff'),
+            'payment_methods' => __('Payment method'), 'expense_categories' => __('Expense category'),
+        ];
+        $option = fn (int $id, string $label, ?string $hint = null): array => ['id' => $id, 'label' => $label, 'hint' => $hint ?: null];
+        $options = [];
+
+        foreach (ReportDocument::FILTERS[$tab] as $key) {
+            $options[$key] = ['label' => $labels[$key], 'options' => match ($key) {
+                'categories' => Category::query()->whereNull('parent_id')->orderBy('name')->get()->map(fn (Category $category) => $option($category->id, $category->localName()))->all(),
+                'subcategories' => $tree->flat()
+                    ->filter(fn (array $row): bool => $row['depth'] > 0)
+                    ->filter(fn (array $row): bool => $chosen->get('categories') === [] || collect($chosen->get('categories'))->contains(fn (int $mainId): bool => in_array($row['category']->id, $tree->withDescendants($mainId), true)))
+                    ->map(fn (array $row) => $option($row['category']->id, $row['category']->localName(), $row['path']))->values()->all(),
+                'brands' => Brand::query()->orderBy('name')->get()->map(fn (Brand $brand) => $option($brand->id, $brand->name))->all(),
+                'products' => (new ReportFilters(array_intersect_key($chosen->ids, array_flip(['categories', 'subcategories', 'brands']))))
+                    ->onProducts(Product::query(), 'products.id')->orderBy('name')->get(['id', 'name', 'name_bn', 'sku'])
+                    ->map(fn (Product $product) => $option($product->id, $product->localName(), $product->sku))->all(),
+                'referrers' => Referrer::query()->orderBy('name')->get(['id', 'name', 'phone'])->map(fn (Referrer $referrer) => $option($referrer->id, $referrer->name, $referrer->phone))->all(),
+                'customers' => Customer::query()
+                    ->when($tab === 'customer-dues', fn ($query) => $query->whereHas('sales', fn ($sales) => $sales->where('status', SaleStatus::Completed)->where('due_amount', '>', 0)))
+                    ->orderBy('name')->get(['id', 'name', 'phone'])->map(fn (Customer $customer) => $option($customer->id, $customer->name, $customer->phone))->all(),
+                'staff' => User::query()->orderBy('name')->get(['id', 'name', 'username'])->map(fn (User $user) => $option($user->id, $user->name, $user->username))->all(),
+                'payment_methods' => PaymentMethod::query()->orderBy('sort_order')->get()->map(fn (PaymentMethod $method) => $option($method->id, $method->localName()))->all(),
+                'expense_categories' => ExpenseCategory::query()->orderBy('name')->get()->map(fn (ExpenseCategory $category) => $option($category->id, $category->localName()))->all(),
+            }];
+        }
+
+        return $options;
     }
 }

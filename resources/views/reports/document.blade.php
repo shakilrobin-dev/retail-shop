@@ -34,6 +34,9 @@
     <div class="rpt-title">{{ $document['title'] }}</div>
     @if ($document['subject'] ?? null)<div class="rpt-subject">{{ $document['subject'] }}</div>@endif
     <div class="rpt-period">{{ $document['period'] }}</div>
+    @if (! empty($document['filters']))
+        <div class="rpt-filters">{{ __('Filtered by') }}: {{ implode('  ·  ', $document['filters']) }}</div>
+    @endif
 
     <table class="rpt-meta">
         <tr>

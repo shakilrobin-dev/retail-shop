@@ -35,6 +35,28 @@ class ReportDocument
         'dead-stock' => ['Dead stock report', false, false],
     ];
 
+    private const PRODUCT_FILTERS = ['categories', 'subcategories', 'brands', 'products'];
+
+    private const SALE_FILTERS = ['categories', 'subcategories', 'brands', 'products', 'referrers', 'customers', 'staff'];
+
+    /** Report key => the filters it can use (see ReportFilters::KEYS). */
+    public const FILTERS = [
+        'summary' => [],
+        'daily' => self::SALE_FILTERS,
+        'sales-register' => self::SALE_FILTERS,
+        'products' => self::SALE_FILTERS,
+        'categories' => self::SALE_FILTERS,
+        'payments' => ['payment_methods', 'staff'],
+        'staff' => self::SALE_FILTERS,
+        'referrers' => self::SALE_FILTERS,
+        'commissions' => ['referrers'],
+        'expenses' => ['expense_categories', 'staff'],
+        'customer-dues' => ['customers', 'referrers'],
+        'due-collections' => ['customers', 'payment_methods', 'staff'],
+        'stock-valuation' => self::PRODUCT_FILTERS,
+        'dead-stock' => self::PRODUCT_FILTERS,
+    ];
+
     public function __construct(
         private ReportService $reports,
         private Settings $settings,
@@ -42,7 +64,7 @@ class ReportDocument
     ) {}
 
     /**
-     * @param  array{main_categories?: bool, dead_days?: int, due_detail?: string, customer_id?: int|null}  $options
+     * @param  array{main_categories?: bool, dead_days?: int, due_detail?: string, customer_id?: int|null, filters?: array<string, mixed>}  $options
      * @return array<string, mixed>
      */
     public function build(string $key, ?int $branchId, CarbonInterface $from, CarbonInterface $to, array $options = []): array
@@ -52,6 +74,7 @@ class ReportDocument
         $branch = $branchId ? Branch::query()->find($branchId) : null;
         /** @var User|null $user */
         $user = Auth::user();
+        $filters = ReportFilters::from($options['filters'] ?? [], self::FILTERS[$key]);
 
         $document = [
             'key' => $key,
@@ -65,6 +88,7 @@ class ReportDocument
             'generated_at' => now()->format('d M Y, h:i A'),
             'landscape' => $landscape,
             'subject' => null,
+            'filters' => $filters->describe(),
             'columns' => [],
             'rows' => [],
             'totals' => null,
@@ -75,19 +99,19 @@ class ReportDocument
 
         return match ($key) {
             'summary' => $this->summary($document, $branchId, $from, $to),
-            'daily' => $this->daily($document, $branchId, $from, $to),
-            'sales-register' => $this->salesRegister($document, $branchId, $from, $to),
-            'products' => $this->products($document, $branchId, $from, $to),
-            'categories' => $this->categories($document, $branchId, $from, $to, (bool) ($options['main_categories'] ?? false)),
-            'payments' => $this->payments($document, $branchId, $from, $to),
-            'staff' => $this->staff($document, $branchId, $from, $to),
-            'referrers' => $this->referrers($document, $branchId, $from, $to),
-            'commissions' => $this->commissions($document, $branchId, $from, $to),
-            'expenses' => $this->expenses($document, $branchId, $from, $to),
-            'customer-dues' => $this->customerDues($document, $branchId, $options['customer_id'] ?? null, $options['due_detail'] ?? 'summary'),
-            'due-collections' => $this->dueCollections($document, $branchId, $from, $to),
-            'stock-valuation' => $this->stockValuation($document, $branchId),
-            'dead-stock' => $this->deadStock($document, $branchId, max(1, (int) ($options['dead_days'] ?? 60))),
+            'daily' => $this->daily($document, $branchId, $from, $to, $filters),
+            'sales-register' => $this->salesRegister($document, $branchId, $from, $to, $filters),
+            'products' => $this->products($document, $branchId, $from, $to, $filters),
+            'categories' => $this->categories($document, $branchId, $from, $to, (bool) ($options['main_categories'] ?? false), $filters),
+            'payments' => $this->payments($document, $branchId, $from, $to, $filters),
+            'staff' => $this->staff($document, $branchId, $from, $to, $filters),
+            'referrers' => $this->referrers($document, $branchId, $from, $to, $filters),
+            'commissions' => $this->commissions($document, $branchId, $from, $to, $filters),
+            'expenses' => $this->expenses($document, $branchId, $from, $to, $filters),
+            'customer-dues' => $this->customerDues($document, $branchId, $options['customer_id'] ?? null, $options['due_detail'] ?? 'summary', $filters),
+            'due-collections' => $this->dueCollections($document, $branchId, $from, $to, $filters),
+            'stock-valuation' => $this->stockValuation($document, $branchId, $filters),
+            'dead-stock' => $this->deadStock($document, $branchId, max(1, (int) ($options['dead_days'] ?? 60)), $filters),
         };
     }
 
@@ -183,9 +207,9 @@ class ReportDocument
         return $document;
     }
 
-    private function daily(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function daily(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->daily($branchId, $from, $to);
+        $rows = $this->reports->daily($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([['day', __('Date')], ['invoices', __('Invoices'), 'int'], ['sales', __('Sales'), 'money'], ['profit', __('Gross profit'), 'money'], ['margin', __('Margin'), 'percent']]);
         $document['rows'] = $rows->map(fn ($row): array => [
             'day' => Carbon::parse($row->day)->format('D, d M Y'),
@@ -199,9 +223,9 @@ class ReportDocument
         return $document;
     }
 
-    private function salesRegister(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function salesRegister(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $sales = $this->reports->salesRegister($branchId, $from, $to);
+        $sales = $this->reports->salesRegister($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([
             ['invoice', __('Invoice')], ['date', __('Date & time')], ['customer', __('Customer')], ['items', __('Items'), 'int'],
             ['subtotal', __('Subtotal'), 'money'], ['discount', __('Discount'), 'money'], ['vat', __('VAT'), 'money'],
@@ -223,6 +247,10 @@ class ReportDocument
         ];
         $voided = $sales->count() - $completed->count();
 
+        if ($filters->hasItemFilters()) {
+            $document['notes'][] = __('Invoices that include the chosen products. Amounts are for the whole invoice.');
+        }
+
         if ($voided > 0) {
             $document['notes'][] = __(':count voided invoices are listed but not included in totals.', ['count' => $voided]);
         }
@@ -230,9 +258,9 @@ class ReportDocument
         return $document;
     }
 
-    private function products(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function products(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->topProducts($branchId, $from, $to, 1000);
+        $rows = $this->reports->topProducts($branchId, $from, $to, 1000, $filters);
         $document['columns'] = $this->columns([['rank', '#', 'int'], ['name', __('Product')], ['quantity', __('Qty sold (pcs)'), 'qty'], ['revenue', __('Sales'), 'money'], ['profit', __('Gross profit'), 'money'], ['margin', __('Margin'), 'percent']]);
         $document['rows'] = $rows->values()->map(fn ($row, $index): array => [
             'rank' => $index + 1, 'name' => $row->name, 'quantity' => (float) $row->quantity, 'revenue' => (float) $row->revenue,
@@ -243,9 +271,9 @@ class ReportDocument
         return $document;
     }
 
-    private function categories(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, bool $mainOnly): array
+    private function categories(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, bool $mainOnly, ReportFilters $filters): array
     {
-        $rows = $this->reports->byCategory($branchId, $from, $to, $mainOnly);
+        $rows = $this->reports->byCategory($branchId, $from, $to, $mainOnly, $filters);
         $total = max(0.01, (float) $rows->sum('revenue'));
         $document['columns'] = $this->columns([['name', __('Category')], ['quantity', __('Qty sold (pcs)'), 'qty'], ['revenue', __('Sales'), 'money'], ['share', __('Share of sales'), 'percent'], ['profit', __('Gross profit'), 'money']]);
         $document['rows'] = $rows->map(fn ($row): array => $row + ['share' => $row['revenue'] / $total * 100])->all();
@@ -255,9 +283,9 @@ class ReportDocument
         return $document;
     }
 
-    private function payments(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function payments(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->byPaymentMethod($branchId, $from, $to);
+        $rows = $this->reports->byPaymentMethod($branchId, $from, $to, $filters);
         $bn = app()->getLocale() === 'bn';
         $document['columns'] = $this->columns([['name', __('Payment method')], ['in', __('Money in'), 'money'], ['out', __('Money out'), 'money'], ['net', __('Net'), 'money']]);
         $document['rows'] = $rows->map(fn ($row): array => [
@@ -270,9 +298,9 @@ class ReportDocument
         return $document;
     }
 
-    private function staff(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function staff(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->byStaff($branchId, $from, $to);
+        $rows = $this->reports->byStaff($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([['name', __('Staff')], ['invoices', __('Invoices'), 'int'], ['sales', __('Sales'), 'money'], ['average', __('Average sale'), 'money'], ['discounts', __('Discounts given'), 'money']]);
         $document['rows'] = $rows->map(fn ($row): array => [
             'name' => $row->name ?? '—', 'invoices' => (int) $row->invoices, 'sales' => (float) $row->sales,
@@ -280,12 +308,16 @@ class ReportDocument
         ])->all();
         $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => (float) $rows->sum('sales'), 'discounts' => (float) $rows->sum('discounts')];
 
+        if ($filters->hasItemFilters()) {
+            $document['notes'][] = __('Only the chosen products are counted: item totals before invoice discount and VAT.');
+        }
+
         return $document;
     }
 
-    private function referrers(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function referrers(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->byReferrer($branchId, $from, $to)->map(function ($row): array {
+        $rows = $this->reports->byReferrer($branchId, $from, $to, $filters)->map(function ($row): array {
             $net = (float) $row->sales - (float) $row->vat;
             $profit = $net - (float) $row->cost;
 
@@ -307,14 +339,16 @@ class ReportDocument
             'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'cost' => (float) $rows->sum('cost'),
             'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0,
         ];
-        $document['notes'][] = __('Sales are without VAT. Returns are not deducted here; see the profit & loss for returns.');
+        $document['notes'][] = $filters->hasItemFilters()
+            ? __('Only the chosen products are counted: item totals before invoice discount and VAT.')
+            : __('Sales are without VAT. Returns are not deducted here; see the profit & loss for returns.');
 
         return $document;
     }
 
-    private function commissions(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function commissions(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $rows = $this->reports->commissions($branchId, $from, $to);
+        $rows = $this->reports->commissions($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([
             ['name', __('Reference')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'], ['profit', __('Profit from sales'), 'money'],
             ['commission', __('Commission worked out'), 'money'], ['paid', __('Paid in period'), 'money'], ['due', __('Due now'), 'money'],
@@ -331,9 +365,9 @@ class ReportDocument
         return $document;
     }
 
-    private function expenses(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function expenses(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $expenses = $this->reports->expenseList($branchId, $from, $to);
+        $expenses = $this->reports->expenseList($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([['date', __('Date')], ['category', __('Category')], ['note', __('Description')], ['paid_by', __('Paid by')], ['user', __('Entered by')], ['amount', __('Amount'), 'money']]);
         $document['rows'] = $expenses->map(fn ($expense): array => [
             'date' => $expense->expense_date->format('d/m/Y'), 'category' => $expense->category->localName(), 'note' => $expense->note,
@@ -351,10 +385,11 @@ class ReportDocument
      * Who owes how much. 'summary' = one line per customer with ageing,
      * 'invoices' = every unpaid invoice, 'items' = invoices with their items.
      */
-    private function customerDues(array $document, ?int $branchId, ?int $customerId, string $detail): array
+    private function customerDues(array $document, ?int $branchId, ?int $customerId, string $detail, ReportFilters $filters): array
     {
         $detail = in_array($detail, ['summary', 'invoices', 'items'], true) ? $detail : 'summary';
-        $sales = $this->reports->customerDues($branchId, $customerId, $detail === 'items');
+        $customerId ??= count($filters->get('customers')) === 1 ? $filters->get('customers')[0] : null;
+        $sales = $this->reports->customerDues($branchId, $customerId, $detail === 'items', $filters);
         $byCustomer = $sales->groupBy('customer_id');
         $bucket = fn (int $days): string => match (true) {
             $days <= 30 => 'age_30',
@@ -451,9 +486,9 @@ class ReportDocument
         return $document;
     }
 
-    private function dueCollections(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
+    private function dueCollections(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
-        $collections = $this->reports->dueCollections($branchId, $from, $to);
+        $collections = $this->reports->dueCollections($branchId, $from, $to, $filters);
         $document['columns'] = $this->columns([
             ['receipt', __('Receipt no')], ['date', __('Date')], ['customer', __('Customer')], ['invoices', __('Against invoices')],
             ['method', __('Received by')], ['user', __('Staff')], ['amount', __('Amount'), 'money'],
@@ -472,9 +507,9 @@ class ReportDocument
         return $document;
     }
 
-    private function stockValuation(array $document, ?int $branchId): array
+    private function stockValuation(array $document, ?int $branchId, ReportFilters $filters): array
     {
-        $rows = $this->reports->stockValuation($branchId);
+        $rows = $this->reports->stockValuation($branchId, $filters);
         $document['columns'] = $this->columns([['sku', __('SKU')], ['name', __('Product')], ['category', __('Category')], ['quantity', __('On hand'), 'qty'], ['cost', __('Unit cost'), 'money'], ['cost_value', __('Value at cost'), 'money'], ['price', __('Selling price'), 'money'], ['retail_value', __('Value at selling price'), 'money']]);
         $document['rows'] = $rows->map(fn ($row): array => [
             'sku' => $row->sku, 'name' => $row->name, 'category' => $this->tree->path($row->category_id), 'quantity' => (float) $row->quantity,
@@ -488,9 +523,9 @@ class ReportDocument
         return $document;
     }
 
-    private function deadStock(array $document, ?int $branchId, int $days): array
+    private function deadStock(array $document, ?int $branchId, int $days, ReportFilters $filters): array
     {
-        $rows = $this->reports->deadStock($branchId, $days);
+        $rows = $this->reports->deadStock($branchId, $days, $filters);
         $document['title'] = __('Dead stock report (not sold in :days days)', ['days' => $days]);
         $document['columns'] = $this->columns([['sku', __('SKU')], ['name', __('Product')], ['quantity', __('In stock'), 'qty'], ['cost', __('Unit cost'), 'money'], ['value', __('Money stuck (cost)'), 'money']]);
         $document['rows'] = $rows->map(fn ($row): array => [

@@ -130,6 +130,10 @@ class ReportExporter
             fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, array_values(array_filter([$document['title'], $document['subject'] ?? null])));
             fputcsv($output, [$document['period'], $document['branch'], $document['reference']]);
+
+            if (! empty($document['filters'])) {
+                fputcsv($output, [__('Filtered by').': '.implode(' · ', $document['filters'])]);
+            }
             fputcsv($output, []);
 
             if ($document['columns']) {
@@ -222,6 +226,10 @@ class ReportExporter
         }
 
         $line($row++, $document['period'], ['size' => 9, 'color' => ['rgb' => '4B5563']], Alignment::HORIZONTAL_CENTER);
+
+        if (! empty($document['filters'])) {
+            $line($row++, __('Filtered by').': '.implode('  ·  ', $document['filters']), ['size' => 9, 'color' => ['rgb' => self::INK]], Alignment::HORIZONTAL_CENTER);
+        }
         $row++;
 
         $meta = [

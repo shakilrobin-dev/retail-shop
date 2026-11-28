@@ -1319,5 +1319,16 @@
     "Adds base units (how stock is counted: piece, kg, bag, ft...). Units that already exist are skipped.": "বেস ইউনিট যোগ করে (স্টক যেভাবে গণনা হয়: পিস, কেজি, ব্যাগ, ফুট...)। আগে থেকে থাকা ইউনিট বাদ যাবে।",
     "See :what": ":what দেখুন",
     "Units": "ইউনিট",
-    "Add products (one by one, or many at once from Excel)": "পণ্য যোগ করুন (একটি একটি করে, বা Excel থেকে একসাথে অনেক)"
+    "Add products (one by one, or many at once from Excel)": "পণ্য যোগ করুন (একটি একটি করে, বা Excel থেকে একসাথে অনেক)",
+    "Sub-category": "সাব-ক্যাটাগরি",
+    "Expense category": "খরচের ক্যাটাগরি",
+    "and :count more": "এবং আরও :count টি",
+    "Filtered by": "ফিল্টার",
+    "Only the chosen products are counted: item totals before invoice discount and VAT.": "শুধু বেছে নেওয়া পণ্য গণনা হয়েছে: ইনভয়েস ডিসকাউন্ট ও ভ্যাটের আগের পণ্যের মোট।",
+    "Invoices that include the chosen products. Amounts are for the whole invoice.": "বেছে নেওয়া পণ্য আছে এমন ইনভয়েস। টাকার পরিমাণ পুরো ইনভয়েসের।",
+    "The profit & loss statement always covers the whole business. Use Sales by category, Product sales or Sales by reference to see one category, product or reference person.": "লাভ-ক্ষতির হিসাব সবসময় পুরো ব্যবসার। একটি ক্যাটাগরি, পণ্য বা রেফারেন্স দেখতে ক্যাটাগরি অনুযায়ী বিক্রি, পণ্য বিক্রি বা রেফারেন্স অনুযায়ী বিক্রি দেখুন।",
+    "Select shown": "দেখানো সব বাছুন",
+    ":count selected": ":count টি বাছাই",
+    "Showing 200 of :count. Type to narrow down.": ":count টির মধ্যে ২০০টি দেখানো হচ্ছে। লিখে খুঁজুন।",
+    "Apply": "প্রয়োগ করুন"
 }

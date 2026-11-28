@@ -40,12 +40,6 @@
                             <button type="button" wire:click="$set('dueDetail', '{{ $key }}')" @class(['rounded px-2.5 py-1', 'bg-primary-600 text-white' => $dueDetail === $key, 'text-muted-foreground-2 hover:bg-muted-hover' => $dueDetail !== $key])>{{ $label }}</button>
                         @endforeach
                     </div>
-                    <select wire:model.live="customer" class="form-input w-56">
-                        <option value="">{{ __('All customers') }}</option>
-                        @foreach ($dueCustomers as $dueCustomer)
-                            <option value="{{ $dueCustomer->id }}">{{ $dueCustomer->name }}@if ($dueCustomer->phone) · {{ $dueCustomer->phone }}@endif</option>
-                        @endforeach
-                    </select>
                 @elseif ($dated)
                     <input wire:model.live="from" type="date" class="form-input w-auto" aria-label="{{ __('From') }}">
                     <input wire:model.live="to" type="date" class="form-input w-auto" aria-label="{{ __('To') }}">
@@ -71,6 +65,20 @@
                     <a href="{{ $exportUrls['xlsx'] }}" class="btn-secondary btn-sm"><x-icon name="table" class="size-3.5 text-emerald-600" /> Excel</a>
                     <a href="{{ $exportUrls['csv'] }}" class="btn-ghost btn-sm">CSV</a>
                 </div>
+
+                @if ($filterOptions !== [])
+                    <div class="flex w-full flex-wrap items-end gap-3 border-t border-card-line pt-3">
+                        @foreach ($filterOptions as $key => $filter)
+                            <x-multi-select wire:model="filters.{{ $key }}" :label="$filter['label']" :options="$filter['options']"
+                                wire:key="report-filter-{{ $key }}-{{ md5(json_encode(array_column($filter['options'], 'id'))) }}" />
+                        @endforeach
+                        @if ($activeFilterCount > 0)
+                            <button type="button" wire:click="clearFilters" class="btn-ghost btn-sm mb-0.5 text-red-600">✕ {{ __('Clear filters') }}</button>
+                        @endif
+                    </div>
+                @elseif ($activeTab === 'summary')
+                    <p class="w-full border-t border-card-line pt-2 text-xs text-muted-foreground-1">{{ __('The profit & loss statement always covers the whole business. Use Sales by category, Product sales or Sales by reference to see one category, product or reference person.') }}</p>
+                @endif
             </div>
 
             @if ($activeTab === 'summary')

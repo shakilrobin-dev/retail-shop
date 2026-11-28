@@ -11,6 +11,7 @@
     .rpt-contact { text-align: right; font-size: 8.5pt; color: #4b5563; width: 34%; }
     .rpt-rule { border-top: 2.5px solid #1e1b4b; border-bottom: 1px solid #4f46e5; height: 2px; margin: 10px 0 14px; }
     .rpt-title { text-align: center; font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #111827; }
+    .rpt-filters { text-align: center; font-size: 8.5pt; color: #1e1b4b; margin: -6px 0 10px; }
     .rpt-period { text-align: center; font-size: 9pt; color: #4b5563; margin: 2px 0 10px; }
     .rpt-meta { margin-bottom: 12px; border: 1px solid #d1d5db; }
     .rpt-meta td { padding: 5px 8px; font-size: 8.5pt; border-right: 1px solid #e5e7eb; vertical-align: top; }
