@@ -21,7 +21,7 @@ return [
 
         // Receipt: print_mode = 'on' | 'off' | 'ask'
         'receipt_print_mode' => 'ask',
-        'receipt_paper' => '80',
+        'receipt_paper' => 'a4',
         'receipt_language' => 'en',
         'receipt_show_logo' => true,
         'receipt_header' => null,

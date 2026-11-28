@@ -307,4 +307,36 @@ class PosSaleTest extends TestCase
         $this->get(route('pos'))->assertOk();
         $this->get(route('customers.index'))->assertOk();
     }
+
+    public function test_a4_invoice_repeats_the_letterhead_and_numbers_the_pages(): void
+    {
+        $this->actingAsRole('admin', $this->branch);
+        $this->stockedPinBox();
+        $this->openRegister();
+        app(Settings::class)->set('shop_logo', 'logo/shop.png');
+
+        Livewire::test(PointOfSale::class)
+            ->set('productSearch', 'PIN-BOX')->call('scan')
+            ->call('openPayment')->call('payExact', 0)->call('complete');
+
+        $sale = Sale::query()->sole();
+
+        $this->get(route('sales.receipt', $sale))
+            ->assertOk()
+            ->assertSee('size: A4', false)
+            ->assertSee('<thead>', false)
+            ->assertSee('counter(page) " of " counter(pages)', false)
+            ->assertSee('storage/logo/shop.png', false)
+            ->assertSee('INVOICE')
+            ->assertSee($this->branch->name);
+
+        $this->get(route('sales.receipt', ['sale' => $sale, 'lang' => 'bn']))
+            ->assertOk()
+            ->assertSee('counter(page', false);
+
+        $this->get(route('sales.receipt', ['sale' => $sale, 'paper' => '80']))
+            ->assertOk()
+            ->assertSee('80mm', false)
+            ->assertDontSee('counter(page', false);
+    }
 }

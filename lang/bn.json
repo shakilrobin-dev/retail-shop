@@ -1214,5 +1214,10 @@
     "Tile size": "টাইলের মাপ",
     "Width (inch)": "প্রস্থ (ইঞ্চি)",
     "Height (inch)": "দৈর্ঘ্য (ইঞ্চি)",
-    "inch": "ইঞ্চি"
+    "inch": "ইঞ্চি",
+    "INVOICE": "ইনভয়েস",
+    "Bill to": "ক্রেতা",
+    "Invoice no": "ইনভয়েস নং",
+    "Received from": "যার কাছ থেকে গ্রহণ",
+    "Walk-in customer": "সাধারণ ক্রেতা"
 }

@@ -7,6 +7,7 @@ use App\Models\CustomerPayment;
 use App\Models\Sale;
 use App\Models\User;
 use App\Services\CurrentBranch;
+use App\Services\ReportDocument;
 use App\Services\Settings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\App;
 class ReceiptController extends Controller
 {
     /**
-     * Printable receipt for a sale. ?paper=80|58|a4 and ?lang=en|bn override the settings.
+     * Printable receipt for a sale (an A4 invoice when the paper is A4). ?paper=80|58|a4 and ?lang=en|bn override the settings.
      */
     public function show(Request $request, Sale $sale, Settings $settings, CurrentBranch $currentBranch): View
     {
@@ -34,7 +35,7 @@ class ReceiptController extends Controller
 
         $sale->load(['items.product.units', 'payments.paymentMethod', 'customer', 'user', 'branch']);
 
-        return view('print.receipt', $this->shopDetails($settings, $sale->branch, $locale) + [
+        return view($paper === 'a4' ? 'print.invoice-a4' : 'print.receipt', $this->shopDetails($settings, $sale->branch, $locale) + [
             'sale' => $sale,
             'paper' => $paper,
             'customerDue' => $sale->customer?->totalDue() ?? 0,
@@ -63,7 +64,7 @@ class ReceiptController extends Controller
 
         $customerPayment->load(['customer', 'user', 'branch', 'paymentMethod', 'allocations.payable']);
 
-        return view('print.due-receipt', $this->shopDetails($settings, $customerPayment->branch, $locale) + [
+        return view($paper === 'a4' ? 'print.due-receipt-a4' : 'print.due-receipt', $this->shopDetails($settings, $customerPayment->branch, $locale) + [
             'receipt' => $customerPayment,
             'paper' => $paper,
             'dueNow' => $customerPayment->customer->totalDue(),
@@ -73,6 +74,7 @@ class ReceiptController extends Controller
 
     /**
      * Shop name, address, logo and texts printed at the top and bottom of receipts.
+     * The letterhead is used by the A4 layout, which always shows the logo when one is uploaded.
      *
      * @return array<string, mixed>
      */
@@ -81,6 +83,7 @@ class ReceiptController extends Controller
         $isBangla = $locale === 'bn';
 
         return [
+            'letterhead' => app(ReportDocument::class)->letterhead($branch),
             'shopName' => ($isBangla ? $settings->get('shop_name_bn') : null) ?: $settings->get('shop_name'),
             'shopPhone' => $branch->phone ?: $settings->get('shop_phone'),
             'address' => ($isBangla ? $branch->address_bn : null) ?: $branch->address,
