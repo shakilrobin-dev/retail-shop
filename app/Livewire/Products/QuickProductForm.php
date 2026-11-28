@@ -2,10 +2,11 @@
 
 namespace App\Livewire\Products;
 
+use App\Livewire\Concerns\PicksCatalogItems;
 use App\Models\Barcode;
+use App\Models\Brand;
 use App\Models\Unit;
 use App\Models\User;
-use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\ProductService;
 use App\Services\Settings;
@@ -24,6 +25,8 @@ use Livewire\Component;
  */
 class QuickProductForm extends Component
 {
+    use PicksCatalogItems;
+
     public bool $open = false;
 
     /** Show the "opening stock" field (not needed on a purchase, which adds stock itself). */
@@ -34,6 +37,8 @@ class QuickProductForm extends Component
     public string $name_bn = '';
 
     public ?int $category_id = null;
+
+    public ?int $brand_id = null;
 
     public ?int $unit_id = null;
 
@@ -72,6 +77,7 @@ class QuickProductForm extends Component
         $this->resetValidation();
         $this->reset('name', 'name_bn', 'barcode', 'cost_price', 'selling_price', 'wholesale_price', 'opening_stock', 'is_measured', 'measure_unit', 'measure_per_unit', 'measure_price', 'pack_name', 'pack_quantity', 'pack_price');
         $this->unit_id ??= Unit::query()->orderBy('id')->value('id');
+        $this->syncCategoryPickers();
         $this->withStock = $withStock;
 
         $term = trim($term);
@@ -106,6 +112,7 @@ class QuickProductForm extends Component
             'name_bn' => ['nullable', 'string', 'max:255'],
             'category_id' => ['required', 'exists:categories,id'],
             'unit_id' => ['required', 'exists:units,id'],
+            'brand_id' => ['nullable', 'exists:brands,id'],
             'barcode' => ['nullable', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'selling_price' => [$this->is_measured ? 'nullable' : 'required', 'numeric', 'min:0'],
@@ -167,6 +174,7 @@ class QuickProductForm extends Component
             'name' => trim($this->name),
             'name_bn' => $this->name_bn ?: null,
             'category_id' => $this->category_id,
+            'brand_id' => $this->brand_id,
             'unit_id' => $unit->id,
             'measure_unit' => $this->is_measured ? trim($this->measure_unit) : null,
             'measure_per_unit' => $this->is_measured ? $this->measure_per_unit : null,
@@ -188,7 +196,9 @@ class QuickProductForm extends Component
         $user = Auth::user();
 
         return view('livewire.products.quick-product-form', [
-            'categoryOptions' => $this->open ? app(CategoryTree::class)->flat(onlyActive: true) : collect(),
+            'mainCategories' => $this->open ? $this->mainCategoryOptions() : collect(),
+            'subCategories' => $this->open ? $this->subCategoryOptions() : collect(),
+            'brands' => $this->open ? Brand::query()->where('is_active', true)->orderBy('name')->get() : collect(),
             'unitOptions' => $this->open ? Unit::query()->orderBy('id')->get() : collect(),
             'canViewCost' => (bool) $user?->can('products.view-cost'),
         ]);

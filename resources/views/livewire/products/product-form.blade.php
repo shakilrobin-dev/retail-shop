@@ -89,19 +89,37 @@
                 {{-- General --}}
                 <div x-show="tab === 'general'" class="grid gap-x-10 gap-y-4 lg:grid-cols-2">
                     <div class="space-y-4">
-                        <x-form.field :label="__('Category')" for="category_id" required error="category_id">
-                            <x-category-select wire:model="category_id" id="category_id" :options="$categoryOptions" :placeholder="__('Choose...')" />
-                            <a href="{{ route('catalog.setup') }}" target="_blank" class="mt-1 inline-block text-xs text-primary-600 hover:underline">{{ __('Manage categories') }} ↗</a>
+                        <x-form.field :label="__('Category')" for="mainCategoryId" required error="category_id">
+                            <div class="flex gap-2">
+                                <select wire:model.live="mainCategoryId" id="mainCategoryId" class="form-input min-w-0 flex-1">
+                                    <option value="">{{ __('Choose...') }}</option>
+                                    @foreach ($mainCategories as $mainCategory)
+                                        <option value="{{ $mainCategory->id }}">{{ $mainCategory->localName() }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" wire:click="addCatalogItem('category')" class="btn-secondary shrink-0 px-3" title="{{ __('Add a new category') }}"><x-icon name="plus" class="size-4" /> {{ __('New') }}</button>
+                            </div>
+                        </x-form.field>
+                        <x-form.field :label="__('Sub-category')" for="subCategoryId" :hint="$mainCategoryId && $subCategories->isEmpty() ? __('No sub-categories yet. Add one, or leave empty.') : null">
+                            <div class="flex gap-2">
+                                <select wire:model.live="subCategoryId" id="subCategoryId" class="form-input min-w-0 flex-1" @disabled(! $mainCategoryId)>
+                                    <option value="">{{ $mainCategoryId ? __('None (main category only)') : __('Choose a category first') }}</option>
+                                    @foreach ($subCategories as $subCategory)
+                                        <option value="{{ $subCategory['id'] }}">{{ $subCategory['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" wire:click="addCatalogItem('subcategory')" class="btn-secondary shrink-0 px-3" title="{{ __('Add a new sub-category') }}"><x-icon name="plus" class="size-4" /> {{ __('New') }}</button>
+                            </div>
                         </x-form.field>
                         <x-form.field :label="__('Brand')" for="brand_id">
                             <div class="flex gap-2">
-                                <select wire:model="brand_id" id="brand_id" class="form-input">
+                                <select wire:model="brand_id" id="brand_id" class="form-input min-w-0 flex-1">
                                     <option value="">{{ __('No brand') }}</option>
                                     @foreach ($brands as $brand)
                                         <option value="{{ $brand->id }}">{{ $brand->name }}</option>
                                     @endforeach
                                 </select>
-                                <input wire:model="newBrand" type="text" placeholder="{{ __('or new brand') }}" class="form-input">
+                                <button type="button" wire:click="addCatalogItem('brand')" class="btn-secondary shrink-0 px-3" title="{{ __('Add a new brand') }}"><x-icon name="plus" class="size-4" /> {{ __('New') }}</button>
                             </div>
                         </x-form.field>
                         <x-form.field :label="__('Model / compatible devices')" for="compatible_models">
@@ -113,11 +131,14 @@
                             <input wire:model="sku" id="sku" type="text" class="form-input font-mono">
                         </x-form.field>
                         <x-form.field :label="__('Base unit')" for="unit_id" required :hint="$is_measured ? __('One tile (piece). The product is sold and shown in :measure; whole pieces are counted in stock.', ['measure' => $measure_unit ?: 'sqft']) : __('Stock is counted in this unit.')">
-                            <select wire:model.live="unit_id" id="unit_id" class="form-input">
-                                @foreach ($unitOptions as $unitOption)
-                                    <option value="{{ $unitOption->id }}">{{ $unitOption->localName() }}</option>
-                                @endforeach
-                            </select>
+                            <div class="flex gap-2">
+                                <select wire:model.live="unit_id" id="unit_id" class="form-input min-w-0 flex-1">
+                                    @foreach ($unitOptions as $unitOption)
+                                        <option value="{{ $unitOption->id }}">{{ $unitOption->localName() }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" wire:click="addCatalogItem('unit')" class="btn-secondary shrink-0 px-3" title="{{ __('Add a new unit') }}"><x-icon name="plus" class="size-4" /> {{ __('New') }}</button>
+                            </div>
                         </x-form.field>
                         <x-form.field :label="__('Warranty (days)')" for="warranty_days" :hint="__('Printed on the receipt. Leave empty for no warranty.')">
                             <input wire:model="warranty_days" id="warranty_days" type="number" min="0" class="form-input w-40 text-right">

@@ -192,7 +192,7 @@ class ReportService
                 ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
                 ->leftJoin('users', 'users.id', '=', 'sales.user_id')
                 ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
-                ->selectRaw('users.name as name, COUNT(DISTINCT sales.id) as invoices, SUM(sale_items.line_total) as sales, SUM(sale_items.discount_amount) as discounts')
+                ->selectRaw('users.id as user_id, users.name as name, COUNT(DISTINCT sales.id) as invoices, SUM(sale_items.line_total) as sales, SUM(sale_items.discount_amount) as discounts')
                 ->groupBy('users.id', 'users.name')
                 ->orderByDesc('sales')
                 ->get();
@@ -201,7 +201,7 @@ class ReportService
         return Sale::query()
             ->leftJoin('users', 'users.id', '=', 'sales.user_id')
             ->whereIn('sales.id', $this->completedSales($branchId, $from, $to, $filters)->select('id'))
-            ->selectRaw('users.name as name, COUNT(*) as invoices, SUM(sales.total) as sales, SUM(sales.discount_amount) as discounts')
+            ->selectRaw('users.id as user_id, users.name as name, COUNT(*) as invoices, SUM(sales.total) as sales, SUM(sales.discount_amount) as discounts')
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('sales')
             ->get();
@@ -248,7 +248,7 @@ class ReportService
      * Commission per reference person: profit of their sales in the period, commission worked out
      * for periods ending in it, commission paid in it, and what is still due (all time).
      *
-     * @return Collection<int, array{name: string, phone: string|null, invoices: int, profit: float, commission: float, paid: float, due: float}>
+     * @return Collection<int, array{referrer_id: int, name: string, phone: string|null, invoices: int, profit: float, commission: float, paid: float, due: float}>
      */
     public function commissions(?int $branchId, CarbonInterface $from, CarbonInterface $to, ?ReportFilters $filters = null): Collection
     {
@@ -276,6 +276,7 @@ class ReportService
             ->unique();
 
         return $filters->on(Referrer::query(), 'referrers', 'id')->whereIn('id', $ids)->orderBy('name')->get()->map(fn (Referrer $referrer): array => [
+            'referrer_id' => $referrer->id,
             'name' => $referrer->name,
             'phone' => $referrer->phone,
             'invoices' => (int) ($salesInPeriod[$referrer->id]->invoices ?? 0),
@@ -345,6 +346,40 @@ class ReportService
         }
 
         return $query;
+    }
+
+    /**
+     * The invoices behind an invoice count on a report, oldest first.
+     * 'due' = unpaid invoices of any date (customer due report); otherwise completed invoices in the period.
+     * 'user', 'referrer' and 'customer' narrow to one person (null = none), 'day' to one date (Y-m-d).
+     *
+     * @param  array{due?: bool, day?: string, user?: int|null, referrer?: int|null, customer?: int|null, with_referrer?: bool}  $criteria
+     * @return Builder<Sale>
+     */
+    public function invoicesFor(?int $branchId, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters, array $criteria): Builder
+    {
+        $query = ($criteria['due'] ?? false)
+            ? $this->filterInvoices(Sale::query()
+                ->when($branchId, fn (Builder $query) => $query->where('sales.branch_id', $branchId))
+                ->where('sales.status', SaleStatus::Completed)
+                ->where('sales.due_amount', '>', 0), $filters)
+            : $this->completedSales($branchId, $from, $to, $filters);
+
+        if (isset($criteria['day'])) {
+            $query->whereDate('sales.sold_at', $criteria['day']);
+        }
+
+        foreach (['user' => 'sales.user_id', 'referrer' => 'sales.referrer_id', 'customer' => 'sales.customer_id'] as $key => $column) {
+            if (array_key_exists($key, $criteria)) {
+                $criteria[$key] === null ? $query->whereNull($column) : $query->where($column, $criteria[$key]);
+            }
+        }
+
+        if ($criteria['with_referrer'] ?? false) {
+            $query->whereNotNull('sales.referrer_id');
+        }
+
+        return $query->orderBy('sales.sold_at')->orderBy('sales.id');
     }
 
     /**

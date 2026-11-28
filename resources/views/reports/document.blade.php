@@ -1,6 +1,7 @@
 {{--
     One official report document. Used on screen (inside the paper preview) and by mPDF.
     Layout uses tables only, so mPDF draws it the same as the browser.
+    On screen, cells with a link in the row's '_links' open the invoices behind them (see ReportIndex).
     @var array $document
     @var bool $pdf
 --}}
@@ -10,6 +11,15 @@
     $head = $document['letterhead'];
     $logo = $pdf ? ($head['logo_path'] && is_file($head['logo_path']) ? $head['logo_path'] : null) : $head['logo_url'];
     $columns = $document['columns'];
+    $linked = function (string $text, ?array $link) use ($pdf): string|\Illuminate\Support\HtmlString {
+        if ($pdf || ! $link) {
+            return $text;
+        }
+
+        $action = isset($link['sale']) ? 'viewInvoice('.(int) $link['sale'].')' : 'openInvoices('.\Illuminate\Support\Js::from($link).')';
+
+        return new \Illuminate\Support\HtmlString('<button type="button" class="rpt-link" wire:click="'.e($action).'">'.e($text).'</button>');
+    };
 @endphp
 <div class="rpt">
     <table class="rpt-letterhead">
@@ -76,7 +86,7 @@
                         <tr class="{{ $serial % 2 === 0 ? 'rpt-even' : '' }}">
                             <td class="rpt-sl">{{ shop_digits($serial) }}</td>
                             @foreach ($columns as $column)
-                                <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ ReportDocument::display($row[$column['key']] ?? null, $column['format']) }}</td>
+                                <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ $linked(ReportDocument::display($row[$column['key']] ?? null, $column['format']), $row['_links'][$column['key']] ?? null) }}</td>
                             @endforeach
                         </tr>
                     @endif
@@ -90,7 +100,7 @@
                         <td class="rpt-sl"></td>
                         @foreach ($columns as $column)
                             @php $value = $document['totals'][$column['key']] ?? null; @endphp
-                            <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ $value === null ? '' : (is_string($value) ? $value : ReportDocument::display($value, $column['format'])) }}</td>
+                            <td class="{{ $column['align'] === 'right' ? 'rpt-r rpt-num' : '' }}">{{ $value === null ? '' : $linked(is_string($value) ? $value : ReportDocument::display($value, $column['format']), $document['totals']['_links'][$column['key']] ?? null) }}</td>
                         @endforeach
                     </tr>
                 </tfoot>
@@ -104,10 +114,11 @@
             @if ($section['title'])
                 <tr><td colspan="2" class="rpt-section">{{ $section['title'] }}</td></tr>
             @endif
-            @foreach ($section['lines'] as [$label, $value, $format, $style])
+            @foreach ($section['lines'] as $line)
+                @php [$label, $value, $format, $style] = $line; @endphp
                 <tr class="rpt-line-{{ $style ?: 'plain' }}">
                     <td>{{ $label }}</td>
-                    <td class="rpt-r rpt-num">{{ ReportDocument::display($value, $format) }}</td>
+                    <td class="rpt-r rpt-num">{{ $linked(ReportDocument::display($value, $format), $line[4] ?? null) }}</td>
                 </tr>
             @endforeach
         </table>

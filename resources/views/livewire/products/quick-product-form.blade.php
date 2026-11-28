@@ -13,16 +13,51 @@
             <div class="grid gap-3 sm:grid-cols-2">
                 <div>
                     <label for="qp-category" class="form-label">{{ __('Category') }} <span class="text-red-500">*</span></label>
-                    <x-category-select wire:model="category_id" id="qp-category" :options="$categoryOptions" :placeholder="__('Choose...')" />
+                    <div class="flex gap-1.5">
+                        <select wire:model.live="mainCategoryId" id="qp-category" class="form-input min-w-0 flex-1">
+                            <option value="">{{ __('Choose...') }}</option>
+                            @foreach ($mainCategories as $mainCategory)
+                                <option value="{{ $mainCategory->id }}">{{ $mainCategory->localName() }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="addCatalogItem('category')" class="btn-secondary shrink-0 px-2.5" title="{{ __('Add a new category') }}" aria-label="{{ __('Add a new category') }}"><x-icon name="plus" class="size-4" /></button>
+                    </div>
                     @error('category_id') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
                 <div>
+                    <label for="qp-subcategory" class="form-label">{{ __('Sub-category') }}</label>
+                    <div class="flex gap-1.5">
+                        <select wire:model.live="subCategoryId" id="qp-subcategory" class="form-input min-w-0 flex-1" @disabled(! $mainCategoryId)>
+                            <option value="">{{ $mainCategoryId ? __('None') : __('Choose a category first') }}</option>
+                            @foreach ($subCategories as $subCategory)
+                                <option value="{{ $subCategory['id'] }}">{{ $subCategory['label'] }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="addCatalogItem('subcategory')" class="btn-secondary shrink-0 px-2.5" title="{{ __('Add a new sub-category') }}" aria-label="{{ __('Add a new sub-category') }}"><x-icon name="plus" class="size-4" /></button>
+                    </div>
+                </div>
+                <div>
+                    <label for="qp-brand" class="form-label">{{ __('Brand') }}</label>
+                    <div class="flex gap-1.5">
+                        <select wire:model="brand_id" id="qp-brand" class="form-input min-w-0 flex-1">
+                            <option value="">{{ __('No brand') }}</option>
+                            @foreach ($brands as $brand)
+                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="addCatalogItem('brand')" class="btn-secondary shrink-0 px-2.5" title="{{ __('Add a new brand') }}" aria-label="{{ __('Add a new brand') }}"><x-icon name="plus" class="size-4" /></button>
+                    </div>
+                </div>
+                <div>
                     <label for="qp-unit" class="form-label">{{ __('Unit') }} <span class="text-red-500">*</span></label>
-                    <select wire:model="unit_id" id="qp-unit" class="form-input">
-                        @foreach ($unitOptions as $unit)
-                            <option value="{{ $unit->id }}">{{ $unit->localName() }}</option>
-                        @endforeach
-                    </select>
+                    <div class="flex gap-1.5">
+                        <select wire:model="unit_id" id="qp-unit" class="form-input min-w-0 flex-1">
+                            @foreach ($unitOptions as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->localName() }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="addCatalogItem('unit')" class="btn-secondary shrink-0 px-2.5" title="{{ __('Add a new unit') }}" aria-label="{{ __('Add a new unit') }}"><x-icon name="plus" class="size-4" /></button>
+                    </div>
                     @error('unit_id') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
             </div>

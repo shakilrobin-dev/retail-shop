@@ -3,6 +3,7 @@
 namespace App\Livewire\Products;
 
 use App\Enums\SaleStatus;
+use App\Livewire\Concerns\PicksCatalogItems;
 use App\Models\Barcode;
 use App\Models\Brand;
 use App\Models\Product;
@@ -11,7 +12,6 @@ use App\Models\PurchaseItem;
 use App\Models\SaleItem;
 use App\Models\Unit;
 use App\Services\BarcodeService;
-use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\ProductService;
 use App\Services\Settings;
@@ -21,6 +21,8 @@ use Livewire\Component;
 
 class ProductForm extends Component
 {
+    use PicksCatalogItems;
+
     public ?Product $product = null;
 
     public string $name = '';
@@ -32,8 +34,6 @@ class ProductForm extends Component
     public ?int $category_id = null;
 
     public ?int $brand_id = null;
-
-    public string $newBrand = '';
 
     public ?int $unit_id = null;
 
@@ -76,6 +76,7 @@ class ProductForm extends Component
         if ($product?->exists) {
             $this->product = $product->load('units.barcodes');
             $this->fill($product->only(['name', 'sku', 'category_id', 'brand_id', 'unit_id', 'is_active']));
+            $this->syncCategoryPickers();
             $this->name_bn = (string) $product->name_bn;
             $this->compatible_models = (string) $product->compatible_models;
             $this->description = (string) $product->description;
@@ -108,6 +109,7 @@ class ProductForm extends Component
 
         if ($copyFrom) {
             $this->fill($copyFrom->only(['category_id', 'brand_id', 'unit_id']));
+            $this->syncCategoryPickers();
             $this->name = $copyFrom->name.' ('.__('copy').')';
             $this->name_bn = (string) $copyFrom->name_bn;
             $this->compatible_models = (string) $copyFrom->compatible_models;
@@ -277,7 +279,6 @@ class ProductForm extends Component
             'sku' => ['nullable', 'string', 'max:50', 'unique:products,sku'.($this->product ? ','.$this->product->id : '')],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
-            'newBrand' => ['nullable', 'string', 'max:255'],
             'unit_id' => ['required', 'exists:units,id'],
             'compatible_models' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -331,11 +332,6 @@ class ProductForm extends Component
         }
 
         $this->applyMeasurePrices();
-
-        if (trim($this->newBrand) !== '') {
-            $this->brand_id = Brand::query()->firstOrCreate(['name' => trim($this->newBrand)])->id;
-            $this->newBrand = '';
-        }
 
         $isNew = $this->product === null;
 
@@ -459,7 +455,8 @@ class ProductForm extends Component
     {
         return view('livewire.products.product-form', [
             'stats' => $this->stats(),
-            'categoryOptions' => app(CategoryTree::class)->flat(onlyActive: true),
+            'mainCategories' => $this->mainCategoryOptions(),
+            'subCategories' => $this->subCategoryOptions(),
             'brands' => Brand::query()->where('is_active', true)->orderBy('name')->get(),
             'unitOptions' => Unit::query()->orderBy('id')->get(),
             'vatEnabled' => app(Settings::class)->bool('vat_enabled'),

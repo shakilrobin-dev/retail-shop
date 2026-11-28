@@ -171,6 +171,17 @@ class ReportDocument
         ], $columns);
     }
 
+    /**
+     * A link on an invoice count: on screen it opens the list of those invoices (see ReportService::invoicesFor()).
+     *
+     * @param  array<string, mixed>  $criteria
+     * @return array<string, mixed>|null
+     */
+    private function invoiceLink(int $count, string $title, array $criteria = []): ?array
+    {
+        return $count > 0 ? ['title' => $title] + $criteria : null;
+    }
+
     private function summary(array $document, ?int $branchId, CarbonInterface $from, CarbonInterface $to): array
     {
         $s = $this->reports->summary($branchId, $from, $to);
@@ -178,7 +189,7 @@ class ReportDocument
 
         $document['sections'] = [
             ['title' => __('Sales'), 'lines' => [
-                [__('Number of invoices'), $s['invoice_count'], 'int', ''],
+                [__('Number of invoices'), $s['invoice_count'], 'int', '', $this->invoiceLink($s['invoice_count'], __('Invoices'))],
                 [__('Gross sales (with VAT)'), $s['gross_sales'], 'money', ''],
                 [__('Less: VAT collected'), -$s['vat'], 'money', 'muted'],
                 [__('Less: returns and refunds'), -$s['returns'], 'money', 'muted'],
@@ -215,10 +226,12 @@ class ReportDocument
             'day' => Carbon::parse($row->day)->format('D, d M Y'),
             'invoices' => (int) $row->invoices, 'sales' => (float) $row->sales, 'profit' => (float) $row->profit,
             'margin' => $row->sales > 0 ? $row->profit / $row->sales * 100 : 0,
+            '_links' => ['invoices' => $this->invoiceLink((int) $row->invoices, __('Invoices on :date', ['date' => Carbon::parse($row->day)->format('d M Y')]), ['day' => Carbon::parse($row->day)->toDateString()])],
         ])->all();
         $sales = (float) $rows->sum('sales');
         $profit = (float) $rows->sum('profit');
-        $document['totals'] = ['day' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0];
+        $document['totals'] = ['day' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0,
+            '_links' => ['invoices' => $this->invoiceLink((int) $rows->sum('invoices'), __('Invoices'))]];
 
         return $document;
     }
@@ -238,6 +251,7 @@ class ReportDocument
             'total' => (float) $sale->total, 'due' => (float) $sale->due_amount,
             'paid_by' => $sale->payments->where('direction', PaymentDirection::In)->map(fn ($p) => $p->paymentMethod->localName())->unique()->implode(', '),
             'cashier' => $sale->user?->name, 'status' => $sale->status === SaleStatus::Voided ? $sale->status->label() : $sale->payment_status->label(),
+            '_links' => ['invoice' => ['sale' => $sale->id]],
         ])->all();
         $completed = $sales->where('status', SaleStatus::Completed);
         $document['totals'] = [
@@ -305,8 +319,10 @@ class ReportDocument
         $document['rows'] = $rows->map(fn ($row): array => [
             'name' => $row->name ?? '—', 'invoices' => (int) $row->invoices, 'sales' => (float) $row->sales,
             'average' => $row->invoices ? $row->sales / $row->invoices : 0, 'discounts' => (float) $row->discounts,
+            '_links' => ['invoices' => $this->invoiceLink((int) $row->invoices, __('Invoices by :name', ['name' => $row->name ?? '—']), ['user' => $row->user_id === null ? null : (int) $row->user_id])],
         ])->all();
-        $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => (float) $rows->sum('sales'), 'discounts' => (float) $rows->sum('discounts')];
+        $document['totals'] = ['name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => (float) $rows->sum('sales'), 'discounts' => (float) $rows->sum('discounts'),
+            '_links' => ['invoices' => $this->invoiceLink((int) $rows->sum('invoices'), __('Invoices'))]];
 
         if ($filters->hasItemFilters()) {
             $document['notes'][] = __('Only the chosen products are counted: item totals before invoice discount and VAT.');
@@ -321,10 +337,14 @@ class ReportDocument
             $net = (float) $row->sales - (float) $row->vat;
             $profit = $net - (float) $row->cost;
 
+            $name = $row->referrer_id ? $row->name.($row->phone ? ' ('.$row->phone.')' : '') : __('Without reference');
+
             return [
-                'name' => $row->referrer_id ? $row->name.($row->phone ? ' ('.$row->phone.')' : '') : __('Without reference'),
+                'name' => $name,
                 'invoices' => (int) $row->invoices, 'sales' => $net, 'cost' => (float) $row->cost, 'profit' => $profit,
                 'margin' => $net > 0 ? $profit / $net * 100 : 0,
+                '_links' => ['invoices' => $this->invoiceLink((int) $row->invoices, $row->referrer_id ? __('Invoices with reference :name', ['name' => $name]) : __('Invoices without reference'),
+                    ['referrer' => $row->referrer_id === null ? null : (int) $row->referrer_id])],
             ];
         });
 
@@ -338,6 +358,7 @@ class ReportDocument
         $document['totals'] = [
             'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'sales' => $sales, 'cost' => (float) $rows->sum('cost'),
             'profit' => $profit, 'margin' => $sales > 0 ? $profit / $sales * 100 : 0,
+            '_links' => ['invoices' => $this->invoiceLink((int) $rows->sum('invoices'), __('Invoices'))],
         ];
         $document['notes'][] = $filters->hasItemFilters()
             ? __('Only the chosen products are counted: item totals before invoice discount and VAT.')
@@ -353,10 +374,13 @@ class ReportDocument
             ['name', __('Reference')], ['phone', __('Phone')], ['invoices', __('Invoices'), 'int'], ['profit', __('Profit from sales'), 'money'],
             ['commission', __('Commission worked out'), 'money'], ['paid', __('Paid in period'), 'money'], ['due', __('Due now'), 'money'],
         ]);
-        $document['rows'] = $rows->all();
+        $document['rows'] = $rows->map(fn (array $row): array => $row + [
+            '_links' => ['invoices' => $this->invoiceLink($row['invoices'], __('Invoices with reference :name', ['name' => $row['name']]), ['referrer' => $row['referrer_id']])],
+        ])->all();
         $document['totals'] = [
             'name' => __('Total'), 'invoices' => (int) $rows->sum('invoices'), 'profit' => (float) $rows->sum('profit'),
             'commission' => (float) $rows->sum('commission'), 'paid' => (float) $rows->sum('paid'), 'due' => (float) $rows->sum('due'),
+            '_links' => ['invoices' => $this->invoiceLink((int) $rows->sum('invoices'), __('Invoices with a reference'), ['with_referrer' => true])],
         ];
         $document['notes'][] = __('Commission is worked out on each person\'s total profit for a month or date range, and counted as an expense (commission given) when it is paid.');
         $document['notes'][] = __('"Commission worked out" counts periods that end inside this report\'s dates.');
@@ -419,7 +443,8 @@ class ReportDocument
                 $customer = $group->first()->customer;
                 $row = ['name' => $customer->name, 'phone' => $customer->phone, 'invoices' => $group->count(), 'oldest' => $group->max(fn ($sale) => $sale->ageInDays()),
                     'age_30' => 0.0, 'age_60' => 0.0, 'age_90' => 0.0, 'age_older' => 0.0, 'due' => (float) $group->sum('due_amount'),
-                    'limit' => $customer->credit_limit === null ? null : (float) $customer->credit_limit];
+                    'limit' => $customer->credit_limit === null ? null : (float) $customer->credit_limit,
+                    '_links' => ['invoices' => $this->invoiceLink($group->count(), __('Unpaid invoices of :name', ['name' => $customer->name]), ['due' => true, 'customer' => $customer->id])]];
 
                 foreach ($group as $sale) {
                     $row[$bucket($sale->ageInDays())] += (float) $sale->due_amount;
@@ -427,7 +452,8 @@ class ReportDocument
 
                 return $row;
             })->sortByDesc('due')->values()->all();
-            $document['totals'] = ['name' => __('Total'), 'invoices' => $sales->count(), 'due' => (float) $sales->sum('due_amount')] + $ageing;
+            $document['totals'] = ['name' => __('Total'), 'invoices' => $sales->count(), 'due' => (float) $sales->sum('due_amount'),
+                '_links' => ['invoices' => $this->invoiceLink($sales->count(), __('Unpaid invoices'), ['due' => true])]] + $ageing;
         } else {
             $document['columns'] = $this->columns([
                 ['invoice', __('Invoice')], ['date', __('Date')], ['due_date', __('Pay by')], ['days', __('Days'), 'int'],
@@ -445,6 +471,7 @@ class ReportDocument
                         'due_date' => $sale->due_date?->format('d/m/Y').($sale->isOverdue() ? ' ('.__('overdue').')' : ''),
                         'days' => $sale->ageInDays(), 'total' => (float) $sale->total,
                         'paid' => round((float) $sale->total - (float) $sale->due_amount, 2), 'due' => (float) $sale->due_amount,
+                        '_links' => ['invoice' => ['sale' => $sale->id]],
                     ];
 
                     if ($detail === 'items') {

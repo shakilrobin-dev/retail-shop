@@ -11,13 +11,16 @@ use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Referrer;
+use App\Models\Sale;
 use App\Models\User;
 use App\Services\CategoryTree;
 use App\Services\CurrentBranch;
 use App\Services\ReportDocument;
 use App\Services\ReportFilters;
+use App\Services\ReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -60,6 +63,22 @@ class ReportIndex extends Component
     #[Url]
     public array $filters = [];
 
+    public bool $showInvoiceList = false;
+
+    /**
+     * The invoices shown in the pop-up: a title and the criteria of ReportService::invoicesFor().
+     *
+     * @var array{title?: string, due?: bool, day?: string, user?: int|null, referrer?: int|null, customer?: int|null, with_referrer?: bool}
+     */
+    public array $invoiceList = [];
+
+    /** How many invoices the pop-up shows (more load with "Show more"). */
+    public int $invoiceListLimit = 50;
+
+    public bool $showInvoice = false;
+
+    public ?int $viewingSaleId = null;
+
     public function mount(): void
     {
         $this->authorize('reports.view');
@@ -94,6 +113,61 @@ class ReportIndex extends Component
         $this->filters = [];
     }
 
+    /**
+     * Open the pop-up with the invoices behind an invoice count on the report.
+     *
+     * @param  array<string, mixed>  $link
+     */
+    public function openInvoices(array $link): void
+    {
+        $this->authorize('reports.view');
+
+        $list = ['title' => mb_substr((string) ($link['title'] ?? __('Invoices')), 0, 200)];
+
+        foreach (['due', 'with_referrer'] as $key) {
+            if (! empty($link[$key])) {
+                $list[$key] = true;
+            }
+        }
+
+        if (isset($link['day']) && is_string($link['day']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $link['day'])) {
+            $list['day'] = $link['day'];
+        }
+
+        foreach (['user', 'referrer', 'customer'] as $key) {
+            if (array_key_exists($key, $link)) {
+                $list[$key] = $link[$key] === null ? null : (int) $link[$key];
+            }
+        }
+
+        $this->invoiceList = $list;
+        $this->invoiceListLimit = 50;
+        $this->showInvoiceList = true;
+    }
+
+    public function showMoreInvoices(): void
+    {
+        $this->invoiceListLimit += 50;
+    }
+
+    /**
+     * Open one invoice in a pop-up. Only invoices of the branches this report covers.
+     */
+    public function viewInvoice(int $saleId): void
+    {
+        $this->authorize('reports.view');
+
+        $sale = Sale::query()->whereKey($saleId)->where('status', '!=', SaleStatus::Held)->firstOrFail();
+        $branchId = $this->branchId();
+        /** @var User $user */
+        $user = Auth::user();
+
+        abort_unless($branchId === null ? $user->canAccessAllBranches() : $sale->branch_id === $branchId, 404);
+
+        $this->viewingSaleId = $sale->id;
+        $this->showInvoice = true;
+    }
+
     public function branchId(): ?int
     {
         /** @var User $user */
@@ -104,17 +178,10 @@ class ReportIndex extends Component
 
     public function render(): View
     {
-        $from = Carbon::parse($this->from ?: today());
-        $to = Carbon::parse($this->to ?: today());
-
-        if ($to->lt($from)) {
-            [$from, $to] = [$to, $from];
-        }
-
+        [$from, $to] = $this->period();
         $branchId = $this->branchId();
-        $tab = array_key_exists($this->tab, ReportDocument::REPORTS) ? $this->tab : 'summary';
-        $usedFilters = ReportDocument::FILTERS[$tab];
-        $chosen = ReportFilters::from($this->filters, $usedFilters);
+        $tab = $this->activeTab();
+        $chosen = ReportFilters::from($this->filters, ReportDocument::FILTERS[$tab]);
         $document = app(ReportDocument::class)->build($tab, $branchId, $from, $to, [
             'main_categories' => $this->mainCategories,
             'dead_days' => $this->deadDays,
@@ -134,7 +201,48 @@ class ReportIndex extends Component
             'activeFilterCount' => count($chosen->ids),
             'canSeeAll' => $user->canAccessAllBranches() && Branch::query()->count() > 1,
             'exportUrls' => collect(['pdf', 'xlsx', 'csv'])->mapWithKeys(fn (string $format) => [$format => route('reports.export', $exportParams + ['format' => $format])])->all(),
+            'invoices' => $this->showInvoiceList ? $this->invoiceListData($branchId, $from, $to, $chosen) : null,
+            'viewingSale' => $this->showInvoice && $this->viewingSaleId
+                ? Sale::query()->with(['items.product.units', 'payments.paymentMethod', 'customer', 'user', 'branch', 'referrer'])->find($this->viewingSaleId)
+                : null,
         ])->title(__('Reports'));
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function period(): array
+    {
+        $from = Carbon::parse($this->from ?: today());
+        $to = Carbon::parse($this->to ?: today());
+
+        return $to->lt($from) ? [$to, $from] : [$from, $to];
+    }
+
+    private function activeTab(): string
+    {
+        return array_key_exists($this->tab, ReportDocument::REPORTS) ? $this->tab : 'summary';
+    }
+
+    /**
+     * The invoices for the pop-up, with their count and totals.
+     *
+     * @return array{rows: Collection<int, Sale>, count: int, total: float, due: float, period: string|null}
+     */
+    private function invoiceListData(?int $branchId, Carbon $from, Carbon $to, ReportFilters $filters): array
+    {
+        $criteria = $this->invoiceList;
+        unset($criteria['title']);
+        $query = app(ReportService::class)->invoicesFor($branchId, $from, $to, $filters, $criteria);
+        $totals = (clone $query)->reorder()->toBase()->selectRaw('COUNT(*) as invoices, SUM(sales.total) as total, SUM(sales.due_amount) as due')->first();
+
+        return [
+            'rows' => $query->with(['customer', 'user'])->withCount('items')->limit($this->invoiceListLimit)->get(),
+            'count' => (int) ($totals->invoices ?? 0),
+            'total' => (float) ($totals->total ?? 0),
+            'due' => (float) ($totals->due ?? 0),
+            'period' => ($criteria['due'] ?? false) || isset($criteria['day']) ? null : __('From :from to :to', ['from' => $from->format('d M Y'), 'to' => $to->format('d M Y')]),
+        ];
     }
 
     /**

@@ -99,15 +99,158 @@
         </div>
     </div>
 
+    <x-modal wire:model="showInvoiceList" :title="$invoiceList['title'] ?? __('Invoices')" :subtitle="$invoices['period'] ?? null" width="max-w-5xl">
+        @if ($invoices)
+            <div class="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                <span class="text-muted-foreground-1">{{ __('Invoices') }}: <strong class="text-foreground">{{ shop_digits($invoices['count']) }}</strong></span>
+                <span class="text-muted-foreground-1">{{ __('Total') }}: <strong class="tabular-nums text-foreground">{{ money($invoices['total']) }}</strong></span>
+                @if ($invoices['due'] > 0)<span class="text-muted-foreground-1">{{ __('Due') }}: <strong class="tabular-nums text-red-600">{{ money($invoices['due']) }}</strong></span>@endif
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-card-line">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Invoice') }}</th>
+                            <th>{{ __('Date') }}</th>
+                            <th>{{ __('Customer') }}</th>
+                            <th class="text-right">{{ __('Items') }}</th>
+                            <th class="text-right">{{ __('Total') }}</th>
+                            <th class="text-right">{{ __('Due') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th>{{ __('Cashier') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($invoices['rows'] as $sale)
+                            <tr wire:key="report-invoice-{{ $sale->id }}" wire:click="viewInvoice({{ $sale->id }})" class="cursor-pointer">
+                                <td class="font-mono text-xs font-medium text-foreground">{{ $sale->invoice_no }}</td>
+                                <td class="whitespace-nowrap text-muted-foreground-2">{{ shop_digits($sale->sold_at->format('d M Y')) }}<div class="text-xs text-muted-foreground">{{ shop_digits($sale->sold_at->format('h:i A')) }}</div></td>
+                                <td>{{ $sale->customer?->name ?? __('Walk-in') }}@if ($sale->customer?->phone)<div class="text-xs text-muted-foreground">{{ $sale->customer->phone }}</div>@endif</td>
+                                <td class="text-right tabular-nums">{{ shop_digits($sale->items_count) }}</td>
+                                <td class="text-right font-semibold tabular-nums text-foreground">{{ money($sale->total) }}</td>
+                                <td class="text-right tabular-nums">@if ($sale->due_amount > 0)<span class="font-medium text-red-600">{{ money($sale->due_amount) }}</span>@else<span class="text-muted-foreground">—</span>@endif</td>
+                                <td><x-badge :tone="$sale->payment_status->tone()">{{ $sale->payment_status->label() }}</x-badge></td>
+                                <td class="text-muted-foreground-1">{{ $sale->user?->name }}</td>
+                                <td class="text-right"><button type="button" wire:click.stop="viewInvoice({{ $sale->id }})" class="btn-secondary btn-sm">{{ __('View') }}</button></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="9" class="py-6 text-center text-muted-foreground-1">{{ __('No invoices found.') }}</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if ($invoices['count'] > $invoices['rows']->count())
+                <div class="mt-3 flex items-center justify-between gap-2 text-sm text-muted-foreground-1">
+                    <span>{{ __('Showing :shown of :total', ['shown' => shop_digits($invoices['rows']->count()), 'total' => shop_digits($invoices['count'])]) }}</span>
+                    <button type="button" wire:click="showMoreInvoices" class="btn-secondary btn-sm">{{ __('Show more') }}</button>
+                </div>
+            @endif
+        @endif
+    </x-modal>
+
+    <x-modal wire:model="showInvoice" :title="$viewingSale ? __('Invoice').' '.$viewingSale->invoice_no : __('Invoice')" :subtitle="$viewingSale ? shop_digits($viewingSale->sold_at->format('d M Y h:i A')) : null" width="max-w-3xl">
+        @if ($viewingSale)
+            @php $sale = $viewingSale; @endphp
+            <div class="space-y-4 text-sm">
+                <div class="flex flex-wrap gap-1.5">
+                    @if ($sale->status === \App\Enums\SaleStatus::Voided)
+                        <x-badge tone="red">{{ $sale->status->label() }}</x-badge>
+                    @else
+                        <x-badge :tone="$sale->payment_status->tone()">{{ $sale->payment_status->label() }}</x-badge>
+                    @endif
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div><div class="text-muted-foreground-1">{{ __('Customer') }}</div><div>{{ $sale->customer?->name ?? __('Walk-in') }}@if ($sale->customer?->phone) · {{ $sale->customer->phone }}@endif</div></div>
+                    <div><div class="text-muted-foreground-1">{{ __('Cashier') }}</div><div>{{ $sale->user?->name ?? '—' }}</div></div>
+                    <div><div class="text-muted-foreground-1">{{ __('Branch') }}</div><div>{{ $sale->branch?->localName() }}</div></div>
+                    @if ($sale->referrer)
+                        <div><div class="text-muted-foreground-1">{{ __('Reference') }}</div><div>{{ $sale->referrer->name }}@if ($sale->referrer->phone) · {{ $sale->referrer->phone }}@endif</div></div>
+                    @endif
+                    @if ($sale->due_date && $sale->due_amount > 0)
+                        <div><div class="text-muted-foreground-1">{{ __('Pay by') }}</div><div @class(['text-red-600' => $sale->isOverdue()])>{{ shop_digits($sale->due_date->format('d M Y')) }}</div></div>
+                    @endif
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-card-line">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>{{ __('Product') }}</th>
+                                <th class="text-right">{{ __('Qty') }}</th>
+                                <th class="text-right">{{ __('Price') }}</th>
+                                <th class="text-right">{{ __('Total') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($sale->items as $item)
+                                <tr wire:key="report-invoice-item-{{ $item->id }}">
+                                    <td>{{ $item->product_name }}@if ($item->unit_quantity > 1) <span class="text-xs text-muted-foreground-1">({{ $item->unit_name }})</span>@endif
+                                        @if ($item->measure_quantity !== null)
+                                            <div class="text-xs text-muted-foreground-1">{{ shop_digits($item->measure_quantity + 0) }} {{ $item->measure_unit }} × {{ money($item->measure_rate) }} · {{ $item->product?->stockBreakdown((float) $item->base_quantity) }}</div>
+                                        @endif
+                                        @if ($item->returned_quantity > 0)<div class="text-xs text-amber-700">{{ __('Returned') }}: {{ shop_digits($item->returned_quantity + 0) }}</div>@endif
+                                    </td>
+                                    <td class="text-right tabular-nums">{{ shop_digits($item->quantity + 0) }}</td>
+                                    <td class="text-right tabular-nums">{{ money($item->unit_price) }}@if ($item->discount_amount > 0)<div class="text-xs text-muted-foreground">− {{ money($item->discount_amount) }}</div>@endif</td>
+                                    <td class="text-right tabular-nums">{{ money($item->line_total) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="3" class="text-right">{{ __('Subtotal') }}</td><td class="text-right tabular-nums">{{ money($sale->subtotal) }}</td></tr>
+                            @if ($sale->discount_amount > 0)<tr><td colspan="3" class="text-right">{{ __('Discount') }}</td><td class="text-right tabular-nums">− {{ money($sale->discount_amount) }}</td></tr>@endif
+                            @if ($sale->vat_amount > 0)<tr><td colspan="3" class="text-right">{{ __('VAT') }}</td><td class="text-right tabular-nums">{{ money($sale->vat_amount) }}</td></tr>@endif
+                            @if ($sale->rounding_amount != 0)<tr><td colspan="3" class="text-right">{{ __('Rounding') }}</td><td class="text-right tabular-nums">{{ $sale->rounding_amount > 0 ? '+' : '−' }} {{ money(abs($sale->rounding_amount)) }}</td></tr>@endif
+                            <tr class="font-semibold"><td colspan="3" class="text-right">{{ __('Total') }}</td><td class="text-right tabular-nums">{{ money($sale->total) }}</td></tr>
+                            @if ($sale->status === \App\Enums\SaleStatus::Completed)
+                                <tr><td colspan="3" class="text-right">{{ __('Paid') }}</td><td class="text-right tabular-nums">{{ money($sale->receivedAmount()) }}</td></tr>
+                                @if ($sale->due_amount > 0)<tr class="font-semibold text-red-600"><td colspan="3" class="text-right">{{ __('Due') }}</td><td class="text-right tabular-nums">{{ money($sale->due_amount) }}</td></tr>@endif
+                            @endif
+                        </tfoot>
+                    </table>
+                </div>
+
+                @if ($sale->payments->isNotEmpty())
+                    <div>
+                        <h3 class="mb-1 font-semibold">{{ __('Payments') }}</h3>
+                        @foreach ($sale->payments as $payment)
+                            <div class="flex justify-between py-0.5">
+                                <span>{{ $payment->direction->label() }} · {{ $payment->paymentMethod->localName() }}@if ($payment->transaction_ref) <span class="text-muted-foreground">({{ $payment->transaction_ref }})</span>@endif
+                                    <span class="text-xs text-muted-foreground">· {{ shop_digits($payment->paid_at->format('d M Y')) }}</span></span>
+                                <span @class(['tabular-nums', 'text-red-700' => $payment->direction === \App\Enums\PaymentDirection::Out])>{{ money($payment->amount) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+                @if ($sale->note)<p class="text-muted-foreground-2">{{ $sale->note }}</p>@endif
+            </div>
+        @endif
+        <x-slot:footer>
+            @if ($viewingSale)
+                @can('pos.sell')
+                    <a href="{{ route('sales.receipt', ['sale' => $viewingSale, 'paper' => 'a4']) }}" target="_blank" class="btn-secondary btn-sm"><x-icon name="printer" class="size-3.5" /> {{ __('A4 invoice') }}</a>
+                    @if ($viewingSale->branch_id === app(\App\Services\CurrentBranch::class)->get()?->id)
+                        <a href="{{ route('sales.show', $viewingSale) }}" target="_blank" class="btn-secondary btn-sm">{{ __('Open invoice') }}</a>
+                    @endif
+                @endcan
+            @endif
+            <button type="button" wire:click="$set('showInvoice', false)" class="btn-primary btn-sm">{{ __('Close') }}</button>
+        </x-slot:footer>
+    </x-modal>
+
     @include('reports.styles')
     <style>
         .report-paper { padding: 40px 44px; min-height: 600px; }
+        .rpt-link { color: #4338ca; font: inherit; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+        .rpt-link:hover { color: #312e81; text-decoration-style: solid; }
         @media print {
             @page { size: A4 {{ $document['landscape'] ? 'landscape' : 'portrait' }}; margin: 12mm; }
             .report-desk { background: none !important; padding: 0 !important; }
             .report-paper { box-shadow: none !important; padding: 0 !important; max-width: none !important; min-height: 0; --tw-ring-shadow: 0 0 #0000 !important; }
             .lg\:grid-cols-\[13rem_1fr\] { grid-template-columns: 1fr !important; }
             .rpt-table thead { display: table-header-group; }
+            .rpt-link { color: inherit !important; text-decoration: none !important; }
         }
     </style>
 </div>

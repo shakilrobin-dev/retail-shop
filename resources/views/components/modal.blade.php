@@ -1,11 +1,19 @@
-@props(['title', 'subtitle' => null, 'width' => 'max-w-lg'])
+@props(['title', 'subtitle' => null, 'width' => 'max-w-lg', 'layer' => 'base'])
 
 {{--
     Centered pop-up dialog.
     Usage: <x-modal wire:model="showForm" title="..."> ...content... <x-slot:footer>buttons</x-slot:footer></x-modal>
+    layer="top" is for a pop-up opened from another pop-up: it shows above it, and Esc closes only the top one.
 --}}
-<div x-data="{ open: @entangle($attributes->wire('model')) }" x-on:keydown.escape.window="open = false" x-cloak class="no-print">
-    <div x-show="open" x-transition.opacity class="fixed inset-0 z-80 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 sm:items-center dark:bg-neutral-900/80" x-on:click.self="open = false">
+@php $isTop = $layer === 'top'; @endphp
+<div x-data="{ open: @entangle($attributes->wire('model')) }"
+    @if ($isTop)
+        x-on:keydown.escape.window.capture="if (open) { $event.preventDefault(); open = false }"
+    @else
+        x-on:keydown.escape.window="if (! $event.defaultPrevented) open = false"
+    @endif
+    x-cloak class="no-print">
+    <div x-show="open" x-transition.opacity class="fixed inset-0 {{ $isTop ? 'z-90' : 'z-80' }} flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 sm:items-center dark:bg-neutral-900/80" x-on:click.self="open = false">
         <div x-show="open" x-transition role="dialog" aria-modal="true"
             class="my-auto flex max-h-[calc(100dvh-2rem)] w-full {{ $width }} flex-col rounded-xl border border-overlay-line bg-overlay shadow-2xl">
             <div class="flex items-start justify-between gap-4 border-b border-overlay-divider px-5 py-3.5">

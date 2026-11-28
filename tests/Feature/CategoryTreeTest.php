@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\GlobalSearch;
 use App\Livewire\Products\CatalogSetup;
+use App\Livewire\Products\ProductForm;
 use App\Livewire\Products\ProductIndex;
 use App\Models\Category;
 use App\Services\CategoryTree;
@@ -124,6 +125,10 @@ class CategoryTreeTest extends TestCase
 
         $this->get(route('dashboard'))->assertOk()->assertSee(__('Sales – last 30 days'));
         $this->get(route('catalog.setup'))->assertOk()->assertSee('Fast chargers');
-        $this->get(route('products.create'))->assertOk()->assertSee('Fast chargers');
+        $this->get(route('products.create'))->assertOk()->assertSee('Accessories');
+
+        Livewire::test(ProductForm::class)
+            ->set('mainCategoryId', Category::query()->where('name', 'Accessories')->value('id'))
+            ->assertSee('Chargers › Fast chargers');
     }
 }
